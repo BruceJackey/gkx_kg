@@ -1,0 +1,86 @@
+# Turtle (RDF) 样例：科技论文知识图谱
+# 与 .owl / .rdf / .rdfs 内容对应，语法更易读，平台也支持 .ttl 导入
+
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix kg:   <http://example.org/scientific-kg#> .
+
+# ===== 本体元信息 =====
+<http://example.org/scientific-kg> a owl:Ontology ;
+  rdfs:label "科技论文知识图谱本体"@zh ;
+  owl:versionInfo "1.0.0" .
+
+# ===== 类层级（本体关系） =====
+kg:Entity a owl:Class ; rdfs:label "实体"@zh .
+kg:Paper a owl:Class ; rdfs:subClassOf kg:Entity ; rdfs:label "论文"@zh .
+kg:Person a owl:Class ; rdfs:subClassOf kg:Entity ; rdfs:label "人物"@zh .
+kg:Author a owl:Class ; rdfs:subClassOf kg:Person ; rdfs:label "作者"@zh .
+kg:Organization a owl:Class ; rdfs:subClassOf kg:Entity ; rdfs:label "机构"@zh ;
+  owl:disjointWith kg:Person .
+kg:Concept a owl:Class ; rdfs:subClassOf kg:Entity ; rdfs:label "概念"@zh .
+kg:Method a owl:Class ; rdfs:subClassOf kg:Concept ; rdfs:label "方法"@zh .
+kg:Dataset a owl:Class ; rdfs:subClassOf kg:Concept ; rdfs:label "数据集"@zh .
+
+# ===== 关系属性 =====
+kg:writtenBy a owl:ObjectProperty ;
+  rdfs:label "撰写于"@zh ;
+  rdfs:domain kg:Paper ; rdfs:range kg:Author ;
+  owl:inverseOf kg:writes .
+
+kg:writes a owl:ObjectProperty ;
+  rdfs:label "撰写"@zh ;
+  rdfs:domain kg:Author ; rdfs:range kg:Paper .
+
+kg:affiliatedWith a owl:ObjectProperty ;
+  rdfs:label "隶属于"@zh ;
+  rdfs:domain kg:Author ; rdfs:range kg:Organization .
+
+kg:cites a owl:ObjectProperty ;
+  rdfs:label "引用"@zh ;
+  rdfs:domain kg:Paper ; rdfs:range kg:Paper .
+
+kg:hasConcept a owl:ObjectProperty ;
+  rdfs:label "包含概念"@zh ;
+  rdfs:domain kg:Paper ; rdfs:range kg:Concept .
+
+kg:evaluatesOn a owl:ObjectProperty ;
+  rdfs:label "评估于"@zh ;
+  rdfs:domain kg:Method ; rdfs:range kg:Dataset .
+
+kg:title a owl:DatatypeProperty ;
+  rdfs:label "标题"@zh ;
+  rdfs:domain kg:Paper ; rdfs:range xsd:string .
+
+kg:year a owl:DatatypeProperty ;
+  rdfs:label "年份"@zh ;
+  rdfs:domain kg:Paper ; rdfs:range xsd:integer .
+
+# ===== 实例与关系边 =====
+kg:Tsinghua a kg:Organization ; rdfs:label "清华大学"@zh .
+kg:PKU a kg:Organization ; rdfs:label "北京大学"@zh .
+
+kg:ZhangMing a kg:Author ; rdfs:label "张明"@zh ; kg:affiliatedWith kg:Tsinghua .
+kg:LiHua a kg:Author ; rdfs:label "李华"@zh ; kg:affiliatedWith kg:PKU .
+kg:WangQiang a kg:Author ; rdfs:label "王强"@zh ; kg:affiliatedWith kg:Tsinghua .
+
+kg:FB15k237 a kg:Dataset ; rdfs:label "FB15k-237" .
+kg:WN18RR a kg:Dataset ; rdfs:label "WN18RR" .
+kg:TKGEmbed a kg:Method ; rdfs:label "TKGEmbed" ;
+  kg:evaluatesOn kg:FB15k237 , kg:WN18RR .
+kg:TransE a kg:Method ; rdfs:label "TransE" .
+kg:KnowledgeGraphEmbedding a kg:Concept ; rdfs:label "知识图谱嵌入"@zh .
+kg:Transformer a kg:Concept ; rdfs:label "Transformer" .
+
+kg:PaperTransE a kg:Paper ;
+  kg:title "Translating Embeddings for Modeling Multi-relational Data" ;
+  kg:year 2013 ;
+  kg:hasConcept kg:TransE , kg:KnowledgeGraphEmbedding .
+
+kg:PaperTKGEmbed a kg:Paper ;
+  kg:title "基于Transformer的知识图谱嵌入方法研究"@zh ;
+  kg:year 2024 ;
+  kg:writtenBy kg:ZhangMing , kg:LiHua , kg:WangQiang ;
+  kg:hasConcept kg:KnowledgeGraphEmbedding , kg:Transformer , kg:TKGEmbed ;
+  kg:cites kg:PaperTransE .

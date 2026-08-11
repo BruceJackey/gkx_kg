@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OWL 样例：科技论文知识图谱本体（含更丰富的约束与关系）
+  在 RDFS 类/属性基础上，增加：等价类、互斥、逆属性、基数约束等
+-->
+<!DOCTYPE rdf:RDF [
+  <!ENTITY owl "http://www.w3.org/2002/07/owl#">
+  <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
+  <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
+  <!ENTITY kg "http://example.org/scientific-kg#">
+]>
+<rdf:RDF
+  xmlns:owl="http://www.w3.org/2002/07/owl#"
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+  xmlns:kg="http://example.org/scientific-kg#"
+  xml:base="http://example.org/scientific-kg">
+
+  <owl:Ontology rdf:about="http://example.org/scientific-kg">
+    <rdfs:label xml:lang="zh">科技论文知识图谱本体</rdfs:label>
+    <rdfs:comment xml:lang="zh">演示 OWL 中的类层级、对象属性、逆属性与简单约束</rdfs:comment>
+    <owl:versionInfo>1.0.0</owl:versionInfo>
+  </owl:Ontology>
+
+  <!-- ========== 类 ========== -->
+  <owl:Class rdf:about="#Entity">
+    <rdfs:label xml:lang="zh">实体</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Paper">
+    <rdfs:label xml:lang="zh">论文</rdfs:label>
+    <rdfs:subClassOf rdf:resource="#Entity"/>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Person">
+    <rdfs:label xml:lang="zh">人物</rdfs:label>
+    <rdfs:subClassOf rdf:resource="#Entity"/>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Author">
+    <rdfs:label xml:lang="zh">作者</rdfs:label>
+    <rdfs:subClassOf rdf:resource="#Person"/>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Organization">
+    <rdfs:label xml:lang="zh">机构</rdfs:label>
+    <rdfs:subClassOf rdf:resource="#Entity"/>
+    <!-- 机构与人物互斥 -->
+    <owl:disjointWith rdf:resource="#Person"/>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Concept">
+    <rdfs:label xml:lang="zh">概念</rdfs:label>
+    <rdfs:subClassOf rdf:resource="#Entity"/>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Method">
+    <rdfs:label xml:lang="zh">方法</rdfs:label>
+    <rdfs:subClassOf rdf:resource="#Concept"/>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Dataset">
+    <rdfs:label xml:lang="zh">数据集</rdfs:label>
+    <rdfs:subClassOf rdf:resource="#Concept"/>
+  </owl:Class>
+
+  <!-- 论文至少有 1 位作者（基数约束示例） -->
+  <owl:Class rdf:about="#Paper">
+    <rdfs:subClassOf>
+      <owl:Restriction>
+        <owl:onProperty rdf:resource="#writtenBy"/>
+        <owl:minCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minCardinality>
+      </owl:Restriction>
+    </rdfs:subClassOf>
+  </owl:Class>
+
+  <!-- ========== 对象属性 ========== -->
+  <owl:ObjectProperty rdf:about="#writtenBy">
+    <rdfs:label xml:lang="zh">撰写于</rdfs:label>
+    <rdfs:domain rdf:resource="#Paper"/>
+    <rdfs:range rdf:resource="#Author"/>
+    <owl:inverseOf rdf:resource="#writes"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#writes">
+    <rdfs:label xml:lang="zh">撰写</rdfs:label>
+    <rdfs:domain rdf:resource="#Author"/>
+    <rdfs:range rdf:resource="#Paper"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#affiliatedWith">
+    <rdfs:label xml:lang="zh">隶属于</rdfs:label>
+    <rdfs:domain rdf:resource="#Author"/>
+    <rdfs:range rdf:resource="#Organization"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#cites">
+    <rdfs:label xml:lang="zh">引用</rdfs:label>
+    <rdfs:domain rdf:resource="#Paper"/>
+    <rdfs:range rdf:resource="#Paper"/>
+    <rdf:type rdf:resource="&owl;IrreflexiveProperty"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#citedBy">
+    <rdfs:label xml:lang="zh">被引用</rdfs:label>
+    <owl:inverseOf rdf:resource="#cites"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#hasConcept">
+    <rdfs:label xml:lang="zh">包含概念</rdfs:label>
+    <rdfs:domain rdf:resource="#Paper"/>
+    <rdfs:range rdf:resource="#Concept"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#evaluatesOn">
+    <rdfs:label xml:lang="zh">评估于</rdfs:label>
+    <rdfs:domain rdf:resource="#Method"/>
+    <rdfs:range rdf:resource="#Dataset"/>
+  </owl:ObjectProperty>
+
+  <!-- ========== 数据属性 ========== -->
+  <owl:DatatypeProperty rdf:about="#title">
+    <rdfs:label xml:lang="zh">标题</rdfs:label>
+    <rdfs:domain rdf:resource="#Paper"/>
+    <rdfs:range rdf:resource="&xsd;string"/>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="#year">
+    <rdfs:label xml:lang="zh">年份</rdfs:label>
+    <rdfs:domain rdf:resource="#Paper"/>
+    <rdfs:range rdf:resource="&xsd;integer"/>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="#doi">
+    <rdfs:label>DOI</rdfs:label>
+    <rdfs:domain rdf:resource="#Paper"/>
+    <rdfs:range rdf:resource="&xsd;string"/>
+  </owl:DatatypeProperty>
+
+  <!-- ========== 少量实例（可一并导入） ========== -->
+  <kg:Author rdf:about="#ZhangMing">
+    <rdfs:label xml:lang="zh">张明</rdfs:label>
+    <kg:affiliatedWith rdf:resource="#Tsinghua"/>
+  </kg:Author>
+
+  <kg:Organization rdf:about="#Tsinghua">
+    <rdfs:label xml:lang="zh">清华大学</rdfs:label>
+  </kg:Organization>
+
+  <kg:Paper rdf:about="#PaperTKGEmbed">
+    <kg:title xml:lang="zh">基于Transformer的知识图谱嵌入方法研究</kg:title>
+    <kg:year rdf:datatype="&xsd;integer">2024</kg:year>
+    <kg:doi>10.1109/TKDE.2024.001</kg:doi>
+    <kg:writtenBy rdf:resource="#ZhangMing"/>
+    <kg:hasConcept rdf:resource="#TKGEmbed"/>
+  </kg:Paper>
+
+  <kg:Method rdf:about="#TKGEmbed">
+    <rdfs:label>TKGEmbed</rdfs:label>
+  </kg:Method>
+
+</rdf:RDF>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RDFS 样例：科技论文知识图谱词汇表
+  包含：类层级（rdfs:subClassOf）+ 属性定义（domain / range）
+-->
+<rdf:RDF
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+  xmlns:kg="http://example.org/scientific-kg#">
+
+  <!-- ========== 类定义与层级关系 ========== -->
+  <rdfs:Class rdf:about="http://example.org/scientific-kg#Entity">
+    <rdfs:label xml:lang="zh">实体</rdfs:label>
+    <rdfs:comment xml:lang="zh">图谱中所有节点的顶层类</rdfs:comment>
+  </rdfs:Class>
+
+  <rdfs:Class rdf:about="http://example.org/scientific-kg#Paper">
+    <rdfs:label xml:lang="zh">论文</rdfs:label>
+    <rdfs:subClassOf rdf:resource="http://example.org/scientific-kg#Entity"/>
+  </rdfs:Class>
+
+  <rdfs:Class rdf:about="http://example.org/scientific-kg#Person">
+    <rdfs:label xml:lang="zh">人物</rdfs:label>
+    <rdfs:subClassOf rdf:resource="http://example.org/scientific-kg#Entity"/>
+  </rdfs:Class>
+
+  <rdfs:Class rdf:about="http://example.org/scientific-kg#Author">
+    <rdfs:label xml:lang="zh">作者</rdfs:label>
+    <rdfs:subClassOf rdf:resource="http://example.org/scientific-kg#Person"/>
+  </rdfs:Class>
+
+  <rdfs:Class rdf:about="http://example.org/scientific-kg#Organization">
+    <rdfs:label xml:lang="zh">机构</rdfs:label>
+    <rdfs:subClassOf rdf:resource="http://example.org/scientific-kg#Entity"/>
+  </rdfs:Class>
+
+  <rdfs:Class rdf:about="http://example.org/scientific-kg#Concept">
+    <rdfs:label xml:lang="zh">概念</rdfs:label>
+    <rdfs:subClassOf rdf:resource="http://example.org/scientific-kg#Entity"/>
+  </rdfs:Class>
+
+  <rdfs:Class rdf:about="http://example.org/scientific-kg#Method">
+    <rdfs:label xml:lang="zh">方法</rdfs:label>
+    <rdfs:subClassOf rdf:resource="http://example.org/scientific-kg#Concept"/>
+  </rdfs:Class>
+
+  <rdfs:Class rdf:about="http://example.org/scientific-kg#Dataset">
+    <rdfs:label xml:lang="zh">数据集</rdfs:label>
+    <rdfs:subClassOf rdf:resource="http://example.org/scientific-kg#Concept"/>
+  </rdfs:Class>
+
+  <!-- ========== 对象属性（实体间关系） ========== -->
+  <rdf:Property rdf:about="http://example.org/scientific-kg#writtenBy">
+    <rdfs:label xml:lang="zh">撰写于</rdfs:label>
+    <rdfs:domain rdf:resource="http://example.org/scientific-kg#Paper"/>
+    <rdfs:range rdf:resource="http://example.org/scientific-kg#Author"/>
+  </rdf:Property>
+
+  <rdf:Property rdf:about="http://example.org/scientific-kg#affiliatedWith">
+    <rdfs:label xml:lang="zh">隶属于</rdfs:label>
+    <rdfs:domain rdf:resource="http://example.org/scientific-kg#Author"/>
+    <rdfs:range rdf:resource="http://example.org/scientific-kg#Organization"/>
+  </rdf:Property>
+
+  <rdf:Property rdf:about="http://example.org/scientific-kg#cites">
+    <rdfs:label xml:lang="zh">引用</rdfs:label>
+    <rdfs:domain rdf:resource="http://example.org/scientific-kg#Paper"/>
+    <rdfs:range rdf:resource="http://example.org/scientific-kg#Paper"/>
+  </rdf:Property>
+
+  <rdf:Property rdf:about="http://example.org/scientific-kg#hasConcept">
+    <rdfs:label xml:lang="zh">包含概念</rdfs:label>
+    <rdfs:domain rdf:resource="http://example.org/scientific-kg#Paper"/>
+    <rdfs:range rdf:resource="http://example.org/scientific-kg#Concept"/>
+  </rdf:Property>
+
+  <rdf:Property rdf:about="http://example.org/scientific-kg#evaluatesOn">
+    <rdfs:label xml:lang="zh">评估于</rdfs:label>
+    <rdfs:domain rdf:resource="http://example.org/scientific-kg#Method"/>
+    <rdfs:range rdf:resource="http://example.org/scientific-kg#Dataset"/>
+  </rdf:Property>
+
+  <!-- ========== 数据属性（字面量） ========== -->
+  <rdf:Property rdf:about="http://example.org/scientific-kg#title">
+    <rdfs:label xml:lang="zh">标题</rdfs:label>
+    <rdfs:domain rdf:resource="http://example.org/scientific-kg#Paper"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Property>
+
+  <rdf:Property rdf:about="http://example.org/scientific-kg#year">
+    <rdfs:label xml:lang="zh">年份</rdfs:label>
+    <rdfs:domain rdf:resource="http://example.org/scientific-kg#Paper"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+  </rdf:Property>
+
+</rdf:RDF>

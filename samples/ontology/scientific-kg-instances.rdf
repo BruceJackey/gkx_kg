@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RDF 样例：科技论文知识图谱实例数据
+  包含：论文 / 作者 / 机构 / 方法 / 数据集 及其相互关系（三元组）
+-->
+<rdf:RDF
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+  xmlns:kg="http://example.org/scientific-kg#">
+
+  <!-- 机构 -->
+  <kg:Organization rdf:about="http://example.org/scientific-kg#Tsinghua">
+    <rdfs:label xml:lang="zh">清华大学</rdfs:label>
+  </kg:Organization>
+
+  <kg:Organization rdf:about="http://example.org/scientific-kg#PKU">
+    <rdfs:label xml:lang="zh">北京大学</rdfs:label>
+  </kg:Organization>
+
+  <!-- 作者 -->
+  <kg:Author rdf:about="http://example.org/scientific-kg#ZhangMing">
+    <rdfs:label xml:lang="zh">张明</rdfs:label>
+    <kg:affiliatedWith rdf:resource="http://example.org/scientific-kg#Tsinghua"/>
+  </kg:Author>
+
+  <kg:Author rdf:about="http://example.org/scientific-kg#LiHua">
+    <rdfs:label xml:lang="zh">李华</rdfs:label>
+    <kg:affiliatedWith rdf:resource="http://example.org/scientific-kg#PKU"/>
+  </kg:Author>
+
+  <kg:Author rdf:about="http://example.org/scientific-kg#WangQiang">
+    <rdfs:label xml:lang="zh">王强</rdfs:label>
+    <kg:affiliatedWith rdf:resource="http://example.org/scientific-kg#Tsinghua"/>
+  </kg:Author>
+
+  <!-- 方法与数据集 -->
+  <kg:Method rdf:about="http://example.org/scientific-kg#TKGEmbed">
+    <rdfs:label>TKGEmbed</rdfs:label>
+    <kg:evaluatesOn rdf:resource="http://example.org/scientific-kg#FB15k237"/>
+    <kg:evaluatesOn rdf:resource="http://example.org/scientific-kg#WN18RR"/>
+  </kg:Method>
+
+  <kg:Method rdf:about="http://example.org/scientific-kg#TransE">
+    <rdfs:label>TransE</rdfs:label>
+  </kg:Method>
+
+  <kg:Dataset rdf:about="http://example.org/scientific-kg#FB15k237">
+    <rdfs:label>FB15k-237</rdfs:label>
+  </kg:Dataset>
+
+  <kg:Dataset rdf:about="http://example.org/scientific-kg#WN18RR">
+    <rdfs:label>WN18RR</rdfs:label>
+  </kg:Dataset>
+
+  <kg:Concept rdf:about="http://example.org/scientific-kg#KnowledgeGraphEmbedding">
+    <rdfs:label xml:lang="zh">知识图谱嵌入</rdfs:label>
+  </kg:Concept>
+
+  <kg:Concept rdf:about="http://example.org/scientific-kg#Transformer">
+    <rdfs:label>Transformer</rdfs:label>
+  </kg:Concept>
+
+  <!-- 论文实例 + 关系 -->
+  <kg:Paper rdf:about="http://example.org/scientific-kg#PaperTKGEmbed">
+    <kg:title xml:lang="zh">基于Transformer的知识图谱嵌入方法研究</kg:title>
+    <kg:year rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">2024</kg:year>
+    <kg:writtenBy rdf:resource="http://example.org/scientific-kg#ZhangMing"/>
+    <kg:writtenBy rdf:resource="http://example.org/scientific-kg#LiHua"/>
+    <kg:writtenBy rdf:resource="http://example.org/scientific-kg#WangQiang"/>
+    <kg:hasConcept rdf:resource="http://example.org/scientific-kg#KnowledgeGraphEmbedding"/>
+    <kg:hasConcept rdf:resource="http://example.org/scientific-kg#Transformer"/>
+    <kg:hasConcept rdf:resource="http://example.org/scientific-kg#TKGEmbed"/>
+    <kg:cites rdf:resource="http://example.org/scientific-kg#PaperTransE"/>
+  </kg:Paper>
+
+  <kg:Paper rdf:about="http://example.org/scientific-kg#PaperTransE">
+    <kg:title>Translating Embeddings for Modeling Multi-relational Data</kg:title>
+    <kg:year rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">2013</kg:year>
+    <kg:hasConcept rdf:resource="http://example.org/scientific-kg#TransE"/>
+    <kg:hasConcept rdf:resource="http://example.org/scientific-kg#KnowledgeGraphEmbedding"/>
+  </kg:Paper>
+
+</rdf:RDF>
