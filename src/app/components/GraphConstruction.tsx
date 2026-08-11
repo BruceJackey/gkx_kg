@@ -2,8 +2,9 @@ import { useState } from 'react';
 import type { ElementType } from 'react';
 import {
   Plus, Trash2, RotateCcw, CheckCircle2, Database, Layers, Shield,
-  Wifi, SlidersHorizontal, Globe, Server, AlertCircle, ChevronRight, Play,
+  Wifi, SlidersHorizontal, Globe, Server, AlertCircle, ChevronRight, Play, Users,
 } from 'lucide-react';
+import { REVIEWER_OPTIONS, saveReviewTask } from '../utils/reviewAssignment';
 
 type TabId = 'data' | 'scope' | 'rules' | 'remote' | 'threshold';
 
@@ -90,6 +91,9 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
   // 阈值
   const [threshold, setThreshold] = useState(75);
 
+  // 审核员（提交前必选 1–2 人）
+  const [reviewerIds, setReviewerIds] = useState<string[]>(['user_003', 'user_002']);
+
   // 多策略权重 (0-100, 归一化后使用)
   const [weights, setWeights] = useState({ rule: 40, dict: 30, ml: 30 });
   const totalWeight = weights.rule + weights.dict + weights.ml;
@@ -126,10 +130,20 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
   const enabledRemote = remoteServices.filter(s => s.enabled).length;
   const thresholdColor = threshold >= 80 ? 'text-green-600' : threshold >= 60 ? 'text-amber-500' : 'text-red-500';
 
-  const configValid = !!selectedOntoId && !!selectedDsId && (isStructured ? !!selectedMappingId : true) && checkedEntities.length > 0;
+  const reviewersOk = reviewerIds.length >= 1 && reviewerIds.length <= 2;
+  const configValid = !!selectedOntoId && !!selectedDsId && (isStructured ? !!selectedMappingId : true) && checkedEntities.length > 0 && reviewersOk;
   const configReason = !selectedOntoId ? '请选择本体' : !selectedDsId ? '请选择数据源'
     : (isStructured && !selectedMappingId) ? '结构化数据源需要选择映射模板'
-    : checkedEntities.length === 0 ? '请至少选择一个实体类型' : '';
+    : checkedEntities.length === 0 ? '请至少选择一个实体类型'
+    : !reviewersOk ? '请配置 1–2 名审核员' : '';
+
+  const toggleReviewer = (id: string) => {
+    setReviewerIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= 2) return prev;
+      return [...prev, id];
+    });
+  };
 
   const toggleEntity = (name: string) => setCheckedEntities(p => p.includes(name) ? p.filter(x => x !== name) : [...p, name]);
   const toggleRelation = (name: string) => setCheckedRelations(p => p.includes(name) ? p.filter(x => x !== name) : [...p, name]);
@@ -153,11 +167,19 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
     setCheckedEntities(['论文', '作者', '机构', '概念']);
     setCheckedRelations(['WRITTEN_BY', 'AFFILIATED_WITH']);
     setGlobalRules(['r1', 'r2']); setFieldRules([]); setRelationRules([]);
-    setRemoteServices([]); setThreshold(75); setActiveTab('data');
+    setRemoteServices([]); setThreshold(75); setReviewerIds(['user_003', 'user_002']); setActiveTab('data');
   };
 
   const handleSubmit = () => {
+    if (!configValid) return;
     setSubmitting(true);
+    saveReviewTask({
+      id: `task-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      ontologyName: currentOnto.name,
+      datasourceName: currentDS?.name ?? '',
+      reviewerIds: [...reviewerIds],
+    });
     setTimeout(() => { setSubmitting(false); onNavigateTo?.('graph-tasks'); }, 800);
   };
 
@@ -667,6 +689,50 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
           </div>
         </div>
 
+        {/* 审核员配置 */}
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+              <Users className="w-4 h-4 text-blue-600" />审核员配置
+            </div>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${reviewersOk ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+              已选 {reviewerIds.length}/2
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">提交构造任务前须指定 1–2 名审核员；仅被分配者可在人工审核页看到本任务条目，并可查看彼此审核标记。</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {REVIEWER_OPTIONS.map(r => {
+              const checked = reviewerIds.includes(r.id);
+              const disabled = !checked && reviewerIds.length >= 2;
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => toggleReviewer(r.id)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                    checked
+                      ? 'border-blue-400 bg-blue-50 text-blue-700'
+                      : disabled
+                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50/40'
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 text-[10px] ${
+                    checked ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 bg-white'
+                  }`}>
+                    {checked ? '✓' : ''}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium truncate">{r.name}</span>
+                    <span className="block text-[10px] text-gray-400 truncate">@{r.username}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* 综合置信度阈值 */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
@@ -765,6 +831,11 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
               {totalRules > 0 && <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full">{totalRules} 规则绑定</span>}
               {enabledRemote > 0 && <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">{enabledRemote} 远程服务</span>}
               <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{syncMode}</span>
+              {reviewerIds.length > 0 && (
+                <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
+                  审核员：{reviewerIds.map(id => REVIEWER_OPTIONS.find(r => r.id === id)?.name).filter(Boolean).join('、')}
+                </span>
+              )}
             </div>
           </div>
           <button onClick={handleReset}

@@ -78,7 +78,7 @@ const initDocs: KnowledgeDoc[] = [
   {
     id: 'd3', type: '文献', format: 'HTML', title: '面向科研领域的知识图谱构建与应用综述',
     authors: ['刘芳', '陈志远'], journal: 'ACM SIGKDD', year: 2023,
-    impactFactor: 7.2, citations: 256, doi: '10.1145/KDD.2023.003',
+    impactFactor: 7.2, citations: 256,
     tags: ['知识图谱', '综述'],
     folderId: 'f1', uploadedAt: '2026-06-05', status: 'ready',
     abstract: '本文系统综述了近年来面向科研领域的知识图谱构建技术与应用场景。',
@@ -977,6 +977,25 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                         <dd className="text-gray-700 flex items-center">
                           {selectedDoc.year}
                           {selectedDoc.metadataAutoFilled && <AIBadge />}
+                        </dd>
+                      </div>
+                    )}
+                    {selectedDoc.type === '文献' && (
+                      <div className="flex gap-2 text-xs">
+                        <dt className="text-gray-400 w-14 flex-shrink-0">DOI</dt>
+                        <dd className="text-gray-700 break-all">
+                          {selectedDoc.doi ? (
+                            <a
+                              href={`https://doi.org/${selectedDoc.doi}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline font-mono text-[11px]"
+                            >
+                              {selectedDoc.doi}
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">无</span>
+                          )}
                         </dd>
                       </div>
                     )}

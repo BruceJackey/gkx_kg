@@ -1,6 +1,15 @@
-import { useState } from 'react';
-import { Check, X, Edit2, GitMerge, Search, Tag, GitBranch, CalendarDays, AlertTriangle, CheckSquare, ScanLine, Workflow, ChevronDown, ChevronRight, BookMarked, ArrowRight, Sparkles, Filter } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Check, X, Edit2, GitMerge, Search, Tag, GitBranch, CalendarDays, AlertTriangle, CheckSquare, ScanLine, Workflow, ChevronDown, ChevronRight, BookMarked, ArrowRight, Sparkles, Filter, Users } from 'lucide-react';
 import { SeedTermPanel, HyponymyPanel, EventReviewPanel, ConflictManagementPanel } from './TermReview';
+import {
+  REVIEWER_OPTIONS,
+  getLatestReviewTask,
+  getCurrentReviewerId,
+  setCurrentReviewerId,
+  buildPeerReviews,
+  type PeerReviewMark,
+  type PeerReviewResult,
+} from '../utils/reviewAssignment';
 
 type CandidateType = 'entity' | 'relation' | 'attribute';
 type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'modified';
@@ -9,29 +18,52 @@ interface ReviewCandidate {
   sourceDoc: string; context: string; confidence: number;
   hitRules: string[]; conflictReason: string; schemaHint: string;
   status: ReviewStatus; modifiedContent?: string;
-  fromScan?: boolean; // flagged by consistency scan
+  fromScan?: boolean;
+  /** Reviewers who can see this item (from construction task config) */
+  assigneeIds: string[];
+  peerReviews: PeerReviewMark[];
+}
+
+const R_ZS_WY = ['user_003', 'user_002']; // 张三、王研
+const R_ZQ = ['user_005', 'user_006'];     // 赵六、钱七
+
+function withAssignees(
+  base: Omit<ReviewCandidate, 'assigneeIds' | 'peerReviews' | 'status'> & { status: ReviewStatus },
+  assigneeIds: string[],
+  seedPeers?: Partial<Record<string, PeerReviewResult>>,
+): ReviewCandidate {
+  const peerReviews = buildPeerReviews(assigneeIds).map(p => ({
+    ...p,
+    result: seedPeers?.[p.userId] ?? (base.status !== 'pending' && p.userId === assigneeIds[0] ? base.status : 'pending'),
+  }));
+  return { ...base, assigneeIds, peerReviews };
 }
 
 const MOCK_CANDIDATES: ReviewCandidate[] = [
-  { id: 'rc1', type: 'entity', content: '多伦多大学', entityType: '机构', sourceDoc: 'papers#2341', context: '...作者Geoffrey Hinton就职于多伦多大学计算机系...', confidence: 0.65, hitRules: ['机构别名合并'], conflictReason: '与已有实体「University of Toronto」存在别名冲突', schemaHint: 'Institution.name', status: 'pending' },
-  { id: 'rc2', type: 'entity', content: 'Yoshua Bengio', entityType: '作者', sourceDoc: 'authors#203', context: '...与Hinton、LeCun共同获得图灵奖...', confidence: 0.72, hitRules: [], conflictReason: '', schemaHint: 'Author.name', status: 'pending' },
-  { id: 'rc3', type: 'relation', content: 'CITES', entityType: '关系', sourceDoc: 'papers#2341→papers#1892', context: '论文引用关系，置信度偏低', confidence: 0.45, hitRules: ['引用关系验证'], conflictReason: '引用链不完整，缺少中间文献', schemaHint: 'Paper→Paper', status: 'pending' },
-  { id: 'rc4', type: 'attribute', content: 'impact_factor=8.3', entityType: '论文', sourceDoc: 'papers#2341', context: 'IF值来源不明确', confidence: 0.38, hitRules: [], conflictReason: '属性值超出已知范围', schemaHint: 'Paper.impact_factor', status: 'pending' },
-  { id: 'rc5', type: 'entity', content: '蒙特利尔学习算法研究所', entityType: '机构', sourceDoc: 'institutions#92', context: '...Bengio创立的AI研究机构...', confidence: 0.58, hitRules: [], conflictReason: '名称较长，可能存在缩写冲突', schemaHint: 'Institution.name', status: 'approved' },
-  { id: 'rc6', type: 'relation', content: 'AFFILIATED_WITH', entityType: '关系', sourceDoc: 'authors#203→institutions#92', context: 'Bengio与MILA的关联', confidence: 0.70, hitRules: ['作者名称标准化'], conflictReason: '', schemaHint: 'Author→Institution', status: 'pending' },
-  { id: 'rc7', type: 'entity', content: '卷积神经网络', entityType: '概念', sourceDoc: 'papers#1892', context: '...CNN在图像识别领域的突破性应用...', confidence: 0.55, hitRules: [], conflictReason: '与「CNN」别名未关联', schemaHint: 'Concept.term', status: 'rejected' },
-  { id: 'rc8', type: 'attribute', content: 'pub_year=2012', entityType: '论文', sourceDoc: 'papers#1892', context: '发表年份字段，来源于元数据', confidence: 0.60, hitRules: [], conflictReason: '年份格式不标准', schemaHint: 'Paper.pub_year', status: 'pending' },
-  { id: 'rc9', type: 'entity', content: 'Yann LeCun', entityType: '作者', sourceDoc: 'authors#301', context: '...Facebook AI研究院院长...', confidence: 0.75, hitRules: [], conflictReason: '', schemaHint: 'Author.name', status: 'pending' },
-  { id: 'rc10', type: 'relation', content: 'HAS_CONCEPT', entityType: '关系', sourceDoc: 'papers#3011→concept#55', context: '论文主题相关概念', confidence: 0.50, hitRules: [], conflictReason: '概念边界不清晰', schemaHint: 'Paper→Concept', status: 'pending' },
-  { id: 'rc11', type: 'attribute', content: 'citation_count=45320', entityType: '论文', sourceDoc: 'papers#2341', context: '引用次数统计', confidence: 0.79, hitRules: [], conflictReason: '', schemaHint: 'Paper.citation_count', status: 'approved' },
-  { id: 'rc12', type: 'entity', content: 'Facebook AI Research', entityType: '机构', sourceDoc: 'institutions#205', context: '...现更名为Meta AI...', confidence: 0.62, hitRules: ['机构别名合并'], conflictReason: '机构已更名，需确认使用旧名或新名', schemaHint: 'Institution.name', status: 'pending' },
-  // ── 以下来自数据一致性扫描 ──
-  { id: 'scan-1', type: 'attribute', content: 'pub_year=2099', entityType: '论文', sourceDoc: 'papers#4521', context: '发表年份属性值超出本体定义范围 1900–2026', confidence: 0.20, hitRules: ['属性值范围校验'], conflictReason: '属性值超出范围：期望 1900–2026，实际 2099', schemaHint: 'Paper.pub_year', status: 'pending', fromScan: true },
-  { id: 'scan-2', type: 'relation', content: 'AUTHORED_BY(论文#4521→机构#88)', entityType: '关系', sourceDoc: 'papers#4521→institutions#88', context: 'AUTHORED_BY 目标端应为 Person，实际指向 Institution', confidence: 0.15, hitRules: ['关系端点类型校验'], conflictReason: '关系不符合本体定义：目标类型应为 Person，实际为 Institution', schemaHint: 'Paper -[AUTHORED_BY]-> Person', status: 'pending', fromScan: true },
-  { id: 'scan-3', type: 'entity', content: '作者#7721 (Wang Fang)', entityType: '作者', sourceDoc: 'authors#7721', context: '孤立实体：无任何出入度关系，不符合图谱完整性规则', confidence: 0.30, hitRules: ['孤立实体检测'], conflictReason: '孤立实体，期望至少 1 条关联关系，实际 0 条', schemaHint: 'Author', status: 'pending', fromScan: true },
-  { id: 'scan-4', type: 'attribute', content: 'status=archived', entityType: '论文', sourceDoc: 'papers#3312', context: 'status 字段值不在枚举列表 draft|published|retracted 中', confidence: 0.25, hitRules: ['枚举值合规校验'], conflictReason: '属性枚举值不合规：期望 draft|published|retracted，实际 archived', schemaHint: 'Paper.status', status: 'pending', fromScan: true },
+  withAssignees({ id: 'rc1', type: 'entity', content: '多伦多大学', entityType: '机构', sourceDoc: 'papers#2341', context: '...作者Geoffrey Hinton就职于多伦多大学计算机系...', confidence: 0.65, hitRules: ['机构别名合并'], conflictReason: '与已有实体「University of Toronto」存在别名冲突', schemaHint: 'Institution.name', status: 'pending' }, R_ZS_WY, { user_002: 'approved' }),
+  withAssignees({ id: 'rc2', type: 'entity', content: 'Yoshua Bengio', entityType: '作者', sourceDoc: 'authors#203', context: '...与Hinton、LeCun共同获得图灵奖...', confidence: 0.72, hitRules: [], conflictReason: '', schemaHint: 'Author.name', status: 'pending' }, R_ZS_WY),
+  withAssignees({ id: 'rc3', type: 'relation', content: 'CITES', entityType: '关系', sourceDoc: 'papers#2341→papers#1892', context: '论文引用关系，置信度偏低', confidence: 0.45, hitRules: ['引用关系验证'], conflictReason: '引用链不完整，缺少中间文献', schemaHint: 'Paper→Paper', status: 'pending' }, R_ZS_WY, { user_003: 'rejected' }),
+  withAssignees({ id: 'rc4', type: 'attribute', content: 'impact_factor=8.3', entityType: '论文', sourceDoc: 'papers#2341', context: 'IF值来源不明确', confidence: 0.38, hitRules: [], conflictReason: '属性值超出已知范围', schemaHint: 'Paper.impact_factor', status: 'pending' }, R_ZS_WY),
+  withAssignees({ id: 'rc5', type: 'entity', content: '蒙特利尔学习算法研究所', entityType: '机构', sourceDoc: 'institutions#92', context: '...Bengio创立的AI研究机构...', confidence: 0.58, hitRules: [], conflictReason: '名称较长，可能存在缩写冲突', schemaHint: 'Institution.name', status: 'approved' }, R_ZS_WY, { user_003: 'approved', user_002: 'approved' }),
+  withAssignees({ id: 'rc6', type: 'relation', content: 'AFFILIATED_WITH', entityType: '关系', sourceDoc: 'authors#203→institutions#92', context: 'Bengio与MILA的关联', confidence: 0.70, hitRules: ['作者名称标准化'], conflictReason: '', schemaHint: 'Author→Institution', status: 'pending' }, R_ZS_WY),
+  withAssignees({ id: 'rc7', type: 'entity', content: '卷积神经网络', entityType: '概念', sourceDoc: 'papers#1892', context: '...CNN在图像识别领域的突破性应用...', confidence: 0.55, hitRules: [], conflictReason: '与「CNN」别名未关联', schemaHint: 'Concept.term', status: 'rejected' }, R_ZS_WY, { user_003: 'rejected', user_002: 'modified' }),
+  withAssignees({ id: 'rc8', type: 'attribute', content: 'pub_year=2012', entityType: '论文', sourceDoc: 'papers#1892', context: '发表年份字段，来源于元数据', confidence: 0.60, hitRules: [], conflictReason: '年份格式不标准', schemaHint: 'Paper.pub_year', status: 'pending' }, R_ZS_WY),
+  withAssignees({ id: 'rc9', type: 'entity', content: 'Yann LeCun', entityType: '作者', sourceDoc: 'authors#301', context: '...Facebook AI研究院院长...', confidence: 0.75, hitRules: [], conflictReason: '', schemaHint: 'Author.name', status: 'pending' }, R_ZQ),
+  withAssignees({ id: 'rc10', type: 'relation', content: 'HAS_CONCEPT', entityType: '关系', sourceDoc: 'papers#3011→concept#55', context: '论文主题相关概念', confidence: 0.50, hitRules: [], conflictReason: '概念边界不清晰', schemaHint: 'Paper→Concept', status: 'pending' }, R_ZQ, { user_005: 'approved' }),
+  withAssignees({ id: 'rc11', type: 'attribute', content: 'citation_count=45320', entityType: '论文', sourceDoc: 'papers#2341', context: '引用次数统计', confidence: 0.79, hitRules: [], conflictReason: '', schemaHint: 'Paper.citation_count', status: 'approved' }, R_ZS_WY, { user_003: 'approved', user_002: 'approved' }),
+  withAssignees({ id: 'rc12', type: 'entity', content: 'Facebook AI Research', entityType: '机构', sourceDoc: 'institutions#205', context: '...现更名为Meta AI...', confidence: 0.62, hitRules: ['机构别名合并'], conflictReason: '机构已更名，需确认使用旧名或新名', schemaHint: 'Institution.name', status: 'pending' }, R_ZS_WY),
+  withAssignees({ id: 'scan-1', type: 'attribute', content: 'pub_year=2099', entityType: '论文', sourceDoc: 'papers#4521', context: '发表年份属性值超出本体定义范围 1900–2026', confidence: 0.20, hitRules: ['属性值范围校验'], conflictReason: '属性值超出范围：期望 1900–2026，实际 2099', schemaHint: 'Paper.pub_year', status: 'pending', fromScan: true }, R_ZS_WY),
+  withAssignees({ id: 'scan-2', type: 'relation', content: 'AUTHORED_BY(论文#4521→机构#88)', entityType: '关系', sourceDoc: 'papers#4521→institutions#88', context: 'AUTHORED_BY 目标端应为 Person，实际指向 Institution', confidence: 0.15, hitRules: ['关系端点类型校验'], conflictReason: '关系不符合本体定义：目标类型应为 Person，实际为 Institution', schemaHint: 'Paper -[AUTHORED_BY]-> Person', status: 'pending', fromScan: true }, R_ZS_WY),
+  withAssignees({ id: 'scan-3', type: 'entity', content: '作者#7721 (Wang Fang)', entityType: '作者', sourceDoc: 'authors#7721', context: '孤立实体：无任何出入度关系，不符合图谱完整性规则', confidence: 0.30, hitRules: ['孤立实体检测'], conflictReason: '孤立实体，期望至少 1 条关联关系，实际 0 条', schemaHint: 'Author', status: 'pending', fromScan: true }, R_ZQ),
+  withAssignees({ id: 'scan-4', type: 'attribute', content: 'status=archived', entityType: '论文', sourceDoc: 'papers#3312', context: 'status 字段值不在枚举列表 draft|published|retracted 中', confidence: 0.25, hitRules: ['枚举值合规校验'], conflictReason: '属性枚举值不合规：期望 draft|published|retracted，实际 archived', schemaHint: 'Paper.status', status: 'pending', fromScan: true }, R_ZQ),
 ];
 
+const PEER_RESULT_META: Record<PeerReviewResult, { label: string; className: string; mark: string }> = {
+  pending:  { label: '待审', className: 'bg-gray-100 text-gray-500 border-gray-200', mark: '·' },
+  approved: { label: '通过', className: 'bg-green-50 text-green-700 border-green-200', mark: '✓' },
+  rejected: { label: '拒绝', className: 'bg-red-50 text-red-600 border-red-200', mark: '✗' },
+  modified: { label: '修改', className: 'bg-blue-50 text-blue-600 border-blue-200', mark: '✎' },
+};
 const ENTITY_TYPES = ['机构', '作者', '概念', '论文'];
 const CONFLICT_TYPES = ['别名冲突', '属性超范围', '引用不完整', '格式不标准'];
 
@@ -581,6 +613,7 @@ function MappingRulesPanel() {
 function KGReviewPanel() {
   const [innerTab, setInnerTab] = useState<'candidates' | 'mapping-rules'>('candidates');
   const [candidates, setCandidates] = useState<ReviewCandidate[]>(MOCK_CANDIDATES);
+  const [currentUserId, setCurrentUserIdState] = useState(getCurrentReviewerId);
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
@@ -594,17 +627,81 @@ function KGReviewPanel() {
   const [editEntityType, setEditEntityType] = useState('');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
+  const latestTask = useMemo(() => getLatestReviewTask(), [candidates, currentUserId]);
+
+  // When a construction task was submitted, apply its reviewers to non-scan construction items
+  useEffect(() => {
+    const task = getLatestReviewTask();
+    if (!task?.reviewerIds?.length) return;
+    setCandidates(prev => prev.map(c => {
+      if (c.fromScan) return c;
+      // Keep demo-only ZQ bucket separate unless they're in the new task
+      if (c.assigneeIds.every(id => R_ZQ.includes(id)) && !task.reviewerIds.some(id => R_ZQ.includes(id))) {
+        return c;
+      }
+      if (c.assigneeIds.join() === task.reviewerIds.join()) return c;
+      const peerReviews = buildPeerReviews(task.reviewerIds).map(p => {
+        const old = c.peerReviews.find(x => x.userId === p.userId);
+        return old ?? p;
+      });
+      return { ...c, assigneeIds: [...task.reviewerIds], peerReviews };
+    }));
+  }, []);
+
+  const switchUser = (id: string) => {
+    setCurrentReviewerId(id);
+    setCurrentUserIdState(id);
+    setSelected([]);
+  };
+
+  const myVisible = useMemo(
+    () => candidates.filter(c => c.assigneeIds.includes(currentUserId)),
+    [candidates, currentUserId],
+  );
+
+  const applyMyResult = (id: string, result: PeerReviewResult, modifiedContent?: string) => {
+    setCandidates(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const peerReviews = c.peerReviews.map(p =>
+        p.userId === currentUserId ? { ...p, result } : p,
+      );
+      // Ensure current user has a slot
+      if (!peerReviews.some(p => p.userId === currentUserId)) {
+        const me = REVIEWER_OPTIONS.find(r => r.id === currentUserId);
+        peerReviews.push({ userId: currentUserId, name: me?.name ?? currentUserId, result });
+      }
+      return {
+        ...c,
+        status: result,
+        modifiedContent: result === 'modified' ? modifiedContent : c.modifiedContent,
+        peerReviews,
+      };
+    }));
+  };
+
   const updateStatus = (id: string, status: ReviewStatus, modifiedContent?: string) => {
-    setCandidates(prev => prev.map(c => c.id === id ? { ...c, status, modifiedContent } : c));
+    applyMyResult(id, status, modifiedContent);
   };
 
   const bulkApprove = () => {
-    setCandidates(prev => prev.map(c => selected.includes(c.id) ? { ...c, status: 'approved' } : c));
+    setCandidates(prev => prev.map(c => {
+      if (!selected.includes(c.id)) return c;
+      const peerReviews = c.peerReviews.map(p =>
+        p.userId === currentUserId ? { ...p, result: 'approved' as PeerReviewResult } : p,
+      );
+      return { ...c, status: 'approved' as ReviewStatus, peerReviews };
+    }));
     setSelected([]);
   };
 
   const bulkReject = () => {
-    setCandidates(prev => prev.map(c => selected.includes(c.id) ? { ...c, status: 'rejected' } : c));
+    setCandidates(prev => prev.map(c => {
+      if (!selected.includes(c.id)) return c;
+      const peerReviews = c.peerReviews.map(p =>
+        p.userId === currentUserId ? { ...p, result: 'rejected' as PeerReviewResult } : p,
+      );
+      return { ...c, status: 'rejected' as ReviewStatus, peerReviews };
+    }));
     setSelected([]);
   };
 
@@ -627,33 +724,44 @@ function KGReviewPanel() {
     setEditCandidate(null);
   };
 
-  const filtered = candidates.filter(c => {
+  const filtered = myVisible.filter(c => {
+    const myResult = c.peerReviews.find(p => p.userId === currentUserId)?.result ?? 'pending';
     if (search && !c.content.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterType && c.type !== filterType) return false;
     if (filterEntityType && c.entityType !== filterEntityType) return false;
     if (filterConfidence === '>60' && c.confidence <= 0.6) return false;
     if (filterConfidence === '40-60' && (c.confidence < 0.4 || c.confidence > 0.6)) return false;
     if (filterConfidence === '<40' && c.confidence >= 0.4) return false;
-    if (filterStatus && c.status !== filterStatus) return false;
+    if (filterStatus && myResult !== filterStatus) return false;
     if (filterSource === 'scan' && !c.fromScan) return false;
     if (filterSource === 'normal' && c.fromScan) return false;
     return true;
   });
 
-  const scanPendingCount = candidates.filter(c => c.fromScan && c.status === 'pending').length;
+  const scanPendingCount = myVisible.filter(c => {
+    const myResult = c.peerReviews.find(p => p.userId === currentUserId)?.result ?? 'pending';
+    return c.fromScan && myResult === 'pending';
+  }).length;
+
+  const myResultOf = (c: ReviewCandidate) =>
+    c.peerReviews.find(p => p.userId === currentUserId)?.result ?? 'pending';
 
   const stats = {
-    pending: candidates.filter(c => c.status === 'pending').length,
-    approved: candidates.filter(c => c.status === 'approved' || c.status === 'modified').length,
-    rejected: candidates.filter(c => c.status === 'rejected').length,
-    conflict: candidates.filter(c => c.conflictReason).length,
-    avgConf: Math.round(candidates.reduce((s, c) => s + c.confidence, 0) / candidates.length * 100),
+    pending: myVisible.filter(c => myResultOf(c) === 'pending').length,
+    approved: myVisible.filter(c => myResultOf(c) === 'approved' || myResultOf(c) === 'modified').length,
+    rejected: myVisible.filter(c => myResultOf(c) === 'rejected').length,
+    conflict: myVisible.filter(c => c.conflictReason).length,
+    avgConf: myVisible.length
+      ? Math.round(myVisible.reduce((s, c) => s + c.confidence, 0) / myVisible.length * 100)
+      : 0,
   };
 
-  const approvedCount = candidates.filter(c => c.status === 'approved' || c.status === 'modified').length;
-  const entityCount = candidates.filter(c => (c.status === 'approved' || c.status === 'modified') && c.type === 'entity').length;
-  const relationCount = candidates.filter(c => (c.status === 'approved' || c.status === 'modified') && c.type === 'relation').length;
-  const rejectedCount = candidates.filter(c => c.status === 'rejected').length;
+  const approvedCount = myVisible.filter(c => myResultOf(c) === 'approved' || myResultOf(c) === 'modified').length;
+  const entityCount = myVisible.filter(c => (myResultOf(c) === 'approved' || myResultOf(c) === 'modified') && c.type === 'entity').length;
+  const relationCount = myVisible.filter(c => (myResultOf(c) === 'approved' || myResultOf(c) === 'modified') && c.type === 'relation').length;
+  const rejectedCount = myVisible.filter(c => myResultOf(c) === 'rejected').length;
+  const currentUser = REVIEWER_OPTIONS.find(r => r.id === currentUserId);
+  const hiddenCount = candidates.length - myVisible.length;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -663,7 +771,7 @@ function KGReviewPanel() {
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${innerTab === 'candidates' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
           <CheckSquare className="w-4 h-4" />候选数据
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-0.5 ${innerTab === 'candidates' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
-            {MOCK_CANDIDATES.filter(c => c.status === 'pending').length}
+            {myVisible.filter(c => (c.peerReviews.find(p => p.userId === currentUserId)?.result ?? 'pending') === 'pending').length}
           </span>
         </button>
         <button onClick={() => setInnerTab('mapping-rules')}
@@ -680,6 +788,31 @@ function KGReviewPanel() {
 
       {/* Candidates tab — everything below only renders when innerTab === 'candidates' */}
       {innerTab === 'candidates' && <>
+
+      {/* Reviewer context bar */}
+      <div className="flex-shrink-0 bg-indigo-50/80 border-b border-indigo-100 px-6 py-2.5 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1.5 text-xs text-indigo-700 font-medium">
+          <Users className="w-3.5 h-3.5" />当前审核身份
+        </div>
+        <select
+          value={currentUserId}
+          onChange={e => switchUser(e.target.value)}
+          className="border border-indigo-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:border-indigo-400"
+        >
+          {REVIEWER_OPTIONS.map(r => (
+            <option key={r.id} value={r.id}>{r.name}（@{r.username}）</option>
+          ))}
+        </select>
+        <span className="text-xs text-indigo-600/80">
+          可见 {myVisible.length} 条
+          {hiddenCount > 0 && <span className="text-indigo-400"> · 另有 {hiddenCount} 条未分配给你</span>}
+        </span>
+        {latestTask && (
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-indigo-200 text-indigo-600">
+            最近任务审核员：{latestTask.reviewerIds.map(id => REVIEWER_OPTIONS.find(r => r.id === id)?.name ?? id).join('、')}
+          </span>
+        )}
+      </div>
 
       {/* Stats bar */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
@@ -778,11 +911,20 @@ function KGReviewPanel() {
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">置信度</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">命中规则</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">冲突原因</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">状态</th>
+                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">审核员标记</th>
+                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">我的状态</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400">
+                    当前身份「{currentUser?.name}」没有可审核条目
+                    {hiddenCount > 0 ? `（另有 ${hiddenCount} 条分配给其他审核员）` : ''}
+                  </td>
+                </tr>
+              )}
               {filtered.map(c => (
                 <tr key={c.id} className={selected.includes(c.id) ? 'bg-blue-50' : ''}>
                   <td className="px-4 py-3">
@@ -829,14 +971,37 @@ function KGReviewPanel() {
                     ) : <span className="text-xs text-gray-300">无</span>}
                   </td>
                   <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {c.peerReviews.map(p => {
+                        const meta = PEER_RESULT_META[p.result];
+                        const isMe = p.userId === currentUserId;
+                        return (
+                          <span
+                            key={p.userId}
+                            title={`${p.name}：${meta.label}`}
+                            className={`inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border font-medium ${meta.className} ${isMe ? 'ring-1 ring-indigo-300' : ''}`}
+                          >
+                            <span className="opacity-70">{meta.mark}</span>
+                            {p.name}{isMe ? '·我' : ''}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const myStatus = c.peerReviews.find(p => p.userId === currentUserId)?.result ?? 'pending';
+                      return (
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      c.status === 'pending' ? 'bg-amber-50 text-amber-600' :
-                      c.status === 'approved' ? 'bg-green-50 text-green-600' :
-                      c.status === 'modified' ? 'bg-blue-50 text-blue-600' :
+                      myStatus === 'pending' ? 'bg-amber-50 text-amber-600' :
+                      myStatus === 'approved' ? 'bg-green-50 text-green-600' :
+                      myStatus === 'modified' ? 'bg-blue-50 text-blue-600' :
                       'bg-red-50 text-red-500'
                     }`}>
-                      {c.status === 'pending' ? '待审核' : c.status === 'approved' ? '已通过' : c.status === 'modified' ? '已修改' : '已拒绝'}
+                      {myStatus === 'pending' ? '待审核' : myStatus === 'approved' ? '已通过' : myStatus === 'modified' ? '已修改' : '已拒绝'}
                     </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
