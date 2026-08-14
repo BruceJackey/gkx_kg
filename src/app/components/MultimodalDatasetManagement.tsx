@@ -11,10 +11,10 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Modality = 'image' | 'text' | 'audio' | 'video';
-type DatasetTab = 'overview' | 'retrieval' | 'metadata' | 'evaluation' | 'version' | 'preprocess';
+type DatasetTab = 'overview' | 'metadata' | 'evaluation' | 'preprocess';
 type UploadMode = 'pairs' | 'label';
 type DataOrigin = 'upload' | 'database' | 'api';
-type RetrievalMode = 'text2image' | 'image2text' | 'joint';
+type RetrievalMode = 'text2image' | 'image2text';
 
 interface ConfiguredDataSource {
   id: string;
@@ -1073,15 +1073,19 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
   const [query, setQuery] = useState('transformer attention architecture');
   const [queryImage, setQueryImage] = useState<string | null>(null);
   const [queryImageName, setQueryImageName] = useState('');
+  const [selectedVersion, setSelectedVersion] = useState(ds.version);
   const [topK, setTopK] = useState(6);
   const [searching, setSearching] = useState(false);
   const [hits, setHits] = useState<RetrievalHit[] | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const versions = Array.from(new Set([
+    ds.version,
+    ...ds.commits.map(commit => commit.tag).filter((tag): tag is string => Boolean(tag)),
+  ]));
 
   const canSearch =
     (mode === 'text2image' && !!query.trim()) ||
-    (mode === 'image2text' && !!queryImage) ||
-    (mode === 'joint' && (!!query.trim() || !!queryImage));
+    (mode === 'image2text' && !!queryImage);
 
   const scorePair = (pair: ImageTextPair): RetrievalHit | null => {
     const q = query.trim().toLowerCase();
@@ -1121,12 +1125,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
       if (!queryImage) return null;
       return { pair, score: Math.min(0.99, imageScore), matchBy: 'image', reason: '查询图像 ↔ 图文对视觉相似' };
     }
-    const joint = q && queryImage
-      ? Math.min(0.99, 0.45 * textScore + 0.55 * imageScore + 0.08)
-      : q
-        ? Math.min(0.99, 0.4 + textScore * 0.55)
-        : Math.min(0.99, imageScore);
-    return { pair, score: joint, matchBy: 'joint', reason: '图文联合编码（CLIP 双塔）' };
+    return null;
   };
 
   const runSearch = () => {
@@ -1141,7 +1140,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
       setHits(ranked.length > 0 ? ranked : ds.pairs.slice(0, Math.min(topK, ds.pairs.length)).map((pair, i) => ({
         pair,
         score: 0.61 - i * 0.04,
-        matchBy: mode === 'image2text' ? 'image' as const : mode === 'joint' ? 'joint' as const : 'text' as const,
+        matchBy: mode === 'image2text' ? 'image' as const : 'text' as const,
         reason: '近邻召回（弱相关）',
       })));
       setSearching(false);
@@ -1155,7 +1154,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
     if (queryImage?.startsWith('blob:')) URL.revokeObjectURL(queryImage);
     setQueryImage(url);
     setQueryImageName(file.name);
-    if (mode === 'text2image') setMode('joint');
+    setMode('image2text');
   };
 
   const useSampleAsQuery = (url: string) => {
@@ -1173,7 +1172,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
               <Search size={15} className="text-violet-600" /> 图文检索
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              基于数据集向量索引，支持以文搜图、以图搜文，以及图文联合检索当前数据集中的图文对。
+              支持以文搜图、以图搜文，并可限定数据集版本。
             </p>
           </div>
           {ds.indexConfig?.built ? (
@@ -1191,7 +1190,6 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
           {([
             { id: 'text2image' as const, label: '以文搜图', desc: '文本查询 → 相关图像' },
             { id: 'image2text' as const, label: '以图搜文', desc: '上传图像 → 相关描述/图文对' },
-            { id: 'joint' as const, label: '图文联合', desc: '文本 + 图像同时作为查询' },
           ]).map(m => (
             <button
               key={m.id}
@@ -1208,7 +1206,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3">
           <div className="space-y-3">
-            {(mode === 'text2image' || mode === 'joint') && (
+            {mode === 'text2image' && (
               <div className="flex items-center border border-gray-200 rounded-xl focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100 bg-white">
                 <FileText size={15} className="ml-3 text-gray-400 flex-shrink-0" />
                 <input
@@ -1221,7 +1219,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
               </div>
             )}
 
-            {(mode === 'image2text' || mode === 'joint') && (
+            {mode === 'image2text' && (
               <div className="flex flex-wrap items-center gap-2">
                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickImage} />
                 <button
@@ -1253,6 +1251,19 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
 
           <div className="flex items-center gap-2 lg:justify-end">
             <label className="text-xs text-gray-500 flex items-center gap-1.5">
+              版本
+              <select
+                value={selectedVersion}
+                onChange={e => {
+                  setSelectedVersion(e.target.value);
+                  setHits(null);
+                }}
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white"
+              >
+                {versions.map(version => <option key={version} value={version}>{version}</option>)}
+              </select>
+            </label>
+            <label className="text-xs text-gray-500 flex items-center gap-1.5">
               Top-K
               <select
                 value={topK}
@@ -1273,7 +1284,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
           </div>
         </div>
 
-        {(mode === 'image2text' || mode === 'joint') && (
+        {mode === 'image2text' && (
           <div>
             <div className="text-[11px] text-gray-400 mb-2">快速选用样本图像作为查询</div>
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -1298,9 +1309,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
           <div className="text-sm font-semibold text-gray-800">检索结果</div>
           {hits && (
             <span className="text-xs text-gray-400">
-              返回 {hits.length} 条 · 模式 {
-                mode === 'text2image' ? '以文搜图' : mode === 'image2text' ? '以图搜文' : '图文联合'
-              }
+              版本 {selectedVersion} · 返回 {hits.length} 条 · {mode === 'text2image' ? '以文搜图' : '以图搜文'}
             </span>
           )}
         </div>
@@ -1332,7 +1341,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
                       相似度 {(hit.score * 100).toFixed(1)}%
                     </span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600 border border-violet-100">
-                      {hit.matchBy === 'text' ? '文→图' : hit.matchBy === 'image' ? '图→文' : '图文联合'}
+                      {hit.matchBy === 'text' ? '文→图' : '图→文'}
                     </span>
                     <span className="text-[10px] text-gray-400">{hit.reason}</span>
                   </div>
@@ -1386,26 +1395,6 @@ function OverviewPanel({ ds, onUpload }: { ds: MultimodalDataset; onUpload: () =
 
   return (
     <div className="space-y-4">
-      {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: '图文对总数', value: ds.pairCount.toLocaleString(), icon: Link2, color: 'text-violet-600 bg-violet-50' },
-          { label: '数据集大小', value: ds.size, icon: Archive, color: 'text-blue-600 bg-blue-50' },
-          { label: '当前版本', value: ds.version, icon: Tag, color: 'text-emerald-600 bg-emerald-50' },
-          { label: '最近更新', value: ds.updatedAt.split(' ')[0], icon: Clock, color: 'text-amber-600 bg-amber-50' },
-        ].map(s => (
-          <div key={s.label} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${s.color}`}>
-              <s.icon size={16} />
-            </div>
-            <div>
-              <div className="text-lg font-semibold text-gray-800">{s.value}</div>
-              <div className="text-xs text-gray-400">{s.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Sample pairs */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3">
@@ -1464,79 +1453,7 @@ function OverviewPanel({ ds, onUpload }: { ds: MultimodalDataset; onUpload: () =
           显示 {filtered.length} / {ds.pairCount.toLocaleString()} 条图文对
         </div>
       </div>
-    </div>
-  );
-}
-
-function VersionPanel({ ds }: { ds: MultimodalDataset }) {
-  const [activeCommit, setActiveCommit] = useState<string | null>(null);
-
-  return (
-    <div className="space-y-4">
-      {/* Branch info */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-sm font-semibold text-gray-800 flex items-center gap-2"><GitBranch size={15} className="text-gray-500" /> 分支管理</div>
-          <button className="text-xs px-3 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-1"><Plus size={12} /> 新建分支</button>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {['main', 'dev', 'experiment/clip-finetune'].map(b => (
-            <div key={b} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${b === ds.branch ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-gray-200 text-gray-600'}`}>
-              <GitBranch size={13} className={b === ds.branch ? 'text-violet-500' : 'text-gray-400'} />
-              {b}
-              {b === ds.branch && <span className="text-xs px-1.5 py-0.5 bg-violet-200 text-violet-700 rounded-md">当前</span>}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Commit history */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-          <div className="text-sm font-semibold text-gray-800 flex items-center gap-2"><GitCommit size={15} className="text-gray-500" /> 提交历史</div>
-          <button className="text-xs px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg flex items-center gap-1"><GitCommit size={12} /> 新建提交</button>
-        </div>
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-[3.2rem] top-0 bottom-0 w-px bg-gray-100" />
-          <div className="divide-y divide-gray-50">
-            {ds.commits.map(c => (
-              <div key={c.hash}
-                onClick={() => setActiveCommit(activeCommit === c.hash ? null : c.hash)}
-                className={`flex gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50/50 transition-colors ${activeCommit === c.hash ? 'bg-violet-50/40' : ''}`}>
-                {/* Hash bubble */}
-                <div className="flex-shrink-0 w-14 text-right relative z-10">
-                  <span className="font-mono text-xs px-2 py-1 bg-white border border-gray-200 rounded-lg text-gray-600">{c.hash.slice(0, 7)}</span>
-                </div>
-                {/* Timeline dot */}
-                <div className="flex-shrink-0 w-4 flex items-start justify-center pt-1.5 relative z-10">
-                  <div className={`w-3 h-3 rounded-full border-2 ${c.tag ? 'border-violet-500 bg-violet-100' : 'border-gray-300 bg-white'}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-sm text-gray-800 font-medium">{c.message}</span>
-                    {c.tag && <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full flex items-center gap-1"><Tag size={10} />{c.tag}</span>}
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
-                    <span>{c.author}</span>
-                    <span>{c.date}</span>
-                    {c.added > 0 && <span className="text-green-600">+{c.added.toLocaleString()}</span>}
-                    {c.removed > 0 && <span className="text-red-500">-{c.removed.toLocaleString()}</span>}
-                  </div>
-                  {activeCommit === c.hash && (
-                    <div className="mt-3 flex gap-2">
-                      <button className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center gap-1"><Eye size={11} /> 查看差异</button>
-                      <button className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center gap-1"><Download size={11} /> 下载该版本</button>
-                      <button className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center gap-1"><Copy size={11} /> 复制哈希</button>
-                      {c.tag && <button className="text-xs px-3 py-1.5 border border-violet-200 rounded-lg text-violet-600 hover:bg-violet-50 flex items-center gap-1"><Package size={11} /> 基于此版本创建数据集</button>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <RetrievalPanel ds={ds} />
     </div>
   );
 }
@@ -2047,8 +1964,6 @@ export default function MultimodalDatasetManagement() {
     { id: 'overview', label: '数据概览', icon: BarChart3 },
     { id: 'metadata', label: '分类与元数据', icon: ClipboardList },
     { id: 'evaluation', label: '数据集评估', icon: Gauge },
-    { id: 'retrieval', label: '图文检索', icon: Search },
-    { id: 'version', label: '版本控制', icon: GitBranch },
     { id: 'preprocess', label: '预处理与对齐', icon: Cpu },
   ];
 
@@ -2212,8 +2127,6 @@ export default function MultimodalDatasetManagement() {
                   onEvaluated={evaluation => updateDataset(selected.id, { evaluation })}
                 />
               )}
-              {activeTab === 'retrieval' && <RetrievalPanel ds={selected} />}
-              {activeTab === 'version' && <VersionPanel ds={selected} />}
               {activeTab === 'preprocess' && <PreprocessPanel ds={selected} />}
             </div>
           </>
