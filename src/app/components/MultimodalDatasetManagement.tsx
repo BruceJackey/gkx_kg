@@ -1,17 +1,35 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
 import {
   Plus, GitBranch, GitCommit, Tag, Upload, Image, FileText, Search, Filter,
   MoreVertical, ChevronRight, CheckCircle, Clock, AlertCircle, RefreshCw,
   Trash2, Download, Eye, Layers, Zap, Database, Settings, X, Check,
   ArrowRight, BarChart3, Cpu, Link2, Archive, Shuffle, AlignCenter,
   FolderOpen, Star, Copy, Play, Pause, ChevronDown, Package, Sparkles, Wand2,
+  ClipboardList, Activity, Gauge, User, Calendar, Globe, Lock, Server,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Modality = 'image' | 'text' | 'audio' | 'video';
-type DatasetTab = 'overview' | 'version' | 'preprocess' | 'storage';
+type DatasetTab = 'overview' | 'retrieval' | 'metadata' | 'evaluation' | 'version' | 'preprocess';
 type UploadMode = 'pairs' | 'label';
+type DataOrigin = 'upload' | 'database' | 'api';
+type RetrievalMode = 'text2image' | 'image2text' | 'joint';
+
+interface ConfiguredDataSource {
+  id: string;
+  name: string;
+  kind: 'database' | 'api';
+  detail: string;
+  status: 'connected' | 'idle';
+}
+
+interface SchemaField {
+  name: string;
+  type: string;
+  required: boolean;
+  desc: string;
+}
 
 interface ImageTextPair {
   id: string;
@@ -20,6 +38,84 @@ interface ImageTextPair {
   tags: string[];
   source: string;
   addedAt: string;
+}
+
+interface RetrievalHit {
+  pair: ImageTextPair;
+  score: number;
+  matchBy: 'text' | 'image' | 'joint';
+  reason: string;
+}
+
+interface DatasetMetadata {
+  description: string;
+  source: string;
+  creator: string;
+  publishedAt: string;
+  license: string;
+  homepage: string;
+}
+
+interface DatasetTaxonomy {
+  domains: string[];
+  tasks: string[];
+  modalities: Modality[];
+  extraTags: string[];
+}
+
+interface QualityIssue {
+  id: string;
+  severity: 'high' | 'medium' | 'low';
+  category: string;
+  count: number;
+  detail: string;
+}
+
+interface DatasetEvaluation {
+  graphDensity: number;
+  avgDegree: number;
+  maxDegree: number;
+  nodeCount: number;
+  edgeCount: number;
+  degreeBins: { label: string; value: number }[];
+  relationDist: { type: string; count: number; pct: number }[];
+  missingRate: number;
+  inconsistencyRate: number;
+  duplicateRate: number;
+  completenessScore: number;
+  qualityScore: number;
+  issues: QualityIssue[];
+  lastEvaluatedAt: string;
+}
+
+interface BenchmarkRow {
+  name: string;
+  density: number;
+  avgDegree: number;
+  completeness: number;
+  quality: number;
+  isCurrent?: boolean;
+}
+
+interface MultimodalDataset {
+  id: string;
+  name: string;
+  description: string;
+  modalities: Modality[];
+  pairCount: number;
+  size: string;
+  version: string;
+  branch: string;
+  updatedAt: string;
+  status: 'active' | 'archived';
+  pairs: ImageTextPair[];
+  commits: CommitRecord[];
+  preprocessJobs: PreprocessJob[];
+  indexConfig: IndexConfig | null;
+  starred: boolean;
+  metadata: DatasetMetadata;
+  taxonomy: DatasetTaxonomy;
+  evaluation: DatasetEvaluation;
 }
 
 interface CommitRecord {
@@ -50,25 +146,52 @@ interface IndexConfig {
   buildAt: string;
 }
 
-interface MultimodalDataset {
-  id: string;
-  name: string;
-  description: string;
-  modalities: Modality[];
-  pairCount: number;
-  size: string;
-  version: string;
-  branch: string;
-  updatedAt: string;
-  status: 'active' | 'archived';
-  pairs: ImageTextPair[];
-  commits: CommitRecord[];
-  preprocessJobs: PreprocessJob[];
-  indexConfig: IndexConfig | null;
-  starred: boolean;
-}
-
 // ─── Mock data ────────────────────────────────────────────────────────────────
+
+const DOMAIN_OPTIONS = ['生物', '金融', '材料', '医疗', '气候', '通用科研', '计算机'];
+const TASK_OPTIONS = ['链接预测', '图文检索', '对比学习', '实体对齐', '关系抽取', '分类', '问答'];
+
+const DEFAULT_EVALUATION: DatasetEvaluation = {
+  graphDensity: 0.012,
+  avgDegree: 4.6,
+  maxDegree: 128,
+  nodeCount: 8420,
+  edgeCount: 19350,
+  degreeBins: [
+    { label: '1–2', value: 32 },
+    { label: '3–5', value: 28 },
+    { label: '6–10', value: 18 },
+    { label: '11–20', value: 12 },
+    { label: '21+', value: 10 },
+  ],
+  relationDist: [
+    { type: 'DESCRIBES', count: 8200, pct: 42 },
+    { type: 'PART_OF', count: 4100, pct: 21 },
+    { type: 'RELATED_TO', count: 3600, pct: 19 },
+    { type: 'DERIVED_FROM', count: 2100, pct: 11 },
+    { type: 'OTHER', count: 1350, pct: 7 },
+  ],
+  missingRate: 3.2,
+  inconsistencyRate: 1.4,
+  duplicateRate: 2.1,
+  completenessScore: 92,
+  qualityScore: 88,
+  issues: [
+    { id: 'q1', severity: 'high', category: '缺失值', count: 412, detail: '图文对缺少 caption 或 image 路径' },
+    { id: 'q2', severity: 'medium', category: '不一致', count: 186, detail: '同一 image 对应多条冲突描述' },
+    { id: 'q3', severity: 'medium', category: '重复', count: 270, detail: '感知哈希判定为近似重复图像' },
+    { id: 'q4', severity: 'low', category: '格式异常', count: 54, detail: '标签含非法分隔符或超长字段' },
+  ],
+  lastEvaluatedAt: '2024-03-15 16:40',
+};
+
+const BENCHMARKS: BenchmarkRow[] = [
+  { name: 'SciPaper-CLIP-v2（当前）', density: 0.012, avgDegree: 4.6, completeness: 92, quality: 88, isCurrent: true },
+  { name: 'MS-COCO Captions', density: 0.008, avgDegree: 3.2, completeness: 96, quality: 91 },
+  { name: 'Flickr30k', density: 0.006, avgDegree: 2.9, completeness: 94, quality: 90 },
+  { name: 'Conceptual Captions', density: 0.004, avgDegree: 2.1, completeness: 89, quality: 84 },
+  { name: 'LAION-400M subset', density: 0.003, avgDegree: 1.8, completeness: 81, quality: 76 },
+];
 
 const PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=120&h=120&fit=crop',
@@ -117,6 +240,21 @@ const MOCK_DATASETS: MultimodalDataset[] = [
       type: 'faiss', dim: 512, metric: 'cosine', built: true,
       vectorCount: 128640, buildAt: '2024-03-15 15:00',
     },
+    metadata: {
+      description: '科技论文图文对数据集，用于科学图表-摘要对比学习，支持CLIP类模型训练',
+      source: 'arXiv / NeurIPS / ICML 公开论文附图',
+      creator: '知识图谱平台 · 数据组',
+      publishedAt: '2024-02-20',
+      license: 'CC BY-NC 4.0',
+      homepage: 'https://example.com/datasets/scipaper-clip-v2',
+    },
+    taxonomy: {
+      domains: ['通用科研', '计算机', '材料'],
+      tasks: ['图文检索', '对比学习', '链接预测'],
+      modalities: ['image', 'text'],
+      extraTags: ['CLIP', '科学图表', '开放获取'],
+    },
+    evaluation: DEFAULT_EVALUATION,
   },
   {
     id: 'ds2',
@@ -143,6 +281,39 @@ const MOCK_DATASETS: MultimodalDataset[] = [
       { id: 'mj2', name: '报告文本去标识化', type: 'clean', status: 'done', progress: 100, config: '去除患者姓名、日期、医院信息' },
     ],
     indexConfig: null,
+    metadata: {
+      description: '医学影像图文对数据集，包含X光、CT、MRI图像及对应医学描述文本，适用于医学视觉-语言预训练。',
+      source: 'MIMIC-CXR / CheXpert',
+      creator: '医学影像实验室',
+      publishedAt: '2023-11-08',
+      license: 'PhysioNet Credentialed',
+      homepage: 'https://example.com/datasets/medimage-caption',
+    },
+    taxonomy: {
+      domains: ['医疗', '生物'],
+      tasks: ['图文检索', '分类', '问答'],
+      modalities: ['image', 'text'],
+      extraTags: ['放射科', '去标识化', '临床报告'],
+    },
+    evaluation: {
+      ...DEFAULT_EVALUATION,
+      graphDensity: 0.009,
+      avgDegree: 3.8,
+      maxDegree: 96,
+      nodeCount: 5120,
+      edgeCount: 9740,
+      missingRate: 5.8,
+      inconsistencyRate: 2.3,
+      duplicateRate: 1.6,
+      completenessScore: 86,
+      qualityScore: 82,
+      lastEvaluatedAt: '2024-03-12 10:05',
+      issues: [
+        { id: 'mq1', severity: 'high', category: '缺失值', count: 980, detail: '部分报告字段缺失 Impression / Findings' },
+        { id: 'mq2', severity: 'medium', category: '不一致', count: 240, detail: '影像模态标签与 DICOM 元数据冲突' },
+        { id: 'mq3', severity: 'low', category: '重复', count: 120, detail: '同一检查号重复入库' },
+      ],
+    },
   },
 ];
 
@@ -215,9 +386,31 @@ const VL_MODELS = [
   { id: 'qwenvl', label: 'Qwen-VL-Plus', desc: '阿里出品，中文友好' },
 ];
 
+const CONFIGURED_DATA_SOURCES: ConfiguredDataSource[] = [
+  { id: 'db1', name: 'SciCorpus MySQL', kind: 'database', detail: 'mysql://corpus_db · table: image_captions', status: 'connected' },
+  { id: 'db2', name: 'MedArchive PostgreSQL', kind: 'database', detail: 'postgresql://med_db · view: v_mm_pairs', status: 'connected' },
+  { id: 'db3', name: 'Lab Object Storage Meta', kind: 'database', detail: 'mysql://lab_meta · table: media_objects', status: 'idle' },
+  { id: 'api1', name: 'PubMed Figure API', kind: 'api', detail: 'GET https://api.example.com/v1/figures', status: 'connected' },
+  { id: 'api2', name: 'Internal Media Hub', kind: 'api', detail: 'POST https://media.internal/list', status: 'connected' },
+  { id: 'api3', name: 'OpenAlex Works API', kind: 'api', detail: 'GET https://api.openalex.org/works', status: 'idle' },
+];
+
+const DEFAULT_IMAGE_TEXT_SCHEMA = {
+  name: 'ImageTextPairSchema',
+  version: 'v1.0',
+  description: '多模态图文对默认 Schema，当前平台仅支持此结构，不可自定义修改。',
+  fields: [
+    { name: 'image', type: 'string | url', required: true, desc: '图像本地路径、对象存储 Key 或可访问 URL' },
+    { name: 'caption', type: 'string', required: true, desc: '与图像对应的文本描述' },
+    { name: 'tags', type: 'string[]', required: false, desc: '可选标签列表' },
+    { name: 'source', type: 'string', required: false, desc: '原始来源标识（论文 DOI、检查号等）' },
+  ] as SchemaField[],
+};
+
 // ─── Upload Dialog ────────────────────────────────────────────────────────────
 
 type GenState = 'idle' | 'generating' | 'done';
+type WizardStep = 'source' | 'schema' | 'content' | 'label';
 
 interface LabeledImage {
   id: string;
@@ -229,16 +422,85 @@ interface LabeledImage {
   aiGenerated: boolean;
 }
 
+function UploadStepIndicator({
+  steps,
+  current,
+}: {
+  steps: { id: WizardStep; label: string }[];
+  current: WizardStep;
+}) {
+  const idx = steps.findIndex(s => s.id === current);
+  return (
+    <div className="flex items-center gap-1 px-6 pt-3 pb-1 overflow-x-auto">
+      {steps.map((s, i) => {
+        const done = i < idx;
+        const active = s.id === current;
+        return (
+          <div key={s.id} className="flex items-center gap-1 flex-shrink-0">
+            {i > 0 && <div className={`w-6 h-px mx-0.5 ${done || active ? 'bg-violet-300' : 'bg-gray-200'}`} />}
+            <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${
+              active ? 'bg-violet-100 text-violet-700 font-medium' : done ? 'text-violet-600' : 'text-gray-400'
+            }`}>
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                active ? 'bg-violet-600 text-white' : done ? 'bg-violet-200 text-violet-700' : 'bg-gray-100 text-gray-400'
+              }`}>
+                {done ? <Check size={10} /> : i + 1}
+              </span>
+              {s.label}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function UploadDialog({ onClose }: { onClose: () => void }) {
   const [uploadMode, setUploadMode] = useState<UploadMode>('pairs');
-  const [step, setStep] = useState<1 | 2>(1);
+  const [wizardStep, setWizardStep] = useState<WizardStep>('source');
+  const [dataOrigin, setDataOrigin] = useState<DataOrigin>('upload');
+  const [selectedSourceId, setSelectedSourceId] = useState<string>('db1');
   const [selectedModel, setSelectedModel] = useState('internvl2');
   const [batchGenerating, setBatchGenerating] = useState(false);
+  const [dbTable, setDbTable] = useState('image_captions');
+  const [dbQuery, setDbQuery] = useState('SELECT image_url AS image, caption, tags FROM image_captions WHERE status = \'ready\' LIMIT 10000');
+  const [apiEndpoint, setApiEndpoint] = useState('/v1/figures');
+  const [apiMethod, setApiMethod] = useState<'GET' | 'POST'>('GET');
   const [labeledImages, setLabeledImages] = useState<LabeledImage[]>([
     { id: 'li1', name: 'figure_001.png', caption: '', tags: '', genState: 'idle', confidence: null, aiGenerated: false },
     { id: 'li2', name: 'chart_002.jpg', caption: '', tags: '', genState: 'idle', confidence: null, aiGenerated: false },
     { id: 'li3', name: 'diagram_003.png', caption: '', tags: '', genState: 'idle', confidence: null, aiGenerated: false },
   ]);
+
+  const wizardSteps: { id: WizardStep; label: string }[] =
+    uploadMode === 'pairs'
+      ? [
+          { id: 'source', label: '数据指定' },
+          { id: 'schema', label: 'Schema 定义' },
+          { id: 'content', label: '导入确认' },
+        ]
+      : [
+          { id: 'source', label: '数据指定' },
+          { id: 'schema', label: 'Schema 定义' },
+          { id: 'content', label: '获取数据' },
+          { id: 'label', label: '打标' },
+        ];
+
+  const filteredSources = CONFIGURED_DATA_SOURCES.filter(s =>
+    dataOrigin === 'database' ? s.kind === 'database' : dataOrigin === 'api' ? s.kind === 'api' : false,
+  );
+  const selectedSource = CONFIGURED_DATA_SOURCES.find(s => s.id === selectedSourceId);
+
+  const resetWizard = (mode: UploadMode) => {
+    setUploadMode(mode);
+    setWizardStep('source');
+    setDataOrigin('upload');
+    setSelectedSourceId(mode === 'label' ? 'api1' : 'db1');
+  };
+
+  const canProceedFromSource =
+    dataOrigin === 'upload' ||
+    (selectedSourceId && filteredSources.some(s => s.id === selectedSourceId));
 
   const updateImage = (id: string, patch: Partial<LabeledImage>) =>
     setLabeledImages(prev => prev.map(x => x.id === id ? { ...x, ...patch } : x));
@@ -246,7 +508,6 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
   const generateCaption = (id: string) => {
     updateImage(id, { genState: 'generating', caption: '', tags: '', confidence: null });
     const mock = MOCK_CAPTIONS[id];
-    // Simulate streaming: reveal text character by character
     let i = 0;
     const text = mock?.caption ?? 'A detailed scientific image showing complex visual information with multiple elements and structural relationships between components.';
     const tags = mock?.tags ?? 'science, diagram';
@@ -275,7 +536,6 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
       setTimeout(() => {
         generateCaption(img.id);
         if (i === pending.length - 1) {
-          // Wait a bit for last one to finish
           setTimeout(() => setBatchGenerating(false), 2500);
         }
       }, i * 600);
@@ -285,236 +545,458 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
   const completedCount = labeledImages.filter(img => img.caption.trim()).length;
   const aiCount = labeledImages.filter(img => img.aiGenerated).length;
 
+  const goNext = () => {
+    if (wizardStep === 'source') setWizardStep('schema');
+    else if (wizardStep === 'schema') setWizardStep('content');
+    else if (wizardStep === 'content' && uploadMode === 'label') setWizardStep('label');
+  };
+
+  const goBack = () => {
+    if (wizardStep === 'label') setWizardStep('content');
+    else if (wizardStep === 'content') setWizardStep('schema');
+    else if (wizardStep === 'schema') setWizardStep('source');
+  };
+
+  const originLabel =
+    dataOrigin === 'upload' ? '直接上传' : dataOrigin === 'database' ? '数据库' : 'API';
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-2xl w-[720px] max-h-[88vh] flex flex-col overflow-hidden">
-        {/* Header */}
+      <div className="bg-white rounded-2xl shadow-2xl w-[760px] max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="font-semibold text-gray-800">上传数据到数据集</div>
+          <div>
+            <div className="font-semibold text-gray-800">导入数据到数据集</div>
+            <div className="text-xs text-gray-400 mt-0.5">支持直接上传、已配置数据库 / API 数据源</div>
+          </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors"><X size={16} /></button>
         </div>
 
-        {/* Mode tabs */}
         <div className="px-6 pt-4 pb-0">
           <div className="flex gap-0 border border-gray-200 rounded-xl overflow-hidden w-fit">
-            <button onClick={() => { setUploadMode('pairs'); setStep(1); }}
+            <button onClick={() => resetWizard('pairs')}
               className={`text-sm px-5 py-2 transition-colors flex items-center gap-1.5 ${uploadMode === 'pairs' ? 'bg-violet-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
               <Link2 size={13} /> 上传图文对
             </button>
-            <button onClick={() => { setUploadMode('label'); setStep(1); }}
+            <button onClick={() => resetWizard('label')}
               className={`text-sm px-5 py-2 transition-colors flex items-center gap-1.5 ${uploadMode === 'label' ? 'bg-violet-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
               <Tag size={13} /> 上传图片并打标
             </button>
           </div>
         </div>
 
+        <UploadStepIndicator steps={wizardSteps} current={wizardStep} />
+
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {uploadMode === 'pairs' ? (
+          {wizardStep === 'source' && (
             <div className="space-y-4">
-              <div className="text-sm text-gray-500">支持上传 JSON/JSONL/CSV 格式的图文对文件，或压缩包（包含图片文件夹 + 标注文件）</div>
-              <div className="border-2 border-dashed border-violet-200 rounded-xl p-10 text-center hover:border-violet-400 hover:bg-violet-50/30 transition-colors cursor-pointer group">
-                <Upload size={32} className="mx-auto mb-3 text-violet-300 group-hover:text-violet-400" />
-                <div className="text-sm font-medium text-gray-700 mb-1">拖拽文件到此处，或点击上传</div>
-                <div className="text-xs text-gray-400">支持 .json .jsonl .csv .zip .tar.gz，单次最大 10 GB</div>
+              <div className="text-sm text-gray-600">选择数据来源：可使用平台已配置的数据源，或直接上传本地文件。</div>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  { id: 'upload' as DataOrigin, title: '直接上传', desc: '本地文件 / 压缩包', icon: Upload },
+                  { id: 'database' as DataOrigin, title: '数据库', desc: 'MySQL / PostgreSQL 等', icon: Database },
+                  { id: 'api' as DataOrigin, title: 'API 来源', desc: 'REST / 内部服务接口', icon: Globe },
+                ]).map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setDataOrigin(opt.id);
+                      const first = CONFIGURED_DATA_SOURCES.find(s =>
+                        opt.id === 'database' ? s.kind === 'database' : opt.id === 'api' ? s.kind === 'api' : false,
+                      );
+                      if (first) setSelectedSourceId(first.id);
+                    }}
+                    className={`text-left border rounded-xl p-4 transition-colors ${
+                      dataOrigin === opt.id ? 'border-violet-400 bg-violet-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${
+                      dataOrigin === opt.id ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      <opt.icon size={16} />
+                    </div>
+                    <div className="text-sm font-medium text-gray-800">{opt.title}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
               </div>
-              <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-600 space-y-2">
-                <div className="font-medium text-gray-700 mb-2">格式说明</div>
-                <div className="font-mono bg-white border border-gray-200 rounded-lg p-3 text-gray-600 leading-relaxed">
-                  {'{"image": "path/to/img.jpg", "caption": "描述文本", "tags": ["tag1"]}'}<br />
-                  {'{"image_url": "https://...", "text": "caption text"}'}
+
+              {dataOrigin === 'upload' && (
+                <div className="border border-dashed border-violet-200 rounded-xl p-6 bg-violet-50/20">
+                  <div className="text-sm font-medium text-gray-700 mb-1">将在后续步骤中选择本地文件</div>
+                  <div className="text-xs text-gray-400">
+                    {uploadMode === 'pairs'
+                      ? '支持 JSON / JSONL / CSV / ZIP 图文对文件'
+                      : '支持 JPG、PNG、WEBP、TIFF 批量图片'}
+                  </div>
+                </div>
+              )}
+
+              {(dataOrigin === 'database' || dataOrigin === 'api') && (
+                <div className="space-y-3">
+                  <div className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                    <Server size={12} /> 已配置的{dataOrigin === 'database' ? '数据库' : 'API'}数据源
+                  </div>
+                  <div className="space-y-2 max-h-52 overflow-y-auto">
+                    {filteredSources.map(src => (
+                      <button
+                        key={src.id}
+                        type="button"
+                        onClick={() => setSelectedSourceId(src.id)}
+                        className={`w-full text-left border rounded-xl px-4 py-3 transition-colors ${
+                          selectedSourceId === src.id ? 'border-violet-400 bg-violet-50' : 'border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-gray-800 flex-1">{src.name}</div>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                            src.status === 'connected' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {src.status === 'connected' ? '已连接' : '未连接'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1 font-mono truncate">{src.detail}</div>
+                      </button>
+                    ))}
+                  </div>
+                  {dataOrigin === 'database' && (
+                    <div className="grid grid-cols-1 gap-2">
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">表 / 视图</div>
+                        <input value={dbTable} onChange={e => setDbTable(e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">抽取 SQL（可选）</div>
+                        <textarea value={dbQuery} onChange={e => setDbQuery(e.target.value)} rows={3}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-violet-400 resize-none" />
+                      </div>
+                    </div>
+                  )}
+                  {dataOrigin === 'api' && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">方法</div>
+                        <select value={apiMethod} onChange={e => setApiMethod(e.target.value as 'GET' | 'POST')}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-violet-400">
+                          <option value="GET">GET</option>
+                          <option value="POST">POST</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <div className="text-xs text-gray-500 mb-1">接口路径</div>
+                        <input value={apiEndpoint} onChange={e => setApiEndpoint(e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-violet-400" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {wizardStep === 'schema' && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <Lock size={15} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <div className="text-sm font-medium text-amber-800">Schema 已锁定（平台默认）</div>
+                  <div className="text-xs text-amber-700/80 mt-0.5">
+                    当前仅提供一种图文对 Schema，不可修改字段定义。导入数据需映射到该结构。
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs text-gray-500 mb-1.5">图像字段名</div>
-                  <input defaultValue="image" className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-violet-400" />
+
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-800">{DEFAULT_IMAGE_TEXT_SCHEMA.name}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{DEFAULT_IMAGE_TEXT_SCHEMA.description}</div>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{DEFAULT_IMAGE_TEXT_SCHEMA.version}</span>
                 </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1.5">文本字段名</div>
-                  <input defaultValue="caption" className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-violet-400" />
+                <div className="divide-y divide-gray-50">
+                  {DEFAULT_IMAGE_TEXT_SCHEMA.fields.map(f => (
+                    <div key={f.name} className="px-4 py-3 flex items-start gap-3 opacity-90">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-mono font-medium text-gray-800">{f.name}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{f.type}</span>
+                          {f.required
+                            ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-600">必填</span>
+                            : <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-400">可选</span>}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">{f.desc}</div>
+                      </div>
+                      <Lock size={12} className="text-gray-300 mt-1 flex-shrink-0" />
+                    </div>
+                  ))}
                 </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-500">
+                数据来源：<span className="text-gray-700 font-medium">{originLabel}</span>
+                {selectedSource && dataOrigin !== 'upload' && (
+                  <> · <span className="text-gray-700 font-medium">{selectedSource.name}</span></>
+                )}
+                {' '}→ 将映射到上述 Schema
               </div>
             </div>
-          ) : (
+          )}
+
+          {wizardStep === 'content' && uploadMode === 'pairs' && (
             <div className="space-y-4">
-              {step === 1 ? (
+              {dataOrigin === 'upload' ? (
                 <>
-                  <div className="text-sm text-gray-500">第一步：上传图片文件</div>
+                  <div className="text-sm text-gray-500">上传 JSON/JSONL/CSV 图文对文件，或压缩包（图片文件夹 + 标注文件）</div>
+                  <div className="border-2 border-dashed border-violet-200 rounded-xl p-10 text-center hover:border-violet-400 hover:bg-violet-50/30 transition-colors cursor-pointer group">
+                    <Upload size={32} className="mx-auto mb-3 text-violet-300 group-hover:text-violet-400" />
+                    <div className="text-sm font-medium text-gray-700 mb-1">拖拽文件到此处，或点击上传</div>
+                    <div className="text-xs text-gray-400">支持 .json .jsonl .csv .zip .tar.gz，单次最大 10 GB</div>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-600 space-y-2">
+                    <div className="font-medium text-gray-700 mb-2">格式需符合 ImageTextPairSchema</div>
+                    <div className="font-mono bg-white border border-gray-200 rounded-lg p-3 text-gray-600 leading-relaxed">
+                      {'{"image": "path/to/img.jpg", "caption": "描述文本", "tags": ["tag1"]}'}<br />
+                      {'{"image_url": "https://...", "text": "caption text"}'}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1.5">图像字段名 → image</div>
+                      <input defaultValue="image" className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-violet-400" />
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1.5">文本字段名 → caption</div>
+                      <input defaultValue="caption" className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-violet-400" />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm text-gray-600">
+                    将从{dataOrigin === 'database' ? '数据库' : 'API'}拉取数据并按默认 Schema 导入。
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3 text-sm">
+                    <div className="flex justify-between"><span className="text-gray-400">数据源</span><span className="text-gray-800 font-medium">{selectedSource?.name}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">连接信息</span><span className="text-gray-600 text-xs font-mono truncate max-w-[360px]">{selectedSource?.detail}</span></div>
+                    {dataOrigin === 'database' && (
+                      <>
+                        <div className="flex justify-between"><span className="text-gray-400">表 / 视图</span><span className="text-gray-800">{dbTable}</span></div>
+                        <div>
+                          <div className="text-gray-400 text-xs mb-1">SQL</div>
+                          <pre className="text-xs font-mono bg-gray-50 border border-gray-100 rounded-lg p-3 whitespace-pre-wrap text-gray-600">{dbQuery}</pre>
+                        </div>
+                      </>
+                    )}
+                    {dataOrigin === 'api' && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">请求</span>
+                        <span className="text-gray-800 font-mono text-xs">{apiMethod} {apiEndpoint}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between"><span className="text-gray-400">目标 Schema</span><span className="text-violet-700 font-medium">{DEFAULT_IMAGE_TEXT_SCHEMA.name}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">预估条数</span><span className="text-gray-800">{dataOrigin === 'database' ? '约 12,480' : '约 3,200'}</span></div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+                    <CheckCircle size={13} /> 字段探测完成：image / caption 可映射；tags、source 可选
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {wizardStep === 'content' && uploadMode === 'label' && (
+            <div className="space-y-4">
+              {dataOrigin === 'upload' ? (
+                <>
+                  <div className="text-sm text-gray-500">获取待打标图片（本地上传）</div>
                   <div className="border-2 border-dashed border-violet-200 rounded-xl p-10 text-center hover:border-violet-400 hover:bg-violet-50/30 transition-colors cursor-pointer group">
                     <Image size={32} className="mx-auto mb-3 text-violet-300 group-hover:text-violet-400" />
                     <div className="text-sm font-medium text-gray-700 mb-1">上传图片文件</div>
                     <div className="text-xs text-gray-400">支持 JPG、PNG、WEBP、TIFF，可批量选择</div>
                   </div>
-                  <div className="space-y-1.5">
-                    {labeledImages.map(img => (
-                      <div key={img.id} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
-                        <div className="w-8 h-8 bg-violet-100 rounded flex items-center justify-center flex-shrink-0">
-                          <Image size={14} className="text-violet-500" />
-                        </div>
-                        <div className="text-sm text-gray-700 flex-1">{img.name}</div>
-                        <CheckCircle size={14} className="text-green-400" />
-                      </div>
-                    ))}
-                  </div>
-                  <button onClick={() => setStep(2)}
-                    className="w-full py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-1.5">
-                    下一步：为图片打标 <ArrowRight size={14} />
-                  </button>
                 </>
               ) : (
                 <>
-                  {/* Step 2 header */}
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => setStep(1)} className="text-xs text-violet-600 hover:underline flex-shrink-0">← 返回</button>
-                    <span className="text-sm text-gray-500 flex-1">第二步：为每张图片填写描述（可 AI 自动生成）</span>
-                    <span className="text-xs text-gray-400">{completedCount}/{labeledImages.length} 已填写</span>
+                  <div className="text-sm text-gray-500">
+                    从已配置的{dataOrigin === 'database' ? '数据库' : 'API'}拉取待打标图片列表
                   </div>
-
-                  {/* AI model selector + batch generate */}
-                  <div className="bg-gradient-to-r from-violet-50 to-blue-50 border border-violet-200 rounded-xl p-4 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center flex-shrink-0">
-                      <Sparkles size={15} className="text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-violet-800 mb-1">AI 自动描述生成</div>
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={selectedModel}
-                          onChange={e => setSelectedModel(e.target.value)}
-                          className="border border-violet-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:border-violet-400 text-gray-700"
-                        >
-                          {VL_MODELS.map(m => (
-                            <option key={m.id} value={m.id}>{m.label} — {m.desc}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <button
-                      onClick={generateAll}
-                      disabled={batchGenerating || labeledImages.every(img => img.caption.trim())}
-                      className="text-sm px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-1.5 flex-shrink-0"
-                    >
-                      {batchGenerating
-                        ? <><RefreshCw size={13} className="animate-spin" /> 批量生成中…</>
-                        : <><Wand2 size={13} /> 一键全部生成</>}
-                    </button>
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm space-y-2">
+                    <div className="flex justify-between"><span className="text-gray-400">数据源</span><span className="font-medium text-gray-800">{selectedSource?.name}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">详情</span><span className="text-xs font-mono text-gray-600 truncate max-w-[360px]">{selectedSource?.detail}</span></div>
+                    {dataOrigin === 'api' && (
+                      <div className="flex justify-between"><span className="text-gray-400">请求</span><span className="font-mono text-xs">{apiMethod} {apiEndpoint}</span></div>
+                    )}
+                    {dataOrigin === 'database' && (
+                      <div className="flex justify-between"><span className="text-gray-400">表 / 视图</span><span>{dbTable}</span></div>
+                    )}
                   </div>
-
-                  {/* Per-image cards */}
-                  <div className="space-y-3">
-                    {labeledImages.map(img => (
-                      <div key={img.id}
-                        className={`border rounded-xl p-4 transition-colors ${img.genState === 'generating' ? 'border-violet-300 bg-violet-50/30' : img.genState === 'done' ? 'border-emerald-200' : 'border-gray-200'}`}>
-                        <div className="flex gap-3">
-                          {/* Thumbnail placeholder */}
-                          <div className="w-20 h-20 bg-gradient-to-br from-violet-100 to-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                            <Image size={26} className="text-violet-300" />
-                            {img.genState === 'generating' && (
-                              <div className="absolute inset-0 bg-violet-600/10 flex items-center justify-center">
-                                <RefreshCw size={16} className="animate-spin text-violet-500" />
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0 space-y-2">
-                            {/* Filename + status row */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-gray-700 flex-1 truncate">{img.name}</span>
-                              {img.genState === 'generating' && (
-                                <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full flex items-center gap-1 flex-shrink-0">
-                                  <RefreshCw size={10} className="animate-spin" /> AI生成中
-                                </span>
-                              )}
-                              {img.genState === 'done' && (
-                                <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full flex items-center gap-1 flex-shrink-0">
-                                  <Sparkles size={10} /> AI生成
-                                  {img.confidence !== null && <span className="text-emerald-500 font-medium">{img.confidence}%</span>}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Caption textarea */}
-                            <div className="relative">
-                              <textarea
-                                rows={img.caption.length > 80 ? 3 : 2}
-                                placeholder="输入图片描述（caption）…"
-                                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none resize-none transition-colors ${img.genState === 'generating' ? 'border-violet-200 bg-violet-50/20 text-violet-800' : img.aiGenerated ? 'border-emerald-200 focus:border-emerald-400' : 'border-gray-200 focus:border-violet-400'}`}
-                                value={img.caption}
-                                onChange={e => updateImage(img.id, { caption: e.target.value, aiGenerated: false, genState: 'idle', confidence: null })}
-                              />
-                              {img.genState === 'generating' && (
-                                <span className="absolute bottom-2 right-2 inline-block w-1 h-4 bg-violet-500 animate-pulse rounded-sm" />
-                              )}
-                            </div>
-
-                            {/* Tags input + per-image generate button */}
-                            <div className="flex gap-2">
-                              <input
-                                placeholder="标签，用逗号分隔（可选）"
-                                className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-violet-400"
-                                value={img.tags}
-                                onChange={e => updateImage(img.id, { tags: e.target.value })}
-                              />
-                              <button
-                                onClick={() => generateCaption(img.id)}
-                                disabled={img.genState === 'generating'}
-                                title="AI自动生成此图描述"
-                                className="flex-shrink-0 text-xs px-3 py-1.5 border border-violet-300 bg-white hover:bg-violet-50 disabled:opacity-50 text-violet-700 rounded-lg transition-colors flex items-center gap-1"
-                              >
-                                {img.genState === 'generating'
-                                  ? <RefreshCw size={11} className="animate-spin" />
-                                  : <Sparkles size={11} />}
-                                {img.genState === 'generating' ? '生成中' : img.aiGenerated ? '重新生成' : 'AI生成描述'}
-                              </button>
-                            </div>
-
-                            {/* Confidence bar for AI-generated */}
-                            {img.aiGenerated && img.confidence !== null && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400">置信度</span>
-                                <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full transition-all duration-700 ${img.confidence >= 90 ? 'bg-emerald-400' : img.confidence >= 75 ? 'bg-amber-400' : 'bg-red-400'}`}
-                                    style={{ width: `${img.confidence}%` }}
-                                  />
-                                </div>
-                                <span className={`text-xs font-medium ${img.confidence >= 90 ? 'text-emerald-600' : img.confidence >= 75 ? 'text-amber-600' : 'text-red-500'}`}>
-                                  {img.confidence}%
-                                </span>
-                                <span className="text-xs text-gray-300">|</span>
-                                <button
-                                  onClick={() => updateImage(img.id, { caption: '', tags: '', aiGenerated: false, genState: 'idle', confidence: null })}
-                                  className="text-xs text-gray-400 hover:text-red-400 transition-colors"
-                                >
-                                  清除
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Summary */}
-                  {aiCount > 0 && (
-                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-xs text-emerald-700">
-                      <Sparkles size={13} className="text-emerald-500" />
-                      已由 AI 自动生成 <strong>{aiCount}</strong> 条描述，你可以在提交前手动修改任意内容
-                    </div>
-                  )}
                 </>
+              )}
+              <div className="space-y-1.5">
+                {labeledImages.map(img => (
+                  <div key={img.id} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                    <div className="w-8 h-8 bg-violet-100 rounded flex items-center justify-center flex-shrink-0">
+                      <Image size={14} className="text-violet-500" />
+                    </div>
+                    <div className="text-sm text-gray-700 flex-1">{img.name}</div>
+                    <CheckCircle size={14} className="text-green-400" />
+                  </div>
+                ))}
+              </div>
+              <div className="text-xs text-gray-400">导入后将按 {DEFAULT_IMAGE_TEXT_SCHEMA.name} 填写 caption / tags</div>
+            </div>
+          )}
+
+          {wizardStep === 'label' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500 flex-1">为每张图片填写描述（可 AI 自动生成）</span>
+                <span className="text-xs text-gray-400">{completedCount}/{labeledImages.length} 已填写</span>
+              </div>
+
+              <div className="bg-gradient-to-r from-violet-50 to-blue-50 border border-violet-200 rounded-xl p-4 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center flex-shrink-0">
+                  <Sparkles size={15} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-violet-800 mb-1">AI 自动描述生成</div>
+                  <select
+                    value={selectedModel}
+                    onChange={e => setSelectedModel(e.target.value)}
+                    className="border border-violet-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:border-violet-400 text-gray-700"
+                  >
+                    {VL_MODELS.map(m => (
+                      <option key={m.id} value={m.id}>{m.label} — {m.desc}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={generateAll}
+                  disabled={batchGenerating || labeledImages.every(img => img.caption.trim())}
+                  className="text-sm px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-1.5 flex-shrink-0"
+                >
+                  {batchGenerating
+                    ? <><RefreshCw size={13} className="animate-spin" /> 批量生成中…</>
+                    : <><Wand2 size={13} /> 一键全部生成</>}
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {labeledImages.map(img => (
+                  <div key={img.id}
+                    className={`border rounded-xl p-4 transition-colors ${img.genState === 'generating' ? 'border-violet-300 bg-violet-50/30' : img.genState === 'done' ? 'border-emerald-200' : 'border-gray-200'}`}>
+                    <div className="flex gap-3">
+                      <div className="w-20 h-20 bg-gradient-to-br from-violet-100 to-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                        <Image size={26} className="text-violet-300" />
+                        {img.genState === 'generating' && (
+                          <div className="absolute inset-0 bg-violet-600/10 flex items-center justify-center">
+                            <RefreshCw size={16} className="animate-spin text-violet-500" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-700 flex-1 truncate">{img.name}</span>
+                          {img.genState === 'generating' && (
+                            <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full flex items-center gap-1 flex-shrink-0">
+                              <RefreshCw size={10} className="animate-spin" /> AI生成中
+                            </span>
+                          )}
+                          {img.genState === 'done' && (
+                            <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full flex items-center gap-1 flex-shrink-0">
+                              <Sparkles size={10} /> AI生成
+                              {img.confidence !== null && <span className="text-emerald-500 font-medium">{img.confidence}%</span>}
+                            </span>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <textarea
+                            rows={img.caption.length > 80 ? 3 : 2}
+                            placeholder="输入图片描述（caption）…"
+                            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none resize-none transition-colors ${img.genState === 'generating' ? 'border-violet-200 bg-violet-50/20 text-violet-800' : img.aiGenerated ? 'border-emerald-200 focus:border-emerald-400' : 'border-gray-200 focus:border-violet-400'}`}
+                            value={img.caption}
+                            onChange={e => updateImage(img.id, { caption: e.target.value, aiGenerated: false, genState: 'idle', confidence: null })}
+                          />
+                          {img.genState === 'generating' && (
+                            <span className="absolute bottom-2 right-2 inline-block w-1 h-4 bg-violet-500 animate-pulse rounded-sm" />
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            placeholder="标签，用逗号分隔（可选）"
+                            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-violet-400"
+                            value={img.tags}
+                            onChange={e => updateImage(img.id, { tags: e.target.value })}
+                          />
+                          <button
+                            onClick={() => generateCaption(img.id)}
+                            disabled={img.genState === 'generating'}
+                            className="flex-shrink-0 text-xs px-3 py-1.5 border border-violet-300 bg-white hover:bg-violet-50 disabled:opacity-50 text-violet-700 rounded-lg transition-colors flex items-center gap-1"
+                          >
+                            {img.genState === 'generating'
+                              ? <RefreshCw size={11} className="animate-spin" />
+                              : <Sparkles size={11} />}
+                            {img.genState === 'generating' ? '生成中' : img.aiGenerated ? '重新生成' : 'AI生成描述'}
+                          </button>
+                        </div>
+                        {img.aiGenerated && img.confidence !== null && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">置信度</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-700 ${img.confidence >= 90 ? 'bg-emerald-400' : img.confidence >= 75 ? 'bg-amber-400' : 'bg-red-400'}`}
+                                style={{ width: `${img.confidence}%` }}
+                              />
+                            </div>
+                            <span className={`text-xs font-medium ${img.confidence >= 90 ? 'text-emerald-600' : img.confidence >= 75 ? 'text-amber-600' : 'text-red-500'}`}>
+                              {img.confidence}%
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {aiCount > 0 && (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-xs text-emerald-700">
+                  <Sparkles size={13} className="text-emerald-500" />
+                  已由 AI 自动生成 <strong>{aiCount}</strong> 条描述，你可以在提交前手动修改任意内容
+                </div>
               )}
             </div>
           )}
         </div>
 
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100">
-          <button onClick={onClose} className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">取消</button>
-          <button onClick={onClose}
-            className="text-sm px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-1.5">
-            <Upload size={13} /> 确认上传
-          </button>
+        <div className="flex justify-between gap-2 px-6 py-4 border-t border-gray-100">
+          <div>
+            {wizardStep !== 'source' && (
+              <button onClick={goBack}
+                className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                上一步
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">取消</button>
+            {wizardStep !== 'label' && !(uploadMode === 'pairs' && wizardStep === 'content') ? (
+              <button
+                onClick={goNext}
+                disabled={wizardStep === 'source' && !canProceedFromSource}
+                className="text-sm px-5 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                下一步 <ArrowRight size={13} />
+              </button>
+            ) : (
+              <button onClick={onClose}
+                className="text-sm px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-1.5">
+                <Upload size={13} /> 确认导入
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -586,6 +1068,301 @@ function NewDatasetDialog({ onClose, onCreate }: { onClose: () => void; onCreate
 
 // ─── Tab panels ───────────────────────────────────────────────────────────────
 
+function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
+  const [mode, setMode] = useState<RetrievalMode>('text2image');
+  const [query, setQuery] = useState('transformer attention architecture');
+  const [queryImage, setQueryImage] = useState<string | null>(null);
+  const [queryImageName, setQueryImageName] = useState('');
+  const [topK, setTopK] = useState(6);
+  const [searching, setSearching] = useState(false);
+  const [hits, setHits] = useState<RetrievalHit[] | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const canSearch =
+    (mode === 'text2image' && !!query.trim()) ||
+    (mode === 'image2text' && !!queryImage) ||
+    (mode === 'joint' && (!!query.trim() || !!queryImage));
+
+  const scorePair = (pair: ImageTextPair): RetrievalHit | null => {
+    const q = query.trim().toLowerCase();
+    const blob = `${pair.caption} ${pair.tags.join(' ')} ${pair.source}`.toLowerCase();
+    let textScore = 0;
+    if (q) {
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const hitTokens = tokens.filter(t => blob.includes(t));
+      textScore = tokens.length ? hitTokens.length / tokens.length : 0;
+      if (blob.includes(q)) textScore = Math.max(textScore, 0.92);
+      if (/attention|transformer|架构/.test(q) && /attention|transformer|architecture/.test(blob)) textScore = Math.max(textScore, 0.78);
+      if (/loss|training|曲线/.test(q) && /loss|training/.test(blob)) textScore = Math.max(textScore, 0.74);
+      if (/protein|结构/.test(q) && /protein|structure/.test(blob)) textScore = Math.max(textScore, 0.8);
+      if (/climate|温度/.test(q) && /climate|temperature/.test(blob)) textScore = Math.max(textScore, 0.76);
+      if (/microscopy|材料|nanotube/.test(q) && /microscopy|material|nanotube/.test(blob)) textScore = Math.max(textScore, 0.77);
+      if (/benchmark|performance|模型/.test(q) && /benchmark|performance|model/.test(blob)) textScore = Math.max(textScore, 0.72);
+    }
+
+    let imageScore = 0;
+    if (queryImage) {
+      const seed = (pair.id.charCodeAt(1) + (queryImageName.length % 7)) % 6;
+      imageScore = 0.55 + seed * 0.07;
+      if (queryImage === pair.imageUrl) imageScore = 0.98;
+    }
+
+    if (mode === 'text2image') {
+      if (!q) return null;
+      const score = Math.min(0.99, 0.35 + textScore * 0.65);
+      return {
+        pair,
+        score: textScore === 0 ? 0.42 + (pair.id.charCodeAt(1) % 5) * 0.05 : score,
+        matchBy: 'text',
+        reason: '文本语义 ↔ 图像向量',
+      };
+    }
+    if (mode === 'image2text') {
+      if (!queryImage) return null;
+      return { pair, score: Math.min(0.99, imageScore), matchBy: 'image', reason: '查询图像 ↔ 图文对视觉相似' };
+    }
+    const joint = q && queryImage
+      ? Math.min(0.99, 0.45 * textScore + 0.55 * imageScore + 0.08)
+      : q
+        ? Math.min(0.99, 0.4 + textScore * 0.55)
+        : Math.min(0.99, imageScore);
+    return { pair, score: joint, matchBy: 'joint', reason: '图文联合编码（CLIP 双塔）' };
+  };
+
+  const runSearch = () => {
+    if (!canSearch) return;
+    setSearching(true);
+    setTimeout(() => {
+      const ranked = ds.pairs
+        .map(scorePair)
+        .filter((h): h is RetrievalHit => !!h)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK);
+      setHits(ranked.length > 0 ? ranked : ds.pairs.slice(0, Math.min(topK, ds.pairs.length)).map((pair, i) => ({
+        pair,
+        score: 0.61 - i * 0.04,
+        matchBy: mode === 'image2text' ? 'image' as const : mode === 'joint' ? 'joint' as const : 'text' as const,
+        reason: '近邻召回（弱相关）',
+      })));
+      setSearching(false);
+    }, 700);
+  };
+
+  const onPickImage = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    if (queryImage?.startsWith('blob:')) URL.revokeObjectURL(queryImage);
+    setQueryImage(url);
+    setQueryImageName(file.name);
+    if (mode === 'text2image') setMode('joint');
+  };
+
+  const useSampleAsQuery = (url: string) => {
+    setQueryImage(url);
+    setQueryImageName('样本图像');
+    if (mode === 'text2image') setMode('image2text');
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <Search size={15} className="text-violet-600" /> 图文检索
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              基于数据集向量索引，支持以文搜图、以图搜文，以及图文联合检索当前数据集中的图文对。
+            </p>
+          </div>
+          {ds.indexConfig?.built ? (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-100 flex items-center gap-1 flex-shrink-0">
+              <CheckCircle size={11} /> 索引可用 · {ds.indexConfig.type.toUpperCase()}
+            </span>
+          ) : (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100 flex-shrink-0">
+              未构建索引（演示仍可检索）
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {([
+            { id: 'text2image' as const, label: '以文搜图', desc: '文本查询 → 相关图像' },
+            { id: 'image2text' as const, label: '以图搜文', desc: '上传图像 → 相关描述/图文对' },
+            { id: 'joint' as const, label: '图文联合', desc: '文本 + 图像同时作为查询' },
+          ]).map(m => (
+            <button
+              key={m.id}
+              onClick={() => setMode(m.id)}
+              className={`px-3 py-2 rounded-lg border text-left transition-colors ${
+                mode === m.id ? 'border-violet-300 bg-violet-50' : 'border-gray-200 bg-white hover:bg-gray-50'
+              }`}
+            >
+              <div className={`text-xs font-medium ${mode === m.id ? 'text-violet-700' : 'text-gray-700'}`}>{m.label}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">{m.desc}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3">
+          <div className="space-y-3">
+            {(mode === 'text2image' || mode === 'joint') && (
+              <div className="flex items-center border border-gray-200 rounded-xl focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100 bg-white">
+                <FileText size={15} className="ml-3 text-gray-400 flex-shrink-0" />
+                <input
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && runSearch()}
+                  placeholder="输入文本查询，如 transformer attention / 蛋白质结构…"
+                  className="flex-1 px-3 py-2.5 text-sm outline-none bg-transparent"
+                />
+              </div>
+            )}
+
+            {(mode === 'image2text' || mode === 'joint') && (
+              <div className="flex flex-wrap items-center gap-2">
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickImage} />
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors"
+                >
+                  <Upload size={12} /> 上传查询图片
+                </button>
+                <span className="text-[11px] text-gray-400">或点击下方样本图作为查询</span>
+                {queryImage && (
+                  <div className="flex items-center gap-2 pl-1.5 pr-1 py-1 rounded-lg border border-gray-200 bg-white">
+                    <img src={queryImage} alt="" className="w-8 h-8 rounded object-cover" />
+                    <span className="text-[11px] text-gray-600 max-w-[120px] truncate">{queryImageName}</span>
+                    <button
+                      onClick={() => {
+                        if (queryImage.startsWith('blob:')) URL.revokeObjectURL(queryImage);
+                        setQueryImage(null);
+                        setQueryImageName('');
+                      }}
+                      className="p-1 text-gray-300 hover:text-red-500"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 lg:justify-end">
+            <label className="text-xs text-gray-500 flex items-center gap-1.5">
+              Top-K
+              <select
+                value={topK}
+                onChange={e => setTopK(Number(e.target.value))}
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white"
+              >
+                {[3, 6, 10, 20].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+            <button
+              onClick={runSearch}
+              disabled={!canSearch || searching}
+              className="text-sm px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              {searching ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+              {searching ? '检索中…' : '开始检索'}
+            </button>
+          </div>
+        </div>
+
+        {(mode === 'image2text' || mode === 'joint') && (
+          <div>
+            <div className="text-[11px] text-gray-400 mb-2">快速选用样本图像作为查询</div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {ds.pairs.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => useSampleAsQuery(p.imageUrl)}
+                  className={`relative flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
+                    queryImage === p.imageUrl ? 'border-violet-500' : 'border-transparent hover:border-violet-200'
+                  }`}
+                >
+                  <img src={p.imageUrl} alt="" className="w-14 h-14 object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <div className="text-sm font-semibold text-gray-800">检索结果</div>
+          {hits && (
+            <span className="text-xs text-gray-400">
+              返回 {hits.length} 条 · 模式 {
+                mode === 'text2image' ? '以文搜图' : mode === 'image2text' ? '以图搜文' : '图文联合'
+              }
+            </span>
+          )}
+        </div>
+
+        {!hits && (
+          <div className="px-5 py-14 text-center text-sm text-gray-400">
+            <Image size={28} className="mx-auto mb-2 text-gray-300" />
+            配置查询条件后点击「开始检索」
+          </div>
+        )}
+
+        {hits && hits.length === 0 && (
+          <div className="px-5 py-10 text-center text-sm text-gray-400">未召回到相关图文对，请调整查询</div>
+        )}
+
+        {hits && hits.length > 0 && (
+          <div className="divide-y divide-gray-50">
+            {hits.map((hit, idx) => (
+              <div key={hit.pair.id} className="flex gap-4 px-5 py-3.5 hover:bg-gray-50/60 transition-colors">
+                <div className="w-6 text-xs text-gray-300 font-mono pt-1">{idx + 1}</div>
+                <img src={hit.pair.imageUrl} alt="" className="w-16 h-16 object-cover rounded-lg flex-shrink-0 bg-gray-100" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
+                      hit.score >= 0.85 ? 'bg-green-50 text-green-700' :
+                      hit.score >= 0.65 ? 'bg-amber-50 text-amber-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      相似度 {(hit.score * 100).toFixed(1)}%
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600 border border-violet-100">
+                      {hit.matchBy === 'text' ? '文→图' : hit.matchBy === 'image' ? '图→文' : '图文联合'}
+                    </span>
+                    <span className="text-[10px] text-gray-400">{hit.reason}</span>
+                  </div>
+                  <p className="text-sm text-gray-700 leading-snug line-clamp-2">{hit.pair.caption}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    {hit.pair.tags.map(t => (
+                      <span key={t} className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">{t}</span>
+                    ))}
+                    <span className="text-[10px] text-gray-400 ml-auto">{hit.pair.source}</span>
+                  </div>
+                </div>
+                <div className="flex-shrink-0 flex flex-col gap-1">
+                  <button className="p-1.5 hover:bg-gray-100 rounded text-gray-400" title="预览"><Eye size={13} /></button>
+                  <button
+                    onClick={() => useSampleAsQuery(hit.pair.imageUrl)}
+                    className="p-1.5 hover:bg-violet-50 rounded text-violet-500"
+                    title="以此图继续检索"
+                  >
+                    <Image size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OverviewPanel({ ds, onUpload }: { ds: MultimodalDataset; onUpload: () => void }) {
   const [searchQ, setSearchQ] = useState('');
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
@@ -640,7 +1417,7 @@ function OverviewPanel({ ds, onUpload }: { ds: MultimodalDataset; onUpload: () =
           </div>
           <button onClick={onUpload}
             className="text-sm px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center gap-1.5">
-            <Upload size={13} /> 上传数据
+            <Upload size={13} /> 导入数据
           </button>
         </div>
         <div className="divide-y divide-gray-50">
@@ -859,152 +1636,329 @@ function PreprocessPanel({ ds }: { ds: MultimodalDataset }) {
   );
 }
 
-function StoragePanel({ ds }: { ds: MultimodalDataset }) {
-  const [buildingIndex, setBuildingIndex] = useState(false);
-  const [indexCfg, setIndexCfg] = useState(ds.indexConfig);
+function toggleInList(list: string[], value: string) {
+  return list.includes(value) ? list.filter(v => v !== value) : [...list, value];
+}
 
-  const buildIndex = () => {
-    setBuildingIndex(true);
-    setTimeout(() => {
-      setBuildingIndex(false);
-      setIndexCfg({
-        type: 'faiss', dim: 512, metric: 'cosine', built: true,
-        vectorCount: ds.pairCount,
-        buildAt: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
-      });
-    }, 2000);
+function MetadataPanel({
+  ds,
+  onSave,
+}: {
+  ds: MultimodalDataset;
+  onSave: (patch: { metadata: DatasetMetadata; taxonomy: DatasetTaxonomy; description: string }) => void;
+}) {
+  const [metadata, setMetadata] = useState<DatasetMetadata>(ds.metadata);
+  const [taxonomy, setTaxonomy] = useState<DatasetTaxonomy>(ds.taxonomy);
+  const [extraTagInput, setExtraTagInput] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const setMeta = (key: keyof DatasetMetadata, value: string) =>
+    setMetadata(prev => ({ ...prev, [key]: value }));
+
+  const addExtraTag = () => {
+    const t = extraTagInput.trim();
+    if (!t || taxonomy.extraTags.includes(t)) return;
+    setTaxonomy(prev => ({ ...prev, extraTags: [...prev.extraTags, t] }));
+    setExtraTagInput('');
+  };
+
+  const handleSave = () => {
+    onSave({ metadata, taxonomy, description: metadata.description });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1800);
   };
 
   return (
     <div className="space-y-4">
-      {/* Storage stats */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: '原始图像存储', value: '38.1 GB', sub: 'MinIO / kg-bucket', icon: Database, cls: 'text-blue-600 bg-blue-50' },
-          { label: '向量索引存储', value: '1.24 GB', sub: 'FAISS IndexFlatIP', icon: Layers, cls: 'text-violet-600 bg-violet-50' },
-          { label: '元数据存储', value: '280 MB', sub: 'PostgreSQL 16', icon: FileText, cls: 'text-emerald-600 bg-emerald-50' },
-        ].map(s => (
-          <div key={s.label} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${s.cls}`}><s.icon size={16} /></div>
-            <div>
-              <div className="text-base font-semibold text-gray-800">{s.value}</div>
-              <div className="text-xs text-gray-400">{s.label}</div>
-              <div className="text-xs text-gray-300 mt-0.5">{s.sub}</div>
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <Tag size={15} className="text-violet-500" /> 多维度标签分类
+        </div>
+        <div className="space-y-4">
+          <div>
+            <div className="text-xs text-gray-500 mb-2">领域</div>
+            <div className="flex flex-wrap gap-2">
+              {DOMAIN_OPTIONS.map(d => {
+                const on = taxonomy.domains.includes(d);
+                return (
+                  <button key={d} type="button" onClick={() => setTaxonomy(prev => ({ ...prev, domains: toggleInList(prev.domains, d) }))}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${on ? 'bg-violet-50 border-violet-300 text-violet-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    {d}
+                  </button>
+                );
+              })}
             </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 mb-2">任务类型</div>
+            <div className="flex flex-wrap gap-2">
+              {TASK_OPTIONS.map(t => {
+                const on = taxonomy.tasks.includes(t);
+                return (
+                  <button key={t} type="button" onClick={() => setTaxonomy(prev => ({ ...prev, tasks: toggleInList(prev.tasks, t) }))}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${on ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 mb-2">数据模态</div>
+            <div className="flex flex-wrap gap-2">
+              {(['image', 'text', 'audio', 'video'] as Modality[]).map(m => {
+                const on = taxonomy.modalities.includes(m);
+                const labels: Record<Modality, string> = { image: '图像', text: '文本', audio: '音频', video: '视频' };
+                return (
+                  <button key={m} type="button" onClick={() => setTaxonomy(prev => ({ ...prev, modalities: toggleInList(prev.modalities, m) as Modality[] }))}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${on ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    {labels[m]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 mb-2">自定义标签</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {taxonomy.extraTags.map(t => (
+                <span key={t} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 flex items-center gap-1">
+                  {t}
+                  <button type="button" onClick={() => setTaxonomy(prev => ({ ...prev, extraTags: prev.extraTags.filter(x => x !== t) }))}
+                    className="text-gray-400 hover:text-gray-600"><X size={10} /></button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input value={extraTagInput} onChange={e => setExtraTagInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addExtraTag()}
+                placeholder="输入标签后回车添加"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
+              <button type="button" onClick={addExtraTag}
+                className="text-sm px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">添加</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <ClipboardList size={15} className="text-violet-500" /> 数据集元数据
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <label className="text-xs text-gray-500 mb-1 block">描述</label>
+            <textarea value={metadata.description} onChange={e => setMeta('description', e.target.value)} rows={3}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400 resize-none" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">来源</label>
+            <input value={metadata.source} onChange={e => setMeta('source', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><User size={11} /> 创建者</label>
+            <input value={metadata.creator} onChange={e => setMeta('creator', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><Calendar size={11} /> 发布日期</label>
+            <input type="date" value={metadata.publishedAt} onChange={e => setMeta('publishedAt', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">许可协议</label>
+            <input value={metadata.license} onChange={e => setMeta('license', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs text-gray-500 mb-1 block">主页 / 文档链接</label>
+            <input value={metadata.homepage} onChange={e => setMeta('homepage', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
+          </div>
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <button type="button" onClick={handleSave}
+            className="text-sm px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg flex items-center gap-1.5">
+            <Check size={13} /> 保存元数据
+          </button>
+          {saved && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} /> 已保存</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EvaluationPanel({
+  ds,
+  onEvaluated,
+}: {
+  ds: MultimodalDataset;
+  onEvaluated: (evaluation: DatasetEvaluation) => void;
+}) {
+  const ev = ds.evaluation;
+  const [running, setRunning] = useState(false);
+  const maxBin = Math.max(...ev.degreeBins.map(b => b.value), 1);
+  const benchmarks = BENCHMARKS.map(b =>
+    b.isCurrent
+      ? {
+          ...b,
+          name: `${ds.name}（当前）`,
+          density: ev.graphDensity,
+          avgDegree: ev.avgDegree,
+          completeness: ev.completenessScore,
+          quality: ev.qualityScore,
+        }
+      : b,
+  );
+
+  const runEvaluation = () => {
+    setRunning(true);
+    setTimeout(() => {
+      const next: DatasetEvaluation = {
+        ...ev,
+        missingRate: Math.max(0.5, +(ev.missingRate + (Math.random() - 0.5)).toFixed(1)),
+        inconsistencyRate: Math.max(0.3, +(ev.inconsistencyRate + (Math.random() - 0.4)).toFixed(1)),
+        duplicateRate: Math.max(0.2, +(ev.duplicateRate + (Math.random() - 0.5)).toFixed(1)),
+        completenessScore: Math.min(99, Math.max(70, ev.completenessScore + Math.floor(Math.random() * 5) - 1)),
+        qualityScore: Math.min(99, Math.max(70, ev.qualityScore + Math.floor(Math.random() * 5) - 1)),
+        lastEvaluatedAt: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
+      };
+      onEvaluated(next);
+      setRunning(false);
+    }, 1200);
+  };
+
+  const severityCls = {
+    high: 'bg-red-50 text-red-700 border-red-100',
+    medium: 'bg-amber-50 text-amber-700 border-amber-100',
+    low: 'bg-gray-50 text-gray-600 border-gray-100',
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center justify-between gap-4">
+        <div>
+          <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+            <Activity size={15} className="text-violet-500" /> 自动化数据集评估
+          </div>
+          <div className="text-xs text-gray-400 mt-1">最近评估：{ev.lastEvaluatedAt}</div>
+        </div>
+        <button type="button" onClick={runEvaluation} disabled={running}
+          className="text-sm px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-lg flex items-center gap-1.5">
+          {running ? <><RefreshCw size={13} className="animate-spin" /> 评估中…</> : <><Gauge size={13} /> 重新评估</>}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { label: '图谱密度', value: ev.graphDensity.toFixed(3) },
+          { label: '平均节点度', value: ev.avgDegree.toFixed(1) },
+          { label: '完整性得分', value: `${ev.completenessScore}` },
+          { label: '质量得分', value: `${ev.qualityScore}` },
+        ].map(s => (
+          <div key={s.label} className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="text-xs text-gray-400 mb-1">{s.label}</div>
+            <div className="text-xl font-semibold text-gray-800">{s.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Storage config */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <div className="text-sm font-semibold text-gray-800 mb-4">存储方案配置</div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <div className="text-xs font-medium text-gray-600 mb-2">图像存储</div>
-            <div>
-              <div className="text-xs text-gray-400 mb-1">存储后端</div>
-              <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:border-violet-400">
-                <option>MinIO（本地）</option>
-                <option>阿里云 OSS</option>
-                <option>腾讯云 COS</option>
-              </select>
-            </div>
-            <div>
-              <div className="text-xs text-gray-400 mb-1">图像格式</div>
-              <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:border-violet-400">
-                <option>原始格式保留</option>
-                <option>统一转 WebP</option>
-                <option>统一转 PNG</option>
-              </select>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="text-xs font-medium text-gray-600 mb-2">元数据存储</div>
-            <div>
-              <div className="text-xs text-gray-400 mb-1">数据库</div>
-              <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:border-violet-400">
-                <option>PostgreSQL</option>
-                <option>MySQL</option>
-                <option>MongoDB</option>
-              </select>
-            </div>
-            <div>
-              <div className="text-xs text-gray-400 mb-1">分片策略</div>
-              <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:border-violet-400">
-                <option>按来源分片</option>
-                <option>按日期分片</option>
-                <option>按哈希分片</option>
-              </select>
-            </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="text-sm font-semibold text-gray-800 mb-1">统计特征 · 节点度分布</div>
+          <div className="text-xs text-gray-400 mb-4">节点 {ev.nodeCount.toLocaleString()} · 边 {ev.edgeCount.toLocaleString()} · 最大度 {ev.maxDegree}</div>
+          <div className="space-y-2">
+            {ev.degreeBins.map(bin => (
+              <div key={bin.label} className="flex items-center gap-3 text-xs">
+                <span className="w-10 text-gray-500">{bin.label}</span>
+                <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-full bg-violet-500 rounded-full" style={{ width: `${(bin.value / maxBin) * 100}%` }} />
+                </div>
+                <span className="w-8 text-right text-gray-500">{bin.value}%</span>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <button className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">保存存储配置</button>
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="text-sm font-semibold text-gray-800 mb-4">统计特征 · 关系类型分布</div>
+          <div className="space-y-3">
+            {ev.relationDist.map(r => (
+              <div key={r.type}>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="font-mono text-gray-700">{r.type}</span>
+                  <span className="text-gray-400">{r.count.toLocaleString()}（{r.pct}%）</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${r.pct}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Vector index */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-            <Zap size={15} className="text-amber-500" /> 多模态检索索引
-          </div>
-          {indexCfg?.built && <span className="text-xs px-2.5 py-1 bg-green-50 text-green-700 rounded-full flex items-center gap-1"><CheckCircle size={11} /> 索引已构建</span>}
+        <div className="text-sm font-semibold text-gray-800 mb-4">数据质量与完整性报告</div>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {[
+            { label: '缺失率', value: `${ev.missingRate}%`, color: 'text-red-600' },
+            { label: '不一致率', value: `${ev.inconsistencyRate}%`, color: 'text-amber-600' },
+            { label: '重复率', value: `${ev.duplicateRate}%`, color: 'text-blue-600' },
+          ].map(m => (
+            <div key={m.label} className="rounded-lg bg-gray-50 px-4 py-3">
+              <div className="text-xs text-gray-400">{m.label}</div>
+              <div className={`text-lg font-semibold mt-0.5 ${m.color}`}>{m.value}</div>
+            </div>
+          ))}
         </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <div className="text-xs text-gray-400 mb-1">向量库类型</div>
-            <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:border-violet-400">
-              <option value="faiss">FAISS（本地高速）</option>
-              <option value="milvus">Milvus（分布式）</option>
-              <option value="elasticsearch">Elasticsearch（混合检索）</option>
-            </select>
-          </div>
-          <div>
-            <div className="text-xs text-gray-400 mb-1">相似度度量</div>
-            <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:border-violet-400">
-              <option value="cosine">余弦相似度（Cosine）</option>
-              <option value="l2">欧氏距离（L2）</option>
-              <option value="ip">内积（Inner Product）</option>
-            </select>
-          </div>
-          <div>
-            <div className="text-xs text-gray-400 mb-1">向量维度</div>
-            <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:border-violet-400">
-              <option>512（CLIP ViT-B/32）</option>
-              <option>768（CLIP ViT-L/14）</option>
-              <option>1024（自定义）</option>
-            </select>
-          </div>
-          <div>
-            <div className="text-xs text-gray-400 mb-1">编码器模型</div>
-            <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:border-violet-400">
-              <option>openai/clip-vit-base-patch32</option>
-              <option>openai/clip-vit-large-patch14</option>
-              <option>laion/CLIP-ViT-H-14-laion2B</option>
-            </select>
-          </div>
+        <div className="space-y-2">
+          {ev.issues.map(issue => (
+            <div key={issue.id} className={`border rounded-lg px-4 py-3 flex items-start gap-3 ${severityCls[issue.severity]}`}>
+              <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium flex items-center gap-2">
+                  {issue.category}
+                  <span className="text-xs font-normal opacity-80">{issue.count} 项</span>
+                </div>
+                <div className="text-xs opacity-80 mt-0.5">{issue.detail}</div>
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        {indexCfg?.built && (
-          <div className="bg-gray-50 rounded-xl p-4 mb-4 grid grid-cols-3 gap-4 text-sm">
-            <div><div className="text-xs text-gray-400 mb-0.5">索引向量数</div><div className="font-medium text-gray-700">{indexCfg.vectorCount.toLocaleString()}</div></div>
-            <div><div className="text-xs text-gray-400 mb-0.5">构建时间</div><div className="font-medium text-gray-700">{indexCfg.buildAt}</div></div>
-            <div><div className="text-xs text-gray-400 mb-0.5">检索延迟（预估）</div><div className="font-medium text-gray-700">~12 ms / query</div></div>
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <button onClick={buildIndex} disabled={buildingIndex}
-            className="text-sm px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-lg transition-colors flex items-center gap-1.5">
-            {buildingIndex ? <><RefreshCw size={13} className="animate-spin" /> 构建中…</> : <><Zap size={13} /> {indexCfg?.built ? '重新构建索引' : '构建检索索引'}</>}
-          </button>
-          {indexCfg?.built && (
-            <button className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1.5">
-              <Search size={13} /> 测试检索
-            </button>
-          )}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <div className="text-sm font-semibold text-gray-800">评估基准对比</div>
+          <div className="text-xs text-gray-400 mt-0.5">与领域内公开基准数据集的关键指标对比</div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-xs text-gray-500">
+                <th className="text-left font-medium px-5 py-2.5">数据集</th>
+                <th className="text-right font-medium px-4 py-2.5">图谱密度</th>
+                <th className="text-right font-medium px-4 py-2.5">平均度</th>
+                <th className="text-right font-medium px-4 py-2.5">完整性</th>
+                <th className="text-right font-medium px-4 py-2.5">质量</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {benchmarks.map(row => (
+                <tr key={row.name} className={row.isCurrent ? 'bg-violet-50/60' : ''}>
+                  <td className="px-5 py-3 text-gray-800 font-medium">
+                    {row.name}
+                    {row.isCurrent && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-violet-100 text-violet-700">当前</span>}
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-600">{row.density.toFixed(3)}</td>
+                  <td className="px-4 py-3 text-right text-gray-600">{row.avgDegree.toFixed(1)}</td>
+                  <td className="px-4 py-3 text-right text-gray-600">{row.completeness}</td>
+                  <td className="px-4 py-3 text-right text-gray-600">{row.quality}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1019,8 +1973,30 @@ export default function MultimodalDatasetManagement() {
   const [activeTab, setActiveTab] = useState<DatasetTab>('overview');
   const [showNewDataset, setShowNewDataset] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [catalogQuery, setCatalogQuery] = useState('');
+  const [filterDomain, setFilterDomain] = useState<string>('全部');
+  const [filterTask, setFilterTask] = useState<string>('全部');
+  const [filterModality, setFilterModality] = useState<Modality | '全部'>('全部');
 
   const selected = datasets.find(d => d.id === selectedId) || datasets[0];
+
+  const filteredDatasets = datasets.filter(ds => {
+    const q = catalogQuery.trim().toLowerCase();
+    const hitQuery = !q || [
+      ds.name,
+      ds.description,
+      ds.metadata.description,
+      ds.metadata.source,
+      ds.metadata.creator,
+      ...ds.taxonomy.domains,
+      ...ds.taxonomy.tasks,
+      ...ds.taxonomy.extraTags,
+    ].some(s => s.toLowerCase().includes(q));
+    const hitDomain = filterDomain === '全部' || ds.taxonomy.domains.includes(filterDomain);
+    const hitTask = filterTask === '全部' || ds.taxonomy.tasks.includes(filterTask);
+    const hitModality = filterModality === '全部' || ds.taxonomy.modalities.includes(filterModality) || ds.modalities.includes(filterModality);
+    return hitQuery && hitDomain && hitTask && hitModality;
+  });
 
   const createDataset = (name: string, desc: string) => {
     const id = 'ds_' + Date.now();
@@ -1031,17 +2007,49 @@ export default function MultimodalDatasetManagement() {
       updatedAt: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
       status: 'active', starred: false,
       pairs: [], commits: [], preprocessJobs: [], indexConfig: null,
+      metadata: {
+        description: desc,
+        source: '',
+        creator: '',
+        publishedAt: new Date().toISOString().slice(0, 10),
+        license: '',
+        homepage: '',
+      },
+      taxonomy: {
+        domains: [],
+        tasks: [],
+        modalities: ['image', 'text'],
+        extraTags: [],
+      },
+      evaluation: {
+        ...DEFAULT_EVALUATION,
+        nodeCount: 0,
+        edgeCount: 0,
+        missingRate: 0,
+        inconsistencyRate: 0,
+        duplicateRate: 0,
+        completenessScore: 100,
+        qualityScore: 100,
+        issues: [],
+        lastEvaluatedAt: '尚未评估',
+      },
     };
     setDatasets(prev => [...prev, newDs]);
     setSelectedId(id);
-    setActiveTab('overview');
+    setActiveTab('metadata');
+  };
+
+  const updateDataset = (id: string, patch: Partial<MultimodalDataset>) => {
+    setDatasets(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
   };
 
   const tabs: { id: DatasetTab; label: string; icon: any }[] = [
     { id: 'overview', label: '数据概览', icon: BarChart3 },
+    { id: 'metadata', label: '分类与元数据', icon: ClipboardList },
+    { id: 'evaluation', label: '数据集评估', icon: Gauge },
+    { id: 'retrieval', label: '图文检索', icon: Search },
     { id: 'version', label: '版本控制', icon: GitBranch },
     { id: 'preprocess', label: '预处理与对齐', icon: Cpu },
-    { id: 'storage', label: '存储与索引', icon: Database },
   ];
 
   return (
@@ -1049,8 +2057,8 @@ export default function MultimodalDatasetManagement() {
       {showNewDataset && <NewDatasetDialog onClose={() => setShowNewDataset(false)} onCreate={createDataset} />}
       {showUpload && <UploadDialog onClose={() => setShowUpload(false)} />}
 
-      {/* Left sidebar: dataset list */}
-      <div className="w-64 flex-shrink-0 border-r border-gray-200 bg-white flex flex-col">
+      {/* Left sidebar: catalog + search */}
+      <div className="w-72 flex-shrink-0 border-r border-gray-200 bg-white flex flex-col">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <div className="text-sm font-semibold text-gray-700">多模态数据集</div>
           <button onClick={() => setShowNewDataset(true)}
@@ -1058,8 +2066,47 @@ export default function MultimodalDatasetManagement() {
             <Plus size={14} />
           </button>
         </div>
+
+        <div className="px-3 py-3 border-b border-gray-100 space-y-2">
+          <div className="relative">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={catalogQuery}
+              onChange={e => setCatalogQuery(e.target.value)}
+              placeholder="关键词搜索数据集…"
+              className="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-violet-400"
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-1.5">
+            <select value={filterDomain} onChange={e => setFilterDomain(e.target.value)}
+              className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:border-violet-400">
+              <option value="全部">分类目录 · 全部领域</option>
+              {DOMAIN_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <select value={filterTask} onChange={e => setFilterTask(e.target.value)}
+              className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:border-violet-400">
+              <option value="全部">全部任务类型</option>
+              {TASK_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select value={filterModality} onChange={e => setFilterModality(e.target.value as Modality | '全部')}
+              className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:border-violet-400">
+              <option value="全部">全部模态</option>
+              <option value="image">图像</option>
+              <option value="text">文本</option>
+              <option value="audio">音频</option>
+              <option value="video">视频</option>
+            </select>
+          </div>
+          <div className="text-xs text-gray-400 flex items-center gap-1">
+            <Filter size={11} /> {filteredDatasets.length} / {datasets.length} 个数据集
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-          {datasets.map(ds => (
+          {filteredDatasets.length === 0 && (
+            <div className="text-xs text-gray-400 text-center py-8 px-2">没有匹配的数据集，请调整分类或关键词</div>
+          )}
+          {filteredDatasets.map(ds => (
             <div key={ds.id} onClick={() => { setSelectedId(ds.id); setActiveTab('overview'); }}
               className={`rounded-xl p-3 cursor-pointer transition-colors border ${selectedId === ds.id ? 'border-violet-300 bg-violet-50' : 'border-transparent hover:bg-gray-50'}`}>
               <div className="flex items-start gap-2">
@@ -1070,6 +2117,14 @@ export default function MultimodalDatasetManagement() {
                   <div className="flex items-center gap-1">
                     <div className="text-xs font-medium text-gray-800 truncate flex-1">{ds.name}</div>
                     {ds.starred && <Star size={11} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    {ds.taxonomy.domains.slice(0, 2).map(d => (
+                      <span key={d} className="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-600">{d}</span>
+                    ))}
+                    {ds.taxonomy.tasks.slice(0, 1).map(t => (
+                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{t}</span>
+                    ))}
                   </div>
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                     {ds.modalities.map(m => <ModalityBadge key={m} m={m} />)}
@@ -1102,6 +2157,14 @@ export default function MultimodalDatasetManagement() {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-600">{selected.version}</span>
                   </div>
                   <p className="text-xs text-gray-500 max-w-2xl">{selected.description}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {selected.taxonomy.domains.map(d => (
+                      <span key={d} className="text-[11px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">{d}</span>
+                    ))}
+                    {selected.taxonomy.tasks.map(t => (
+                      <span key={t} className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{t}</span>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0 ml-4">
                   <button className="text-sm px-3 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-1.5">
@@ -1109,16 +2172,16 @@ export default function MultimodalDatasetManagement() {
                   </button>
                   <button onClick={() => setShowUpload(true)}
                     className="text-sm px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg flex items-center gap-1.5">
-                    <Upload size={13} /> 上传数据
+                    <Upload size={13} /> 导入数据
                   </button>
                 </div>
               </div>
 
               {/* Tabs */}
-              <div className="flex gap-0 mt-4 border-b -mb-px">
+              <div className="flex gap-0 mt-4 border-b -mb-px overflow-x-auto">
                 {tabs.map(tab => (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 text-sm px-4 py-2.5 border-b-2 transition-colors ${activeTab === tab.id ? 'border-violet-600 text-violet-700 font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    className={`flex items-center gap-1.5 text-sm px-4 py-2.5 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id ? 'border-violet-600 text-violet-700 font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                     <tab.icon size={14} /> {tab.label}
                   </button>
                 ))}
@@ -1128,9 +2191,30 @@ export default function MultimodalDatasetManagement() {
             {/* Tab content */}
             <div className="flex-1 overflow-y-auto p-6">
               {activeTab === 'overview' && <OverviewPanel ds={selected} onUpload={() => setShowUpload(true)} />}
+              {activeTab === 'metadata' && (
+                <MetadataPanel
+                  key={selected.id}
+                  ds={selected}
+                  onSave={({ metadata, taxonomy, description }) =>
+                    updateDataset(selected.id, {
+                      metadata,
+                      taxonomy,
+                      description,
+                      modalities: taxonomy.modalities.length ? taxonomy.modalities : selected.modalities,
+                    })
+                  }
+                />
+              )}
+              {activeTab === 'evaluation' && (
+                <EvaluationPanel
+                  key={selected.id}
+                  ds={selected}
+                  onEvaluated={evaluation => updateDataset(selected.id, { evaluation })}
+                />
+              )}
+              {activeTab === 'retrieval' && <RetrievalPanel ds={selected} />}
               {activeTab === 'version' && <VersionPanel ds={selected} />}
               {activeTab === 'preprocess' && <PreprocessPanel ds={selected} />}
-              {activeTab === 'storage' && <StoragePanel ds={selected} />}
             </div>
           </>
         ) : (

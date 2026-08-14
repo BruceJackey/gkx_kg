@@ -5,6 +5,7 @@ import {
   FileText, ScrollText, StickyNote, BookOpen, Cpu, GalleryHorizontal,
   ChevronRight, ChevronDown, MoreVertical, Trash2, Edit2, FolderPlus,
   Check, TrendingUp, Quote, Loader2, Tag, ChevronUp, CheckCircle2, Sparkles, Link,
+  Workflow, Play, Power,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,10 +22,77 @@ interface KnowledgeDoc {
   abstract?: string; tags: string[]; folderId: string;
   uploadedAt: string; status: DocStatus;
   metadataAutoFilled?: boolean;
+  autoArchivedBy?: string;
 }
 
 interface Folder {
   id: string; name: string; parentId?: string; color: string;
+}
+
+type RuleField = 'title' | 'tags' | 'authors' | 'journal' | 'abstract' | 'type' | 'doi';
+type RuleOp = 'contains' | 'not_contains' | 'equals' | 'starts_with';
+
+interface ArchiveRule {
+  id: string;
+  enabled: boolean;
+  ifField: RuleField;
+  ifOp: RuleOp;
+  ifValue: string;
+  thenFolderId: string;
+}
+
+const RULE_FIELDS: { id: RuleField; label: string }[] = [
+  { id: 'title', label: '标题' },
+  { id: 'tags', label: '标签' },
+  { id: 'authors', label: '作者' },
+  { id: 'journal', label: '期刊' },
+  { id: 'abstract', label: '摘要' },
+  { id: 'type', label: '类型' },
+  { id: 'doi', label: 'DOI' },
+];
+
+const RULE_OPS: { id: RuleOp; label: string }[] = [
+  { id: 'contains', label: '包含' },
+  { id: 'not_contains', label: '不包含' },
+  { id: 'equals', label: '等于' },
+  { id: 'starts_with', label: '开头是' },
+];
+
+function fieldLabel(id: RuleField) {
+  return RULE_FIELDS.find(f => f.id === id)?.label ?? id;
+}
+function opLabel(id: RuleOp) {
+  return RULE_OPS.find(o => o.id === id)?.label ?? id;
+}
+
+function getDocFieldText(doc: KnowledgeDoc, field: RuleField): string {
+  switch (field) {
+    case 'title': return doc.title ?? '';
+    case 'tags': return (doc.tags ?? []).join(' ');
+    case 'authors': return (doc.authors ?? []).join(' ');
+    case 'journal': return doc.journal ?? '';
+    case 'abstract': return doc.abstract ?? '';
+    case 'type': return doc.type ?? '';
+    case 'doi': return doc.doi ?? '';
+  }
+}
+
+function matchArchiveRule(doc: KnowledgeDoc, rule: ArchiveRule): boolean {
+  if (!rule.enabled || !rule.ifValue.trim() || !rule.thenFolderId) return false;
+  const raw = getDocFieldText(doc, rule.ifField);
+  const hay = raw.toLowerCase();
+  const needle = rule.ifValue.trim().toLowerCase();
+  switch (rule.ifOp) {
+    case 'contains': return hay.includes(needle);
+    case 'not_contains': return !hay.includes(needle);
+    case 'equals': return hay === needle;
+    case 'starts_with': return hay.startsWith(needle);
+  }
+}
+
+/** First matching enabled rule wins. */
+function applyArchiveRules(doc: KnowledgeDoc, rules: ArchiveRule[]): ArchiveRule | null {
+  return rules.find(r => matchArchiveRule(doc, r)) ?? null;
 }
 
 interface UploadFile {
@@ -56,6 +124,13 @@ const initFolders: Folder[] = [
   { id: 'f3a', name: 'AI专利', parentId: 'f3', color: '#f59e0b' },
   { id: 'f3b', name: '医疗专利', parentId: 'f3', color: '#ef4444' },
   { id: 'f4', name: '高影响力文献', color: '#10b981' },
+  { id: 'f5', name: '人工智能', color: '#6366f1' },
+];
+
+const initArchiveRules: ArchiveRule[] = [
+  { id: 'ar1', enabled: true, ifField: 'title', ifOp: 'contains', ifValue: 'AI', thenFolderId: 'f5' },
+  { id: 'ar2', enabled: false, ifField: 'title', ifOp: 'contains', ifValue: '知识图谱', thenFolderId: 'f1' },
+  { id: 'ar3', enabled: false, ifField: 'journal', ifOp: 'equals', ifValue: 'Nature', thenFolderId: 'f4' },
 ];
 
 const initDocs: KnowledgeDoc[] = [
@@ -358,6 +433,161 @@ function UploadModal({ open, onOpenChange, onUploadComplete }: UploadModalProps)
   );
 }
 
+// ─── Archive Rules Modal ──────────────────────────────────────────────────────
+
+interface ArchiveRulesModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  rules: ArchiveRule[];
+  folders: Folder[];
+  onChange: (rules: ArchiveRule[]) => void;
+  onRunNow: () => number;
+}
+
+function ArchiveRulesModal({ open, onOpenChange, rules, folders, onChange, onRunNow }: ArchiveRulesModalProps) {
+  const [draft, setDraft] = useState<Omit<ArchiveRule, 'id' | 'enabled'>>({
+    ifField: 'title', ifOp: 'contains', ifValue: '', thenFolderId: folders[0]?.id ?? '',
+  });
+  const [runMsg, setRunMsg] = useState<string | null>(null);
+
+  const folderName = (id: string) => folders.find(f => f.id === id)?.name ?? '未知文件夹';
+
+  const addRule = () => {
+    if (!draft.ifValue.trim() || !draft.thenFolderId) return;
+    onChange([{ id: uid(), enabled: true, ...draft, ifValue: draft.ifValue.trim() }, ...rules]);
+    setDraft({ ifField: 'title', ifOp: 'contains', ifValue: '', thenFolderId: draft.thenFolderId });
+  };
+
+  const handleRun = () => {
+    const n = onRunNow();
+    setRunMsg(n > 0 ? `已按规则归档 ${n} 篇文档` : '没有文档匹配当前启用的规则');
+    setTimeout(() => setRunMsg(null), 2500);
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/40 z-40" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[640px] max-h-[82vh] bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between flex-shrink-0">
+            <div>
+              <Dialog.Title className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                <Workflow className="w-4 h-4 text-blue-600" />自动化归档规则
+              </Dialog.Title>
+              <p className="text-xs text-gray-400 mt-1">用「若 IF … 则 THEN …」把文献自动分到文件夹。上传完成或点击立即执行时生效，按列表从上到下命中第一条。</p>
+            </div>
+            <Dialog.Close className="p-1 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></Dialog.Close>
+          </div>
+
+          <div className="px-5 py-4 border-b border-gray-100 bg-slate-50 flex-shrink-0">
+            <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-2">新建规则</div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-[11px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">IF</span>
+              <select
+                value={draft.ifField}
+                onChange={e => setDraft(d => ({ ...d, ifField: e.target.value as RuleField }))}
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400"
+              >
+                {RULE_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              <select
+                value={draft.ifOp}
+                onChange={e => setDraft(d => ({ ...d, ifOp: e.target.value as RuleOp }))}
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400"
+              >
+                {RULE_OPS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+              <input
+                value={draft.ifValue}
+                onChange={e => setDraft(d => ({ ...d, ifValue: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') addRule(); }}
+                placeholder="例如 AI"
+                className="flex-1 min-w-[120px] border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-400"
+              />
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">THEN</span>
+              <span className="text-xs text-gray-500">移入</span>
+              <select
+                value={draft.thenFolderId}
+                onChange={e => setDraft(d => ({ ...d, thenFolderId: e.target.value }))}
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400 max-w-[160px]"
+              >
+                {folders.map(f => (
+                  <option key={f.id} value={f.id}>{f.parentId ? `└ ${f.name}` : f.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={addRule}
+                disabled={!draft.ifValue.trim() || !draft.thenFolderId}
+                className="ml-auto flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />添加
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2">
+              预览：若{fieldLabel(draft.ifField)}{opLabel(draft.ifOp)}「{draft.ifValue.trim() || '…'}」，则自动移入「{folderName(draft.thenFolderId)}」
+            </p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-5 py-3 min-h-0">
+            {rules.length === 0 ? (
+              <div className="py-10 text-center text-sm text-gray-400">还没有规则，先在上方创建一条</div>
+            ) : (
+              <ul className="space-y-2">
+                {rules.map(rule => (
+                  <li key={rule.id} className={`border rounded-xl px-3 py-2.5 flex items-start gap-3 ${rule.enabled ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-70'}`}>
+                    <button
+                      onClick={() => onChange(rules.map(r => r.id === rule.id ? { ...r, enabled: !r.enabled } : r))}
+                      title={rule.enabled ? '停用' : '启用'}
+                      className={`mt-0.5 p-1 rounded-md transition-colors ${rule.enabled ? 'text-emerald-600 hover:bg-emerald-50' : 'text-gray-300 hover:bg-gray-100'}`}
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="flex-1 min-w-0 text-xs text-gray-700 leading-relaxed">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded">IF</span>
+                        <span>{fieldLabel(rule.ifField)}</span>
+                        <span className="text-gray-400">{opLabel(rule.ifOp)}</span>
+                        <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">「{rule.ifValue}」</span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">THEN</span>
+                        <span>移入</span>
+                        <span className="inline-flex items-center gap-1 font-medium text-gray-800">
+                          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: folders.find(f => f.id === rule.thenFolderId)?.color }} />
+                          {folderName(rule.thenFolderId)}
+                        </span>
+                      </div>
+                      {!rule.enabled && <div className="text-[10px] text-gray-400 mt-1">已停用，不会自动执行</div>}
+                    </div>
+                    <button
+                      onClick={() => onChange(rules.filter(r => r.id !== rule.id))}
+                      className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="px-5 py-3 border-t border-gray-100 flex items-center gap-3 flex-shrink-0">
+            {runMsg && <span className="text-xs text-emerald-600 flex-1">{runMsg}</span>}
+            {!runMsg && <span className="text-[11px] text-gray-400 flex-1">{rules.filter(r => r.enabled).length} 条规则启用中</span>}
+            <button
+              onClick={handleRun}
+              className="flex items-center gap-1.5 text-xs px-3 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <Play className="w-3.5 h-3.5" />对现有文档立即执行
+            </button>
+            <Dialog.Close className="text-xs px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+              完成
+            </Dialog.Close>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props { onNavigate: (page: string) => void; }
@@ -382,6 +612,30 @@ export default function KnowledgeBase({ onNavigate }: Props) {
   const [newFolderName, setNewFolderName] = useState('');
   const [tagsExpanded, setTagsExpanded] = useState(true);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [archiveRules, setArchiveRules] = useState<ArchiveRule[]>(initArchiveRules);
+  const [archiveRulesOpen, setArchiveRulesOpen] = useState(false);
+  const [archiveToast, setArchiveToast] = useState<string | null>(null);
+
+  const showArchiveToast = (msg: string) => {
+    setArchiveToast(msg);
+    setTimeout(() => setArchiveToast(null), 2800);
+  };
+
+  const classifyDoc = useCallback((doc: KnowledgeDoc, rules: ArchiveRule[] = archiveRules): KnowledgeDoc => {
+    const hit = applyArchiveRules(doc, rules);
+    if (!hit) return doc;
+    return { ...doc, folderId: hit.thenFolderId, autoArchivedBy: hit.id };
+  }, [archiveRules]);
+
+  const runArchiveRules = useCallback(() => {
+    let moved = 0;
+    setDocs(prev => prev.map(d => {
+      const next = classifyDoc(d);
+      if (next.folderId !== d.folderId) moved += 1;
+      return next;
+    }));
+    return moved;
+  }, [classifyDoc]);
 
   // ── Computed ──────────────────────────────────────────────────────────────
 
@@ -421,9 +675,10 @@ export default function KnowledgeBase({ onNavigate }: Props) {
 
   const handleUploadComplete = useCallback((files: File[]) => {
     const today = new Date().toISOString().slice(0, 10);
+    let autoMoved = 0;
     files.forEach(file => {
       const isPatent = file.name.includes('专利') || file.name.toLowerCase().includes('patent');
-      const newDoc: KnowledgeDoc = {
+      const rawDoc: KnowledgeDoc = {
         id: uid(),
         type: isPatent ? '专利' : '文献',
         format: extToFormat(file.name),
@@ -434,28 +689,31 @@ export default function KnowledgeBase({ onNavigate }: Props) {
         status: 'parsing',
         metadataAutoFilled: false,
       };
+      const newDoc = classifyDoc(rawDoc);
+      if (newDoc.folderId !== rawDoc.folderId) autoMoved += 1;
       setDocs(prev => [newDoc, ...prev]);
       setTimeout(() => {
-        setDocs(prev => prev.map(d =>
-          d.id === newDoc.id
-            ? {
-                ...d,
-                status: 'ready',
-                metadataAutoFilled: true,
-                authors: isPatent ? undefined : ['AI Author', '自动识别'],
-                applicant: isPatent ? 'AI识别申请人' : undefined,
-                journal: isPatent ? undefined : 'AI识别期刊',
-                patentNumber: isPatent ? `CN${Date.now().toString().slice(-10)}A` : undefined,
-                filingDate: isPatent ? today : undefined,
-                year: isPatent ? undefined : new Date().getFullYear(),
-                tags: ['AI识别', isPatent ? '专利' : '文献'],
-                abstract: 'AI自动识别摘要：本文档经过AI自动分析，提取了关键信息并生成了结构化元数据。',
-              }
-            : d
-        ));
+        setDocs(prev => prev.map(d => {
+          if (d.id !== newDoc.id) return d;
+          const filled: KnowledgeDoc = {
+            ...d,
+            status: 'ready',
+            metadataAutoFilled: true,
+            authors: isPatent ? undefined : ['AI Author', '自动识别'],
+            applicant: isPatent ? 'AI识别申请人' : undefined,
+            journal: isPatent ? undefined : 'AI识别期刊',
+            patentNumber: isPatent ? `CN${Date.now().toString().slice(-10)}A` : undefined,
+            filingDate: isPatent ? today : undefined,
+            year: isPatent ? undefined : new Date().getFullYear(),
+            tags: ['AI识别', isPatent ? '专利' : '文献'],
+            abstract: 'AI自动识别摘要：本文档经过AI自动分析，提取了关键信息并生成了结构化元数据。',
+          };
+          return classifyDoc(filled);
+        }));
       }, 2000);
     });
-  }, [selectedFolderId]);
+    if (autoMoved > 0) showArchiveToast(`已按归档规则自动分类 ${autoMoved} 篇文档`);
+  }, [selectedFolderId, classifyDoc]);
 
   const handlePageDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -508,6 +766,23 @@ export default function KnowledgeBase({ onNavigate }: Props) {
           onOpenChange={setUploadModalOpen}
           onUploadComplete={handleUploadComplete}
         />
+        <ArchiveRulesModal
+          open={archiveRulesOpen}
+          onOpenChange={setArchiveRulesOpen}
+          rules={archiveRules}
+          folders={folders}
+          onChange={setArchiveRules}
+          onRunNow={() => {
+            const n = runArchiveRules();
+            if (n > 0) showArchiveToast(`已按归档规则自动分类 ${n} 篇文档`);
+            return n;
+          }}
+        />
+        {archiveToast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+            {archiveToast}
+          </div>
+        )}
 
         {/* ── Header ── */}
         <div className="px-8 pt-6 pb-4 bg-white border-b border-gray-200 flex-shrink-0">
@@ -516,12 +791,23 @@ export default function KnowledgeBase({ onNavigate }: Props) {
               <h1 className="text-2xl text-gray-900 font-semibold mb-0.5">知识库</h1>
               <p className="text-sm text-gray-400">上传、管理与检索你的文献、专利和笔记，一键跳转阅读与处理</p>
             </div>
-            <button
-              onClick={() => setUploadModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors font-medium"
-            >
-              <Upload className="w-4 h-4" />上传文档
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setArchiveRulesOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 text-sm rounded-lg transition-colors"
+              >
+                <Workflow className="w-4 h-4 text-blue-600" />归档规则
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">
+                  {archiveRules.filter(r => r.enabled).length}
+                </span>
+              </button>
+              <button
+                onClick={() => setUploadModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors font-medium"
+              >
+                <Upload className="w-4 h-4" />上传文档
+              </button>
+            </div>
           </div>
 
           {/* Stats chips */}
@@ -670,6 +956,16 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                 )}
               </div>
             </div>
+            <div className="px-3 py-2 border-t border-gray-100 flex-shrink-0">
+              <button
+                onClick={() => setArchiveRulesOpen(true)}
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <Workflow className="w-3.5 h-3.5" />
+                <span className="flex-1 text-left">归档规则</span>
+                <span className="text-[10px] text-gray-400">{archiveRules.filter(r => r.enabled).length} 启用</span>
+              </button>
+            </div>
           </div>
 
           {/* ── Center: doc list ── */}
@@ -766,6 +1062,11 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                             {doc.status === 'ready' && doc.metadataAutoFilled && (
                               <span className="flex items-center gap-1 text-[10px] text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded flex-shrink-0">
                                 <Sparkles className="w-2.5 h-2.5" />AI 已标注
+                              </span>
+                            )}
+                            {doc.autoArchivedBy && (
+                              <span className="flex items-center gap-1 text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded flex-shrink-0">
+                                <Workflow className="w-2.5 h-2.5" />自动归档
                               </span>
                             )}
                           </div>
@@ -1027,6 +1328,15 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                     <div className="flex gap-2 text-xs items-center">
                       <dt className="text-gray-400 w-14 flex-shrink-0">格式</dt>
                       <dd className={`font-medium text-[11px] px-1.5 py-0.5 rounded ${FORMAT_COLORS[selectedDoc.format]}`}>{selectedDoc.format}</dd>
+                    </div>
+                    <div className="flex gap-2 text-xs items-start">
+                      <dt className="text-gray-400 w-14 flex-shrink-0">文件夹</dt>
+                      <dd className="text-gray-700">
+                        {folders.find(f => f.id === selectedDoc.folderId)?.name ?? '—'}
+                        {selectedDoc.autoArchivedBy && (
+                          <span className="ml-1 text-[10px] text-indigo-500">（规则归档）</span>
+                        )}
+                      </dd>
                     </div>
                   </dl>
                 </div>

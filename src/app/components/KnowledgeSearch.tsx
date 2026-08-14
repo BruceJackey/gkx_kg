@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, type ChangeEvent } from 'react';
 import {
   Search, MessageSquare, BookmarkPlus, X, ChevronDown,
   ExternalLink, Quote, Loader2, FolderOpen, FileText, Check,
   Plus, Sparkles, Link, SlidersHorizontal, ChevronUp, BarChart3,
-  ChevronRight, Filter, TrendingUp, Trash2, Bot, Send, User
+  ChevronRight, Filter, TrendingUp, Trash2, Bot, Send, User,
+  Image as ImageIcon, Table2, Sigma, Layers, Upload,
 } from 'lucide-react';
 import NoteGenerationDialog from './NoteGenerationDialog';
 
@@ -13,6 +14,9 @@ interface SummaryRef {
   label: string;
   section: string;
 }
+
+type DocKind = '文献' | '专利';
+type ModalityKind = 'image' | 'table' | 'formula';
 
 interface Literature {
   id: string;
@@ -28,6 +32,17 @@ interface Literature {
   summaryRefs: SummaryRef[];
   keywords: string[];
   doi: string;
+  docKind?: DocKind;
+  /** Mock modalities this paper can be retrieved by in reverse/hybrid search */
+  modalityHints?: ModalityKind[];
+}
+
+interface ModalAttachment {
+  id: string;
+  kind: ModalityKind;
+  name: string;
+  preview?: string; // object URL for images
+  note?: string;
 }
 
 interface RuleCondition {
@@ -36,6 +51,12 @@ interface RuleCondition {
   operator: string;
   value: string;
 }
+
+const MODALITY_META: Record<ModalityKind, { label: string; accept: string; Icon: typeof ImageIcon; color: string; bg: string; border: string }> = {
+  image: { label: '图片', accept: 'image/*', Icon: ImageIcon, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200' },
+  table: { label: '表格', accept: '.csv,.tsv,.xlsx,.xls,.tsv,text/csv', Icon: Table2, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+  formula: { label: '公式', accept: '.tex,.mml,.mathml,image/*,.svg', Icon: Sigma, color: 'text-cyan-700', bg: 'bg-cyan-50', border: 'border-cyan-200' },
+};
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -342,7 +363,56 @@ const mockLiterature: Literature[] = [
     keywords: ['因果推断', '知识图谱', '可信度评估', '知识清洗'],
     doi: '10.1609/AAAI.2024.020',
   },
+  {
+    id: 'P001',
+    title: '一种多模态科学文献图表反向检索方法及系统',
+    authors: ['李研', '周凯'],
+    journal: 'CN专利',
+    year: 2024,
+    impactFactor: 0,
+    citations: 18,
+    abstract: '本发明公开了一种支持以图片、表格、公式为查询条件的多模态反向检索方法，可从大规模文献与专利库中召回语义相关文档。',
+    aiSummary: '专利提出图像-文本联合编码与公式结构树匹配两条通路，支持单模态反向检索与跨模态混合查询，适用于科研知识库检索场景。',
+    relevanceScore: 0.97,
+    summaryRefs: [{ label: '§权利要求', section: 'Claims' }, { label: '§实施例', section: 'Embodiments' }],
+    keywords: ['多模态', '反向检索', '图表', '专利'],
+    doi: 'CN202410998877A',
+    docKind: '专利',
+    modalityHints: ['image', 'table', 'formula'],
+  },
+  {
+    id: 'P002',
+    title: '基于公式结构的科技文献语义检索装置',
+    authors: ['韩雪', '丁磊'],
+    journal: 'CN专利',
+    year: 2023,
+    impactFactor: 0,
+    citations: 11,
+    abstract: '本发明涉及一种将 LaTeX / MathML 公式解析为结构图并与全文语义联合检索的装置。',
+    aiSummary: '通过公式 AST 与段落嵌入的双塔检索，可定位包含等价变换或同义公式的文献段落，支撑科研人员以公式找文。',
+    relevanceScore: 0.93,
+    summaryRefs: [{ label: '§说明书', section: 'Description' }],
+    keywords: ['公式检索', 'LaTeX', '语义检索', '专利'],
+    doi: 'CN202310556612B',
+    docKind: '专利',
+    modalityHints: ['formula', 'table'],
+  },
 ];
+
+function enrichLiterature(papers: Literature[]): Literature[] {
+  return papers.map(p => {
+    if (p.modalityHints?.length) return { ...p, docKind: p.docKind ?? '文献' };
+    const blob = `${p.title} ${p.abstract} ${p.keywords.join(' ')}`.toLowerCase();
+    const hints: ModalityKind[] = [];
+    if (/多模态|image|visual|图|cnn|chart|figure|推荐/.test(blob)) hints.push('image');
+    if (/table|实验|benchmark|数据集|指标|result|评估|清洗/.test(blob)) hints.push('table');
+    if (/transformer|embedding|公式|attention|mrr|loss|数学|因果|对齐/.test(blob)) hints.push('formula');
+    if (hints.length === 0) hints.push('image', 'table');
+    return { ...p, docKind: p.docKind ?? '文献', modalityHints: hints };
+  });
+}
+
+const literatureIndex = enrichLiterature(mockLiterature);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -414,8 +484,14 @@ function RangeSlider({ min, max, value, onChange, label }: {
 
 export default function KnowledgeSearch() {
   // Search
+  const [searchMode, setSearchMode] = useState<'text' | 'multimodal'>('text');
   const [searchQuery, setSearchQuery] = useState('知识图谱 Transformer 嵌入');
   const [appliedQuery, setAppliedQuery] = useState('知识图谱 Transformer 嵌入');
+  const [attachments, setAttachments] = useState<ModalAttachment[]>([]);
+  const [appliedAttachments, setAppliedAttachments] = useState<ModalAttachment[]>([]);
+  const [searching, setSearching] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingKind, setPendingKind] = useState<ModalityKind>('image');
 
   // Filters
   const [yearRange, setYearRange] = useState<[number, number]>([2018, 2024]);
@@ -439,20 +515,38 @@ export default function KnowledgeSearch() {
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
 
   const PAGE_SIZE = 8;
+  const activeModalities = useMemo(
+    () => [...new Set(appliedAttachments.map(a => a.kind))],
+    [appliedAttachments],
+  );
+  const isHybridQuery = appliedAttachments.length > 0 && !!appliedQuery.trim();
+  const isReverseOnly = appliedAttachments.length > 0 && !appliedQuery.trim();
 
   // Filter & sort
   const filteredResults = useMemo(() => {
-    let items = mockLiterature.filter(p =>
+    let items = literatureIndex.filter(p =>
       p.year >= yearRange[0] && p.year <= yearRange[1] &&
-      p.impactFactor >= ifRange[0] && p.impactFactor <= ifRange[1] &&
-      (selectedJournals.length === 0 || selectedJournals.includes(p.journal))
+      (p.impactFactor >= ifRange[0] && p.impactFactor <= ifRange[1] || p.docKind === '专利') &&
+      (selectedJournals.length === 0 || selectedJournals.includes(p.journal)) &&
+      (selectedDocTypes.length === 0 || selectedDocTypes.includes(p.docKind ?? '文献'))
     );
+
+    if (activeModalities.length > 0) {
+      items = items
+        .filter(p => (p.modalityHints ?? []).some(m => activeModalities.includes(m)))
+        .map(p => {
+          const hitCount = (p.modalityHints ?? []).filter(m => activeModalities.includes(m)).length;
+          const boost = 0.04 * hitCount + (isHybridQuery ? 0.03 : 0.06);
+          return { ...p, relevanceScore: Math.min(0.99, p.relevanceScore + boost) };
+        });
+    }
+
     if (sortBy === 'date') items = [...items].sort((a, b) => b.year - a.year);
     else if (sortBy === 'citations') items = [...items].sort((a, b) => b.citations - a.citations);
     else if (sortBy === 'if') items = [...items].sort((a, b) => b.impactFactor - a.impactFactor);
     else items = [...items].sort((a, b) => b.relevanceScore - a.relevanceScore);
     return items;
-  }, [yearRange, ifRange, selectedJournals, sortBy]);
+  }, [yearRange, ifRange, selectedJournals, selectedDocTypes, sortBy, activeModalities, isHybridQuery]);
 
   const totalPages = Math.ceil(filteredResults.length / PAGE_SIZE);
   const pageItems = filteredResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -462,9 +556,43 @@ export default function KnowledgeSearch() {
     setTimeout(() => setToastMsg(null), 2200);
   }
 
+  function pickFile(kind: ModalityKind) {
+    setPendingKind(kind);
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = MODALITY_META[kind].accept;
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  }
+
+  function onFileChosen(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const kind = pendingKind;
+    const id = Math.random().toString(36).slice(2, 9);
+    const preview = kind === 'image' ? URL.createObjectURL(file) : undefined;
+    setAttachments(prev => [...prev, { id, kind, name: file.name, preview }]);
+    if (searchMode !== 'multimodal') setSearchMode('multimodal');
+  }
+
+  function removeAttachment(id: string) {
+    setAttachments(prev => {
+      const target = prev.find(a => a.id === id);
+      if (target?.preview) URL.revokeObjectURL(target.preview);
+      return prev.filter(a => a.id !== id);
+    });
+  }
+
   function handleSearch() {
-    setAppliedQuery(searchQuery);
+    if (searchMode === 'multimodal' && !searchQuery.trim() && attachments.length === 0) {
+      showToast('请输入文本或上传图片/表格/公式');
+      return;
+    }
+    setSearching(true);
+    setAppliedQuery(searchQuery.trim());
+    setAppliedAttachments([...attachments]);
     setPage(1);
+    setTimeout(() => setSearching(false), 600);
   }
 
   function toggleSummary(id: string) {
@@ -519,15 +647,38 @@ export default function KnowledgeSearch() {
 
   return (
     <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
+      <input ref={fileInputRef} type="file" className="hidden" onChange={onFileChosen} />
+
       {/* ── TOP SEARCH AREA ── */}
       <div className="bg-white border-b border-gray-200 px-8 pt-5 pb-4 space-y-3">
+        {/* Mode tabs */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSearchMode('text')}
+            className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${searchMode === 'text' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          >
+            文本检索
+          </button>
+          <button
+            onClick={() => setSearchMode('multimodal')}
+            className={`text-sm px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${searchMode === 'multimodal' ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          >
+            <Layers size={14} />
+            多模态交叉检索
+          </button>
+        </div>
+
         {/* Search bar */}
         <div className="flex gap-2">
           <div className="flex-1 flex items-center bg-white border border-gray-300 rounded-xl shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
             <Search size={18} className="ml-4 text-gray-400 flex-shrink-0" />
             <input
               className="flex-1 px-3 py-3 text-gray-900 placeholder-gray-400 text-sm outline-none bg-transparent"
-              placeholder="输入研究问题或关键概念，如「知识图谱 Transformer 嵌入」..."
+              placeholder={
+                searchMode === 'multimodal'
+                  ? '可选：输入文本，与下方图片/表格/公式组成混合检索…'
+                  : '输入研究问题或关键概念，如「知识图谱 Transformer 嵌入」...'
+              }
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
@@ -535,19 +686,104 @@ export default function KnowledgeSearch() {
           </div>
           <button
             onClick={handleSearch}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-medium rounded-xl shadow-sm transition-colors flex items-center gap-2"
+            disabled={searching}
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 text-white text-sm font-medium rounded-xl shadow-sm transition-colors flex items-center gap-2"
           >
-            <Search size={16} />
+            {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
             检索
           </button>
         </div>
 
+        {/* Multimodal panel */}
+        {searchMode === 'multimodal' && (
+          <div className="rounded-xl border border-violet-100 bg-violet-50/40 p-3 space-y-3">
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-violet-800 mb-1">多模态反向检索</div>
+                <p className="text-[11px] text-violet-700/80 leading-relaxed">
+                  上传一张图片、一个表格或一个公式，在知识库中检索包含该内容或语义相关的文献与专利。
+                </p>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-violet-800 mb-1">跨资源混合检索</div>
+                <p className="text-[11px] text-violet-700/80 leading-relaxed">
+                  一次查询可同时组合文本 + 多种模态附件（如图片+公式+关键词），联合召回。
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(MODALITY_META) as ModalityKind[]).map(kind => {
+                const meta = MODALITY_META[kind];
+                return (
+                  <button
+                    key={kind}
+                    onClick={() => pickFile(kind)}
+                    className={`inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border bg-white hover:bg-white transition-colors ${meta.border} ${meta.color}`}
+                  >
+                    <Upload size={12} />
+                    <meta.Icon size={13} />
+                    上传{meta.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {attachments.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {attachments.map(att => {
+                  const meta = MODALITY_META[att.kind];
+                  return (
+                    <div
+                      key={att.id}
+                      className={`flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-lg border bg-white ${meta.border}`}
+                    >
+                      {att.preview ? (
+                        <img src={att.preview} alt="" className="w-8 h-8 rounded object-cover border border-gray-100" />
+                      ) : (
+                        <div className={`w-8 h-8 rounded flex items-center justify-center ${meta.bg}`}>
+                          <meta.Icon size={14} className={meta.color} />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className={`text-[10px] font-medium ${meta.color}`}>{meta.label}</div>
+                        <div className="text-[11px] text-gray-600 truncate max-w-[140px]">{att.name}</div>
+                      </div>
+                      <button
+                        onClick={() => removeAttachment(att.id)}
+                        className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-[11px] text-violet-500/80 border border-dashed border-violet-200 rounded-lg px-3 py-2.5 bg-white/60">
+                尚未添加模态附件。仅上传附件 = 反向检索；附件 + 文本 = 混合检索。
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats bar */}
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <div>
-            共检索到 <strong className="text-gray-900">1.5亿+</strong> 篇文献，当前筛选结果{' '}
-            <strong className="text-blue-600">{filteredResults.length}</strong> 篇
-            {appliedQuery && <span className="ml-2 text-gray-400">· 关键词：<span className="text-gray-600">"{appliedQuery}"</span></span>}
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+            <span>
+              共检索到 <strong className="text-gray-900">1.5亿+</strong> 篇文献/专利，当前筛选结果{' '}
+              <strong className="text-blue-600">{filteredResults.length}</strong> 篇
+            </span>
+            {appliedQuery && (
+              <span className="text-gray-400">· 文本：<span className="text-gray-600">"{appliedQuery}"</span></span>
+            )}
+            {appliedAttachments.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-violet-600">
+                · {isHybridQuery ? '混合检索' : isReverseOnly ? '反向检索' : '多模态'}：
+                {activeModalities.map(m => MODALITY_META[m].label).join(' + ')}
+                <span className="text-violet-400">（{appliedAttachments.length} 个附件）</span>
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-400">排序</span>
@@ -598,7 +834,7 @@ export default function KnowledgeSearch() {
                     </div>
                     <span className="text-xs text-gray-600 group-hover:text-gray-900 flex-1">{j}</span>
                     <span className="text-xs text-gray-400">
-                      {mockLiterature.filter(p => p.journal === j).length}
+                      {literatureIndex.filter(p => p.journal === j).length}
                     </span>
                     <input type="checkbox" className="sr-only" checked={selectedJournals.includes(j)} onChange={() => toggleJournal(j)} />
                   </label>
@@ -696,14 +932,32 @@ export default function KnowledgeSearch() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${relevanceBadgeColor(paper.relevanceScore)}`}>
                         相关度 {Math.round(paper.relevanceScore * 100)}%
                       </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        paper.docKind === '专利' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-blue-50 text-blue-700 border border-blue-100'
+                      }`}>
+                        {paper.docKind ?? '文献'}
+                      </span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">{paper.journal}</span>
                       <span className="text-xs text-gray-400">{paper.year}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ifBadgeColor(paper.impactFactor)}`}>
-                        IF {paper.impactFactor}
-                      </span>
+                      {paper.docKind !== '专利' && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ifBadgeColor(paper.impactFactor)}`}>
+                          IF {paper.impactFactor}
+                        </span>
+                      )}
                       <span className="text-xs px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 flex items-center gap-0.5 border border-gray-200">
                         <Quote size={9} /> {paper.citations.toLocaleString()}
                       </span>
+                      {activeModalities.length > 0 && (paper.modalityHints ?? [])
+                        .filter(m => activeModalities.includes(m))
+                        .map(m => {
+                          const meta = MODALITY_META[m];
+                          return (
+                            <span key={m} className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium flex items-center gap-0.5 ${meta.bg} ${meta.color} ${meta.border}`}>
+                              <meta.Icon size={10} />
+                              {isHybridQuery ? `混合·${meta.label}` : `反向·${meta.label}`}
+                            </span>
+                          );
+                        })}
                     </div>
 
                     {/* Actions */}
@@ -901,7 +1155,7 @@ export default function KnowledgeSearch() {
       <NoteGenerationDialog
         open={noteDialogOpen}
         onClose={() => setNoteDialogOpen(false)}
-        selectedPapers={mockLiterature.filter(p => selectedIds.has(p.id)).map(p => ({
+        selectedPapers={literatureIndex.filter(p => selectedIds.has(p.id)).map(p => ({
           id: p.id, title: p.title, authors: p.authors, journal: p.journal,
           year: p.year, impactFactor: p.impactFactor, citations: p.citations,
           abstract: p.abstract, keywords: p.keywords,
