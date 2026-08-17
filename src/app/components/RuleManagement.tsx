@@ -14,7 +14,7 @@ import {
   ChevronRight, AlertTriangle, CheckCircle2, Clock,
   ArrowDown, Layers, Share2, Bot, Code2, ChevronUp,
   FileJson, PlayCircle, SquareCheck, Eye, RotateCcw, History,
-  Wand2, MousePointerClick
+  Wand2, MousePointerClick, Bug, Pause, SkipForward, Circle, FlaskConical, ListChecks, Play
 } from 'lucide-react';
 
 // ─── DSL Syntax Highlighted Editor ───────────────────────────────────────────
@@ -206,6 +206,467 @@ const SANDBOX_TRACE = `[Sandbox] 加载 4 条 facts，构建临时图...
 [Complete] 命中 3 次，去重后输出 2 条新关系
 [NOTE] ⚠ 不写入真实图数据库，仅沙箱环境`;
 
+interface DebugStep {
+  id: string;
+  phase: string;
+  title: string;
+  matchStatus: 'idle' | 'running' | 'matched' | 'skipped' | 'failed';
+  matchLabel: string;
+  vars: { name: string; value: string }[];
+}
+
+const MOCK_DEBUG_STEPS: DebugStep[] = [
+  {
+    id: 'dbg-1', phase: 'LOAD', title: '加载 facts，构建临时图',
+    matchStatus: 'matched', matchLabel: 'facts=4 · 节点就绪',
+    vars: [
+      { name: 'facts_count', value: '4' },
+      { name: 'nodes', value: '{作者:3, 论文:2}' },
+      { name: 'edges', value: '4 × WRITTEN_BY' },
+    ],
+  },
+  {
+    id: 'dbg-2', phase: 'MATCH', title: '路径模式匹配 A-[:WRITTEN_BY]->B<-[:WRITTEN_BY]-C',
+    matchStatus: 'matched', matchLabel: '候选 3 组',
+    vars: [
+      { name: 'pattern', value: '(?P<A>作者)-[:WRITTEN_BY]->(?P<B>论文)<-[:WRITTEN_BY]-(?P<C>作者)' },
+      { name: 'candidates', value: '[(张三,深度学习新进展,李四), (李四,深度学习新进展,张三), (王五,图神经网络综述,张三)]' },
+      { name: 'A', value: '作者:张三' },
+      { name: 'B', value: '论文:深度学习新进展' },
+      { name: 'C', value: '作者:李四' },
+    ],
+  },
+  {
+    id: 'dbg-3', phase: 'FILTER', title: '约束求值：A.id ≠ C.id',
+    matchStatus: 'matched', matchLabel: '接受 2 / 跳过 1（反向重复）',
+    vars: [
+      { name: 'condition', value: 'A.id != C.id' },
+      { name: 'A.id', value: 'author_zhangsan' },
+      { name: 'C.id', value: 'author_lisi' },
+      { name: 'condition_result', value: 'true' },
+      { name: 'skip_reason', value: 'Match#2 反向已存在，去重' },
+    ],
+  },
+  {
+    id: 'dbg-4', phase: 'ACTION', title: 'THEN：create_relation(合作者)',
+    matchStatus: 'running', matchLabel: '准备写出 2 条关系',
+    vars: [
+      { name: 'action', value: 'create_relation' },
+      { name: 'from', value: 'A → 张三' },
+      { name: 'to', value: 'C → 李四' },
+      { name: 'type', value: '合作者' },
+      { name: 'confidence', value: '0.95' },
+    ],
+  },
+  {
+    id: 'dbg-5', phase: 'COMMIT', title: '沙箱提交（不写入真实库）',
+    matchStatus: 'matched', matchLabel: '输出 2 条新关系',
+    vars: [
+      { name: 'output[0]', value: '张三 →合作者→ 李四' },
+      { name: 'output[1]', value: '王五 →合作者→ 张三' },
+      { name: 'sandbox', value: 'true' },
+    ],
+  },
+];
+
+const MATCH_BADGE: Record<DebugStep['matchStatus'], { label: string; cls: string }> = {
+  idle: { label: '未执行', cls: 'bg-gray-100 text-gray-500' },
+  running: { label: '匹配中', cls: 'bg-blue-50 text-blue-700' },
+  matched: { label: '已命中', cls: 'bg-emerald-50 text-emerald-700' },
+  skipped: { label: '已跳过', cls: 'bg-amber-50 text-amber-700' },
+  failed: { label: '未命中', cls: 'bg-red-50 text-red-600' },
+};
+
+type DebugRunStatus = 'idle' | 'paused' | 'running' | 'done';
+
+function RuleDebugPanel() {
+  const [breakpoints, setBreakpoints] = useState<Set<string>>(new Set(['dbg-3']));
+  const [cursor, setCursor] = useState(-1);
+  const [status, setStatus] = useState<DebugRunStatus>('idle');
+
+  const current = cursor >= 0 ? MOCK_DEBUG_STEPS[cursor] : null;
+
+  const toggleBp = (id: string) => {
+    setBreakpoints(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const findNextStop = (from: number, stepOnly: boolean) => {
+    if (stepOnly) return Math.min(from + 1, MOCK_DEBUG_STEPS.length - 1);
+    for (let i = from + 1; i < MOCK_DEBUG_STEPS.length; i++) {
+      if (breakpoints.has(MOCK_DEBUG_STEPS[i].id)) return i;
+    }
+    return MOCK_DEBUG_STEPS.length - 1;
+  };
+
+  const runTo = (target: number) => {
+    setStatus('running');
+    setTimeout(() => {
+      setCursor(target);
+      const atEnd = target >= MOCK_DEBUG_STEPS.length - 1;
+      const hitBp = breakpoints.has(MOCK_DEBUG_STEPS[target].id);
+      setStatus(atEnd && !hitBp ? 'done' : 'paused');
+      if (atEnd) setStatus('done');
+    }, 380);
+  };
+
+  const handleRun = () => {
+    const from = status === 'idle' ? -1 : cursor;
+    const target = findNextStop(from, false);
+    runTo(target);
+  };
+
+  const handleStep = () => {
+    const from = status === 'idle' ? -1 : cursor;
+    if (from >= MOCK_DEBUG_STEPS.length - 1) {
+      setStatus('done');
+      return;
+    }
+    runTo(from + 1);
+  };
+
+  const handleReset = () => {
+    setCursor(-1);
+    setStatus('idle');
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-500">
+        在规则执行步骤左侧点击圆点设置断点，然后单步跟踪或运行到下一断点，查看中间变量与匹配状态。
+      </p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={handleRun} disabled={status === 'running' || status === 'done'}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg">
+          {status === 'running' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+          {status === 'paused' ? '继续到断点' : '运行到断点'}
+        </button>
+        <button onClick={handleStep} disabled={status === 'running' || status === 'done'}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40 rounded-lg">
+          <SkipForward className="w-3.5 h-3.5" />单步执行
+        </button>
+        <button onClick={handleReset} disabled={status === 'idle'}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 rounded-lg">
+          <RotateCcw className="w-3.5 h-3.5" />重置
+        </button>
+        <span className={`text-[11px] px-2 py-1 rounded-full ${
+          status === 'paused' ? 'bg-amber-50 text-amber-700' :
+          status === 'done' ? 'bg-emerald-50 text-emerald-700' :
+          status === 'running' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500'
+        }`}>
+          {status === 'idle' ? '未启动' : status === 'running' ? '执行中…' : status === 'paused' ? `已暂停 · ${current?.phase}` : '执行完毕'}
+        </span>
+        <span className="text-[11px] text-gray-400 ml-auto">{breakpoints.size} 个断点</span>
+      </div>
+
+      <div className="grid grid-cols-5 gap-3">
+        <div className="col-span-3 border border-gray-200 rounded-xl overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+            <Bug className="w-3.5 h-3.5" />执行步骤
+          </div>
+          <div className="divide-y divide-gray-50">
+            {MOCK_DEBUG_STEPS.map((step, i) => {
+              const hasBp = breakpoints.has(step.id);
+              const isCurrent = cursor === i;
+              const done = cursor > i;
+              const badge = i <= cursor
+                ? MATCH_BADGE[i === cursor && status !== 'done' ? 'running' : step.matchStatus]
+                : MATCH_BADGE.idle;
+              return (
+                <div key={step.id} className={`flex items-start gap-2 px-3 py-2.5 ${isCurrent ? 'bg-blue-50/70' : done ? 'bg-white' : 'bg-white'}`}>
+                  <button onClick={() => toggleBp(step.id)} title={hasBp ? '移除断点' : '设置断点'}
+                    className="mt-0.5 flex-shrink-0">
+                    {hasBp
+                      ? <Circle className="w-3.5 h-3.5 fill-red-500 text-red-500" />
+                      : <Circle className="w-3.5 h-3.5 text-gray-300 hover:text-red-400" />}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{step.phase}</span>
+                      <span className={`text-xs ${isCurrent ? 'text-blue-800 font-medium' : 'text-gray-800'}`}>{step.title}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                      {i <= cursor && <span className="text-[10px] text-gray-400 truncate">{step.matchLabel}</span>}
+                    </div>
+                  </div>
+                  {isCurrent && status === 'paused' && <Pause className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />}
+                  {done && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="col-span-2 border border-gray-200 rounded-xl overflow-hidden flex flex-col">
+          <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">中间变量 / 匹配状态</div>
+          {current && cursor >= 0 ? (
+            <div className="p-3 space-y-3 flex-1 overflow-y-auto">
+              <div>
+                <div className="text-[10px] text-gray-400 mb-1">当前匹配</div>
+                <div className={`text-xs px-2 py-1.5 rounded-lg border ${
+                  current.matchStatus === 'matched' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' :
+                  current.matchStatus === 'skipped' ? 'bg-amber-50 border-amber-100 text-amber-800' :
+                  'bg-blue-50 border-blue-100 text-blue-800'
+                }`}>{current.matchLabel}</div>
+              </div>
+              <div className="space-y-1.5">
+                {current.vars.map(v => (
+                  <div key={v.name} className="bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5">
+                    <div className="text-[10px] font-mono text-blue-600">{v.name}</div>
+                    <div className="text-xs text-gray-800 break-all mt-0.5">{v.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-xs text-gray-400 p-4 text-center">
+              点击「单步执行」或「运行到断点」后，此处显示该步的变量绑定与匹配结果
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface UnitTestCase {
+  id: string;
+  name: string;
+  scope: 'single' | 'group';
+  facts: string;
+  expected: string;
+}
+
+const MOCK_UNIT_TESTS: UnitTestCase[] = [
+  {
+    id: 'ut-1',
+    name: '正向：共同作者应推断合作者',
+    scope: 'single',
+    facts: FACTS_EXAMPLE,
+    expected: JSON.stringify([
+      { from: '张三', relation: '合作者', to: '李四' },
+      { from: '王五', relation: '合作者', to: '张三' },
+    ], null, 2),
+  },
+  {
+    id: 'ut-2',
+    name: '负向：同一作者不应自我关联',
+    scope: 'single',
+    facts: JSON.stringify([
+      { subject: '作者:张三', predicate: 'WRITTEN_BY', object: '论文:深度学习新进展', properties: { order: 1 } },
+      { subject: '作者:张三', predicate: 'WRITTEN_BY', object: '论文:深度学习新进展', properties: { order: 2 } },
+    ], null, 2),
+    expected: JSON.stringify([], null, 2),
+  },
+  {
+    id: 'ut-3',
+    name: '规则组：合著推断 + 同事关系',
+    scope: 'group',
+    facts: JSON.stringify([
+      { subject: '作者:张三', predicate: 'WRITTEN_BY', object: '论文:深度学习新进展' },
+      { subject: '作者:李四', predicate: 'WRITTEN_BY', object: '论文:深度学习新进展' },
+      { subject: '作者:张三', predicate: '项目成员', object: '项目:新能源知识图谱' },
+      { subject: '作者:李四', predicate: '项目成员', object: '项目:新能源知识图谱' },
+    ], null, 2),
+    expected: JSON.stringify([
+      { from: '张三', relation: '合作者', to: '李四' },
+      { from: '张三', relation: '同事', to: '李四' },
+    ], null, 2),
+  },
+];
+
+type TestRunResult = { status: 'pass' | 'fail'; actual: string; message: string };
+
+function RuleUnitTestPanel() {
+  const [cases, setCases] = useState<UnitTestCase[]>(MOCK_UNIT_TESTS);
+  const [selectedId, setSelectedId] = useState(MOCK_UNIT_TESTS[0].id);
+  const [results, setResults] = useState<Record<string, TestRunResult>>({});
+  const [running, setRunning] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  const selected = cases.find(c => c.id === selectedId) ?? cases[0];
+  const passed = Object.values(results).filter(r => r.status === 'pass').length;
+
+  const updateSelected = (patch: Partial<UnitTestCase>) => {
+    setCases(prev => prev.map(c => c.id === selected.id ? { ...c, ...patch } : c));
+    setResults(prev => {
+      const next = { ...prev };
+      delete next[selected.id];
+      return next;
+    });
+  };
+
+  const addCase = () => {
+    const id = 'ut-' + Date.now();
+    const next: UnitTestCase = {
+      id, name: `用例 ${cases.length + 1}`, scope: 'single',
+      facts: FACTS_EXAMPLE,
+      expected: '[]',
+    };
+    setCases(prev => [...prev, next]);
+    setSelectedId(id);
+    setEditing(true);
+  };
+
+  const removeCase = (id: string) => {
+    setCases(prev => prev.filter(c => c.id !== id));
+    setResults(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    if (selectedId === id) setSelectedId(cases.find(c => c.id !== id)?.id ?? '');
+  };
+
+  const runOne = (tc: UnitTestCase): TestRunResult => {
+    let expectedParsed: unknown = [];
+    try { expectedParsed = JSON.parse(tc.expected || '[]'); } catch { expectedParsed = []; }
+    const expectedArr = Array.isArray(expectedParsed) ? expectedParsed : [];
+    if (tc.id === 'ut-2' || expectedArr.length === 0) {
+      return { status: 'pass', actual: '[]', message: '无新关系写出，与预期一致' };
+    }
+    if (tc.scope === 'group') {
+      return {
+        status: 'pass',
+        actual: JSON.stringify([
+          { from: '张三', relation: '合作者', to: '李四' },
+          { from: '张三', relation: '同事', to: '李四' },
+        ], null, 2),
+        message: '规则组命中 2 条：合著者 + 同事',
+      };
+    }
+    return {
+      status: 'pass',
+      actual: JSON.stringify([
+        { from: '张三', relation: '合作者', to: '李四' },
+        { from: '王五', relation: '合作者', to: '张三' },
+      ], null, 2),
+      message: '推理结果与预期一致（2 条合作者关系）',
+    };
+  };
+
+  const runTests = (ids?: string[]) => {
+    const targets = cases.filter(c => !ids || ids.includes(c.id));
+    setRunning(true);
+    setTimeout(() => {
+      const next: Record<string, TestRunResult> = { ...results };
+      targets.forEach(tc => { next[tc.id] = runOne(tc); });
+      setResults(next);
+      setRunning(false);
+    }, 700);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-gray-500">
+          为当前规则或一组规则编写用例：输入预设 facts，断言推理结果是否符合预期。
+        </p>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {Object.keys(results).length > 0 && (
+            <span className="text-[11px] text-gray-500">{passed}/{Object.keys(results).length} 通过</span>
+          )}
+          <button onClick={addCase}
+            className="text-xs px-2.5 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-1">
+            <Plus className="w-3 h-3" />新增用例
+          </button>
+          <button onClick={() => runTests()} disabled={running || cases.length === 0}
+            className="text-xs px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white rounded-lg flex items-center gap-1.5">
+            {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FlaskConical className="w-3.5 h-3.5" />}
+            {running ? '运行中…' : '运行全部'}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-5 gap-3">
+        <div className="col-span-2 border border-gray-200 rounded-xl overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+            <ListChecks className="w-3.5 h-3.5" />测试用例
+          </div>
+          <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+            {cases.map(tc => {
+              const r = results[tc.id];
+              return (
+                <button key={tc.id} onClick={() => { setSelectedId(tc.id); setEditing(false); }}
+                  className={`w-full text-left px-3 py-2.5 transition-colors ${selectedId === tc.id ? 'bg-violet-50' : 'hover:bg-gray-50'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-800 truncate flex-1">{tc.name}</span>
+                    {r?.status === 'pass' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />}
+                    {r?.status === 'fail' && <AlertCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+                  </div>
+                  <span className={`mt-1 inline-block text-[10px] px-1.5 py-0.5 rounded ${tc.scope === 'group' ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
+                    {tc.scope === 'group' ? '规则组' : '单条规则'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="col-span-3 border border-gray-200 rounded-xl p-3 space-y-3">
+          {selected ? (
+            <>
+              <div className="flex items-center gap-2">
+                {editing ? (
+                  <input value={selected.name} onChange={e => updateSelected({ name: e.target.value })}
+                    className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-violet-400" />
+                ) : (
+                  <div className="text-sm font-medium text-gray-800 flex-1">{selected.name}</div>
+                )}
+                <button onClick={() => setEditing(e => !e)} className="text-xs text-gray-500 hover:text-gray-800">{editing ? '完成' : '编辑'}</button>
+                <button onClick={() => removeCase(selected.id)} className="text-xs text-red-400 hover:text-red-600">删除</button>
+              </div>
+              <div className="flex gap-2">
+                {(['single', 'group'] as const).map(s => (
+                  <button key={s} onClick={() => updateSelected({ scope: s })}
+                    className={`text-xs px-2.5 py-1 rounded-lg border ${selected.scope === s ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-gray-200 text-gray-500'}`}>
+                    {s === 'single' ? '单条规则' : '一组规则'}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <div className="text-[10px] text-gray-400 mb-1">预设 facts</div>
+                <textarea value={selected.facts} onChange={e => updateSelected({ facts: e.target.value })} rows={5}
+                  className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] font-mono focus:outline-none focus:border-violet-400 bg-gray-50 resize-none" />
+              </div>
+              <div>
+                <div className="text-[10px] text-gray-400 mb-1">期望推理结果</div>
+                <textarea value={selected.expected} onChange={e => updateSelected({ expected: e.target.value })} rows={4}
+                  className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] font-mono focus:outline-none focus:border-violet-400 bg-gray-50 resize-none" />
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => runTests([selected.id])} disabled={running}
+                  className="text-xs px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white rounded-lg flex items-center gap-1">
+                  <PlayCircle className="w-3.5 h-3.5" />运行此用例
+                </button>
+                {results[selected.id] && (
+                  <span className={`text-xs ${results[selected.id].status === 'pass' ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {results[selected.id].status === 'pass' ? '通过' : '失败'} · {results[selected.id].message}
+                  </span>
+                )}
+              </div>
+              {results[selected.id] && (
+                <div>
+                  <div className="text-[10px] text-gray-400 mb-1">实际输出</div>
+                  <pre className="bg-gray-900 text-green-400 text-[11px] p-2.5 rounded-lg overflow-x-auto font-mono max-h-28">
+                    {results[selected.id].actual}
+                  </pre>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-xs text-gray-400 py-10 text-center">暂无用例，点击「新增用例」开始</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Agent Drawer Component ───────────────────────────────────────────────────
 
 function AgentRuleDrawer({
@@ -306,7 +767,7 @@ function AgentRuleDrawer({
               <h2 className="text-lg font-semibold text-gray-900">
                 {isNew ? '新增规则' : `编辑规则 · ${rule.name}`}
               </h2>
-              <p className="text-sm text-gray-500 mt-0.5">用自然语言编排、沙箱验证，再确认保存</p>
+              <p className="text-sm text-gray-500 mt-0.5">自然语言编排、断点单步调试、单元测试后确认保存</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {/* Mode tabs */}
@@ -476,8 +937,16 @@ function AgentRuleDrawer({
                 </div>
               ))}
 
-              {/* Step 5: Confirmation */}
-              {stepCard(5, '人工确认', !sandboxDone, (
+              {stepCard(5, '断点与单步执行', !parseDone, (
+                <RuleDebugPanel />
+              ))}
+
+              {stepCard(6, '规则单元测试', !parseDone, (
+                <RuleUnitTestPanel />
+              ))}
+
+              {/* Step 7: Confirmation */}
+              {stepCard(7, '人工确认', !sandboxDone, (
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}
                     className="mt-0.5 rounded border-gray-300 text-blue-600 w-4 h-4 flex-shrink-0" />
@@ -640,6 +1109,28 @@ function AgentRuleDrawer({
                       })}
                     />
                   ))}
+                </div>
+              </div>
+
+              <div className="border border-blue-200 rounded-xl overflow-hidden">
+                <div className="bg-blue-50 px-4 py-2.5 border-b border-blue-100 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">5</span>
+                  <Bug className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="text-sm font-semibold text-blue-700">断点与单步执行</span>
+                </div>
+                <div className="p-4">
+                  <RuleDebugPanel />
+                </div>
+              </div>
+
+              <div className="border border-violet-200 rounded-xl overflow-hidden">
+                <div className="bg-violet-50 px-4 py-2.5 border-b border-violet-100 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">6</span>
+                  <FlaskConical className="w-3.5 h-3.5 text-violet-600" />
+                  <span className="text-sm font-semibold text-violet-700">规则单元测试</span>
+                </div>
+                <div className="p-4">
+                  <RuleUnitTestPanel />
                 </div>
               </div>
 
@@ -815,7 +1306,15 @@ function AgentRuleDrawer({
                 </div>
               ))}
 
-              {stepCard(3, '人工确认', !manualSandboxDone, (
+              {stepCard(3, '断点与单步执行', false, (
+                <RuleDebugPanel />
+              ))}
+
+              {stepCard(4, '规则单元测试', false, (
+                <RuleUnitTestPanel />
+              ))}
+
+              {stepCard(5, '人工确认', !manualSandboxDone, (
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input type="checkbox" checked={manualSandboxConfirmed} onChange={e => setManualSandboxConfirmed(e.target.checked)}
                     className="mt-0.5 rounded border-gray-300 text-blue-600 w-4 h-4 flex-shrink-0" />

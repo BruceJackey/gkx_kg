@@ -6,7 +6,7 @@ import {
 import {
   RefreshCw, ChevronDown, ChevronRight, AlertCircle, CheckCircle2,
   Clock, Network, History, Play, RotateCcw, ScanLine,
-  Zap, Eye, GitMerge, Calendar, TrendingUp,
+  Zap, Eye, GitMerge, TrendingUp,
   XCircle, Plus, X, Database, Timer, Activity,
   CheckCircle, FileCode2, Trash2, Upload, Lock,
   FileText, AlertTriangle,
@@ -17,7 +17,6 @@ import { RdfExportPanel } from './GraphExport';
 
 type RunStatus = 'extracting' | 'merging' | 'committing' | 'review_pending' | 'succeeded' | 'failed';
 type RunMode = 'full' | 'incremental';
-type ScheduleType = 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom';
 
 interface GraphRun {
   id: string; mode: RunMode; status: RunStatus; phase: string; progress: number;
@@ -37,13 +36,7 @@ interface GraphEntry {
   lastFull?: string; lastIncremental?: string; activeRun?: GraphRun; runs: GraphRun[];
   isPrivate?: boolean;
   versions: GraphVersion[];
-}
-interface ScheduledTask {
-  id: string; graphId: string; graphName: string; mode: RunMode;
-  scheduleType: ScheduleType; cronExpr: string; cronDesc: string;
-  nextRun: string; lastRun?: string; lastStatus?: 'succeeded' | 'failed';
-  lastDuration?: string; timeout: number; retryMax: number;
-  enabled: boolean; createdAt: string;
+  delayedExec?: { hours: number; mode: RunMode } | null;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -89,30 +82,6 @@ const MOCK_GRAPHS: GraphEntry[] = [
     id: 'g2', graphName: '新能源产业图谱', ontologyName: '新能源产业图谱本体',
     datasourceName: '产业数据库', targetSpace: 'kg:energy-v1',
     entityCount: 0, relationCount: 0, runs: [], versions: [],
-  },
-];
-
-const MOCK_SCHEDULED: ScheduledTask[] = [
-  {
-    id: 'sch-1', graphId: 'g1', graphName: '科技论文知识图谱', mode: 'incremental',
-    scheduleType: 'daily', cronExpr: '0 2 * * *', cronDesc: '每天 02:00',
-    nextRun: '2026-08-11 02:00', lastRun: '2026-08-10 02:00',
-    lastStatus: 'succeeded', lastDuration: '12分18秒',
-    timeout: 120, retryMax: 1, enabled: true, createdAt: '2026-07-01',
-  },
-  {
-    id: 'sch-2', graphId: 'g1', graphName: '科技论文知识图谱', mode: 'full',
-    scheduleType: 'weekly', cronExpr: '0 3 * * 0', cronDesc: '每周日 03:00',
-    nextRun: '2026-08-16 03:00', lastRun: '2026-08-09 03:00',
-    lastStatus: 'succeeded', lastDuration: '28分44秒',
-    timeout: 240, retryMax: 0, enabled: true, createdAt: '2026-07-01',
-  },
-  {
-    id: 'sch-3', graphId: 'g2', graphName: '新能源产业图谱', mode: 'full',
-    scheduleType: 'monthly', cronExpr: '0 4 1 * *', cronDesc: '每月1日 04:00',
-    nextRun: '2026-09-01 04:00', lastRun: '2026-08-01 04:00',
-    lastStatus: 'failed', lastDuration: '—',
-    timeout: 360, retryMax: 2, enabled: false, createdAt: '2026-07-15',
   },
 ];
 
@@ -185,15 +154,7 @@ const ERROR_BREAKDOWN = [
   { type: '属性格式错误', count: 12,  pct: 3,  color: '#94a3b8', example: 'pub_year: "invalid"'         },
 ];
 
-const CRON_PRESETS: Record<ScheduleType, { label: string; desc: string }> = {
-  hourly:  { label: '每小时',   desc: '每小时整点执行'     },
-  daily:   { label: '每天',     desc: '每天指定时间执行'   },
-  weekly:  { label: '每周',     desc: '每周指定日期执行'   },
-  monthly: { label: '每月',     desc: '每月指定日期执行'   },
-  custom:  { label: '自定义',   desc: '输入 Cron 表达式'  },
-};
-
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+const DELAY_HOURS = [0, 1, 2, 4, 6, 12, 24];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -203,33 +164,6 @@ function getPhaseIdx(status: RunStatus): number {
     review_pending: 3, succeeded: 5, failed: -1,
   };
   return m[status] ?? 0;
-}
-
-function buildCronExpr(type: ScheduleType, time: string, weekday: number, monthday: number, custom: string): string {
-  const [hh, mm] = time.split(':').map(Number);
-  if (type === 'hourly')  return `0 * * * *`;
-  if (type === 'daily')   return `${mm} ${hh} * * *`;
-  if (type === 'weekly')  return `${mm} ${hh} * * ${weekday}`;
-  if (type === 'monthly') return `${mm} ${hh} ${monthday} * *`;
-  return custom;
-}
-
-function buildCronDesc(type: ScheduleType, time: string, weekday: number, monthday: number): string {
-  if (type === 'hourly')  return '每小时执行';
-  if (type === 'daily')   return `每天 ${time} 执行`;
-  if (type === 'weekly')  return `每周${WEEKDAYS[weekday]} ${time} 执行`;
-  if (type === 'monthly') return `每月${monthday}日 ${time} 执行`;
-  return '自定义 Cron';
-}
-
-function countdown(nextRun: string): string {
-  const now = new Date('2026-08-10T10:00:00');
-  const next = new Date(nextRun.replace(' ', 'T') + ':00');
-  const diff = next.getTime() - now.getTime();
-  if (diff < 0) return '已过期';
-  const h = Math.floor(diff / 3_600_000);
-  const m = Math.floor((diff % 3_600_000) / 60_000);
-  return `${h}h ${m}m`;
 }
 
 // ─── Phase timeline ───────────────────────────────────────────────────────────
@@ -676,311 +610,6 @@ function RunDashboard({
   );
 }
 
-// ─── New schedule modal ───────────────────────────────────────────────────────
-
-function NewScheduleModal({
-  onClose, onSave, graphs,
-}: {
-  onClose: () => void;
-  onSave: (t: ScheduledTask) => void;
-  graphs: GraphEntry[];
-}) {
-  const [graphId, setGraphId] = useState(graphs[0]?.id || '');
-  const [mode, setMode] = useState<RunMode>('incremental');
-  const [schedType, setSchedType] = useState<ScheduleType>('daily');
-  const [time, setTime] = useState('02:00');
-  const [weekday, setWeekday] = useState(0);
-  const [monthday, setMonthday] = useState(1);
-  const [customCron, setCustomCron] = useState('0 2 * * *');
-  const [timeout, setTimeout_] = useState(120);
-  const [retryMax, setRetryMax] = useState(1);
-
-  const cronExpr = buildCronExpr(schedType, time, weekday, monthday, customCron);
-  const cronDesc = buildCronDesc(schedType, time, weekday, monthday);
-  const graph = graphs.find(g => g.id === graphId);
-
-  const handleSave = () => {
-    const now = '2026-08-10';
-    onSave({
-      id: 'sch-' + uid(),
-      graphId,
-      graphName: graph?.graphName || '',
-      mode,
-      scheduleType: schedType,
-      cronExpr,
-      cronDesc,
-      nextRun: '—',
-      timeout,
-      retryMax,
-      enabled: true,
-      createdAt: now,
-    });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-[520px] max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900">新建定时任务</h3>
-            <p className="text-xs text-gray-400 mt-0.5">配置图谱的自动化调度策略</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="px-6 py-5 space-y-5">
-          {/* Graph + mode */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">目标图谱</label>
-              <select className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white"
-                value={graphId} onChange={e => setGraphId(e.target.value)}>
-                {graphs.map(g => <option key={g.id} value={g.id}>{g.graphName}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">构造模式</label>
-              <div className="flex gap-2">
-                {(['incremental', 'full'] as const).map(m => (
-                  <button key={m} onClick={() => setMode(m)}
-                    className={`flex-1 py-2 text-xs rounded-lg border transition-colors ${mode === m ? 'border-blue-500 bg-blue-50 text-blue-600 font-semibold' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                    {m === 'incremental' ? '增量更新' : '全量构造'}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Schedule type */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2">调度频率</label>
-            <div className="grid grid-cols-5 gap-1.5">
-              {(Object.keys(CRON_PRESETS) as ScheduleType[]).map(t => (
-                <button key={t} onClick={() => setSchedType(t)}
-                  className={`py-2 px-1 text-xs rounded-lg border text-center transition-colors ${schedType === t ? 'border-blue-500 bg-blue-50 text-blue-600 font-semibold' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                  {CRON_PRESETS[t].label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Time config based on type */}
-          {schedType !== 'hourly' && schedType !== 'custom' && (
-            <div className="flex items-center gap-4 flex-wrap">
-              {schedType === 'weekly' && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">执行星期</label>
-                  <div className="flex gap-1">
-                    {WEEKDAYS.map((d, i) => (
-                      <button key={i} onClick={() => setWeekday(i)}
-                        className={`w-8 h-8 rounded-lg text-xs transition-colors ${weekday === i ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {schedType === 'monthly' && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">执行日期</label>
-                  <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white"
-                    value={monthday} onChange={e => setMonthday(+e.target.value)}>
-                    {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
-                      <option key={d} value={d}>{d} 日</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">执行时间</label>
-                <input type="time" value={time} onChange={e => setTime(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-              </div>
-            </div>
-          )}
-          {schedType === 'custom' && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Cron 表达式</label>
-              <input value={customCron} onChange={e => setCustomCron(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-blue-400"
-                placeholder="0 2 * * *" />
-              <p className="text-[10px] text-gray-400 mt-1">格式: 分 时 日 月 周几</p>
-            </div>
-          )}
-
-          {/* Cron preview */}
-          <div className="bg-slate-900 rounded-xl px-4 py-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-400 mb-0.5">调度计划</p>
-              <p className="text-sm font-medium text-white">{cronDesc}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-500 mb-0.5 text-right">Cron 表达式</p>
-              <p className="font-mono text-sm text-emerald-400">{cronExpr}</p>
-            </div>
-          </div>
-
-          {/* Timeout + retry */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">超时时间（分钟）</label>
-              <input type="number" min="10" max="1440" value={timeout}
-                onChange={e => setTimeout_(+e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">失败重试次数</label>
-              <input type="number" min="0" max="5" value={retryMax}
-                onChange={e => setRetryMax(+e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100">
-          <button onClick={onClose} className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-            取消
-          </button>
-          <button onClick={handleSave}
-            className="text-sm px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5">
-            <Calendar size={13} /> 创建定时任务
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Scheduled tasks panel ────────────────────────────────────────────────────
-
-function ScheduledTasksPanel({
-  tasks, graphs, onUpdate,
-}: {
-  tasks: ScheduledTask[];
-  graphs: GraphEntry[];
-  onUpdate: (tasks: ScheduledTask[]) => void;
-}) {
-  const [showModal, setShowModal] = useState(false);
-
-  const toggle = (id: string) =>
-    onUpdate(tasks.map(t => t.id === id ? { ...t, enabled: !t.enabled } : t));
-
-  const remove = (id: string) =>
-    onUpdate(tasks.filter(t => t.id !== id));
-
-  const handleSave = (t: ScheduledTask) =>
-    onUpdate([...tasks, t]);
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100">
-        <Calendar className="w-4 h-4 text-gray-400" />
-        <span className="text-sm font-semibold text-gray-800">定时任务</span>
-        <span className="text-xs text-gray-400">· {tasks.filter(t => t.enabled).length} 个已启用</span>
-        <div className="flex-1" />
-        <button onClick={() => setShowModal(true)}
-          className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5">
-          <Plus size={13} /> 新建定时任务
-        </button>
-      </div>
-
-      {tasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-14 text-gray-400">
-          <Calendar className="w-10 h-10 mb-3 opacity-25" />
-          <p className="text-sm">暂无定时任务，点击右上角新建。</p>
-        </div>
-      ) : (
-        <div>
-          <div className="grid px-5 py-2 bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-500"
-            style={{ gridTemplateColumns: '2fr 1.5fr 1.4fr 1.6fr 1.2fr 0.8fr 1fr' }}>
-            <div>图谱 / 模式</div>
-            <div>调度计划</div>
-            <div>下次执行</div>
-            <div>上次执行</div>
-            <div>超时 / 重试</div>
-            <div>启用</div>
-            <div>操作</div>
-          </div>
-
-          {tasks.map(t => (
-            <div key={t.id} className="grid px-5 py-4 border-b border-gray-100 last:border-0 items-center hover:bg-gray-50/50 transition-colors"
-              style={{ gridTemplateColumns: '2fr 1.5fr 1.4fr 1.6fr 1.2fr 0.8fr 1fr' }}>
-
-              <div>
-                <div className="text-sm font-medium text-gray-900">{t.graphName}</div>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block ${t.mode === 'full' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                  {t.mode === 'full' ? '全量' : '增量'}
-                </span>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-800">{t.cronDesc}</div>
-                <div className="font-mono text-[10px] text-gray-400 mt-0.5">{t.cronExpr}</div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-700">{t.nextRun}</div>
-                <div className="text-[10px] text-gray-400 mt-0.5">距现在 {countdown(t.nextRun)}</div>
-              </div>
-
-              <div>
-                {t.lastRun ? (
-                  <>
-                    <div className="text-sm text-gray-600">{t.lastRun}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      {t.lastStatus === 'succeeded'
-                        ? <CheckCircle2 size={11} className="text-emerald-500" />
-                        : <XCircle size={11} className="text-red-500" />}
-                      <span className={`text-[10px] ${t.lastStatus === 'succeeded' ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {t.lastStatus === 'succeeded' ? '成功' : '失败'}
-                      </span>
-                      {t.lastDuration && <span className="text-[10px] text-gray-400">· {t.lastDuration}</span>}
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-xs text-gray-400">从未运行</span>
-                )}
-              </div>
-
-              <div className="text-xs text-gray-500 space-y-0.5">
-                <div>超时 {t.timeout}min</div>
-                <div>重试 {t.retryMax} 次</div>
-              </div>
-
-              <div>
-                <div
-                  onClick={() => toggle(t.id)}
-                  className={`w-9 h-5 rounded-full cursor-pointer transition-colors relative ${t.enabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-all shadow-sm ${t.enabled ? 'left-[18px]' : 'left-0.5'}`} />
-                </div>
-              </div>
-
-              <div className="flex gap-1">
-                <button
-                  onClick={() => remove(t.id)}
-                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                  <XCircle size={13} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {showModal && (
-        <NewScheduleModal
-          onClose={() => setShowModal(false)}
-          onSave={handleSave}
-          graphs={graphs}
-        />
-      )}
-    </div>
-  );
-}
-
 // ─── Private Graph Upload Modal ───────────────────────────────────────────────
 
 type ParseState = 'idle' | 'parsing' | 'done' | 'error';
@@ -1059,6 +688,7 @@ function PrivateGraphModal({ onClose, onBuild }: {
       relationCount: relationEst,
       isPrivate: true,
       runs: [],
+      versions: [],
     };
     onBuild(newEntry);
     onClose();
@@ -1500,8 +1130,6 @@ function DeleteConfirmModal({ graph, onClose, onConfirm }: {
 
 export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: string) => void }) {
   const [graphs, setGraphs] = useState<GraphEntry[]>(MOCK_GRAPHS);
-  const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>(MOCK_SCHEDULED);
-  const [pageTab, setPageTab] = useState<'tasks' | 'scheduled'>('tasks');
   const [expandedGraphId, setExpandedGraphId] = useState<string | null>(null);
   const [openRunId, setOpenRunId] = useState<{ graphId: string; runId: string } | null>(null);
   const [exportOpenId, setExportOpenId] = useState<string | null>(null);
@@ -1510,6 +1138,7 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
   const [showPrivateModal, setShowPrivateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<GraphEntry | null>(null);
   const [rollbackGraphId, setRollbackGraphId] = useState<string | null>(null);
+  const [delayHours, setDelayHours] = useState<Record<string, number>>({});
 
   const handleScan = (graphId: string) => {
     if (scanStates[graphId] === 'scanning') return;
@@ -1522,14 +1151,23 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
     setTimeout(() => setRefreshing(false), 1000);
   };
 
-  const handleFullBuild = (graphId: string) => {
+  const handleFullBuild = (graphId: string, mode: RunMode = 'full', ignoreDelay = false) => {
+    const hours = ignoreDelay ? 0 : (delayHours[graphId] ?? 0);
+    if (hours > 0) {
+      setGraphs(prev => prev.map(g => g.id !== graphId ? g : { ...g, delayedExec: { hours, mode } }));
+      return;
+    }
     const newRun: GraphRun = {
-      id: `run-${uid()}`, mode: 'full', status: 'extracting', phase: '实体抽取中',
+      id: `run-${uid()}`, mode, status: 'extracting', phase: '实体抽取中',
       progress: 5, processedRows: 0, entityCount: 0, relationCount: 0,
       newCount: 0, modCount: 0, delCount: 0, startedAt: new Date().toLocaleString('zh-CN'),
     };
-    setGraphs(prev => prev.map(g => g.id !== graphId ? g : { ...g, activeRun: newRun, runs: [newRun, ...g.runs] }));
+    setGraphs(prev => prev.map(g => g.id !== graphId ? g : { ...g, delayedExec: null, activeRun: newRun, runs: [newRun, ...g.runs] }));
     setOpenRunId({ graphId, runId: newRun.id });
+  };
+
+  const cancelDelayedExec = (graphId: string) => {
+    setGraphs(prev => prev.map(g => g.id !== graphId ? g : { ...g, delayedExec: null }));
   };
 
   const handleBuildPrivate = (entry: GraphEntry) => {
@@ -1580,26 +1218,9 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">图谱任务</h1>
-            <p className="text-sm text-gray-500 mt-0.5">构造任务管理、实时监控与定时调度</p>
+            <p className="text-sm text-gray-500 mt-0.5">构造任务管理与实时监控；延迟执行在操作栏标记即可</p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Page tabs */}
-            <div className="flex gap-0.5 border border-gray-200 rounded-lg p-0.5 bg-gray-50">
-              {([
-                ['tasks',     '任务列表', Network],
-                ['scheduled', '定时任务', Calendar],
-              ] as const).map(([key, label, Icon]) => (
-                <button key={key} onClick={() => setPageTab(key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-all ${pageTab === key ? 'bg-white shadow-sm text-gray-800 font-semibold' : 'text-gray-400 hover:text-gray-600'}`}>
-                  <Icon size={12} /> {label}
-                  {key === 'scheduled' && (
-                    <span className="ml-0.5 bg-blue-100 text-blue-600 text-[9px] font-bold px-1.5 py-px rounded-full">
-                      {scheduledTasks.filter(t => t.enabled).length}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
             <button onClick={() => setShowPrivateModal(true)}
               className="text-sm px-3 py-1.5 border border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1.5">
               <Lock size={13} /> 私有图谱
@@ -1618,19 +1239,6 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
 
       {/* ── Body ───────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
-
-        {/* ══ SCHEDULED TASKS TAB ══ */}
-        {pageTab === 'scheduled' && (
-          <ScheduledTasksPanel
-            tasks={scheduledTasks}
-            graphs={graphs}
-            onUpdate={setScheduledTasks}
-          />
-        )}
-
-        {/* ══ TASKS LIST TAB ══ */}
-        {pageTab === 'tasks' && (
-          <>
             {/* Graph list */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100">
@@ -1677,7 +1285,16 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
                           </div>
                           <div className="font-mono text-xs text-gray-500 truncate">{g.targetSpace}</div>
                           <div>
-                            {ar ? (
+                            {g.delayedExec && !isActive ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                                <Clock className="w-3 h-3" />
+                                {g.delayedExec.mode === 'full' ? '全量' : '增量'} · {g.delayedExec.hours}小时后执行
+                                <button type="button" onClick={() => cancelDelayedExec(g.id)}
+                                  className="ml-0.5 text-blue-400 hover:text-blue-700">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </span>
+                            ) : ar ? (
                               <span className={`flex items-center gap-1.5 text-xs ${arCfg?.color}`}>
                                 <div className={`w-1.5 h-1.5 rounded-full ${arCfg?.dot} ${arCfg?.animate ? 'animate-pulse' : ''}`} />
                                 {arCfg?.label}
@@ -1719,7 +1336,7 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
                               </button>
                             )}
                             {ar?.status === 'failed' && (
-                              <button onClick={() => handleFullBuild(g.id)}
+                              <button onClick={() => handleFullBuild(g.id, 'full', true)}
                                 className="text-xs px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-0.5">
                                 <RotateCcw className="w-3 h-3" />重试
                               </button>
@@ -1731,11 +1348,22 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
                                 {isOpen ? '收起仪表盘' : '打开仪表盘'}
                               </button>
                             )}
-                            <button onClick={() => handleFullBuild(g.id)} disabled={!!isActive}
+                            <select
+                              value={delayHours[g.id] ?? 0}
+                              onChange={e => setDelayHours(prev => ({ ...prev, [g.id]: Number(e.target.value) }))}
+                              disabled={!!isActive}
+                              title="延迟执行"
+                              className="text-xs border border-gray-200 rounded-lg px-1.5 py-1 bg-white text-gray-600 focus:outline-none focus:border-blue-400 disabled:opacity-40"
+                            >
+                              {DELAY_HOURS.map(h => (
+                                <option key={h} value={h}>{h === 0 ? '立即执行' : `${h}小时后`}</option>
+                              ))}
+                            </select>
+                            <button onClick={() => handleFullBuild(g.id, 'full')} disabled={!!isActive}
                               className="text-xs px-2.5 py-1 border border-blue-200 text-blue-600 hover:bg-blue-50 disabled:opacity-40 rounded-lg transition-colors flex items-center gap-0.5">
                               <Play className="w-3 h-3" />全量
                             </button>
-                            <button disabled={!g.lastFull || !!isActive}
+                            <button onClick={() => handleFullBuild(g.id, 'incremental')} disabled={!g.lastFull || !!isActive}
                               className="text-xs px-2.5 py-1 border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 rounded-lg transition-colors">
                               增量
                             </button>
@@ -1862,8 +1490,6 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
                 onNavigateTo={onNavigateTo}
               />
             )}
-          </>
-        )}
       </div>
 
       {/* Modals */}

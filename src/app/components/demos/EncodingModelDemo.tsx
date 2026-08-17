@@ -1,5 +1,10 @@
 import { useState } from 'react';
 import { CheckCircle, ChevronRight, Settings, Play, Info } from 'lucide-react';
+import {
+  EmbeddingSpaceSelector,
+  embeddingSpaceLabel,
+  type EmbeddingSpace,
+} from './EmbeddingSpaceSelector';
 
 type ModelId = 'transe' | 'transh' | 'transr' | 'rescal' | 'distmult' | 'complex' | 'conve' | 'graphsage';
 type CategoryId = 'translation' | 'decomposition' | 'neural';
@@ -19,6 +24,7 @@ interface Model {
   defaultDim: number;
   defaultLr: string;
   defaultBatch: number;
+  preferredSpace: EmbeddingSpace;
   supportsSymmetry: boolean;
   supportsAntisymmetry: boolean;
   supportsInverse: boolean;
@@ -32,6 +38,7 @@ const MODELS: Model[] = [
     strengths: ['计算简单，训练快', '参数量少，内存友好', '适合层次关系建模'],
     limitations: ['无法处理 1-to-N 关系', '不支持反对称、对称关系'],
     complexity: 'O(N·d)', mrr: '0.347', hits10: '53.1', defaultDim: 200, defaultLr: '0.01', defaultBatch: 128,
+    preferredSpace: 'real',
     supportsSymmetry: false, supportsAntisymmetry: false, supportsInverse: false, supportsComposition: true,
   },
   {
@@ -40,6 +47,7 @@ const MODELS: Model[] = [
     strengths: ['支持复杂映射关系', '对 TransE 的直接改进', '投影机制直观'],
     limitations: ['参数量稍多', '投影可能引入误差'],
     complexity: 'O(N·d + R·d)', mrr: '0.382', hits10: '58.4', defaultDim: 200, defaultLr: '0.005', defaultBatch: 256,
+    preferredSpace: 'real',
     supportsSymmetry: false, supportsAntisymmetry: false, supportsInverse: false, supportsComposition: true,
   },
   {
@@ -48,6 +56,7 @@ const MODELS: Model[] = [
     strengths: ['每关系独立空间', '表达能力更强', '对复杂关系建模更精准'],
     limitations: ['参数量大', '计算开销高', '易过拟合'],
     complexity: 'O(N·d + R·d·k)', mrr: '0.421', hits10: '61.2', defaultDim: 100, defaultLr: '0.001', defaultBatch: 128,
+    preferredSpace: 'real',
     supportsSymmetry: true, supportsAntisymmetry: true, supportsInverse: false, supportsComposition: true,
   },
   {
@@ -56,6 +65,7 @@ const MODELS: Model[] = [
     strengths: ['表达能力最强', '捕捉复杂实体交互', '支持所有关系模式'],
     limitations: ['参数量随关系数平方增长', '易过拟合', '不适合大规模图谱'],
     complexity: 'O(N·d + R·d²)', mrr: '0.356', hits10: '51.7', defaultDim: 100, defaultLr: '0.001', defaultBatch: 64,
+    preferredSpace: 'real',
     supportsSymmetry: true, supportsAntisymmetry: true, supportsInverse: true, supportsComposition: true,
   },
   {
@@ -64,6 +74,7 @@ const MODELS: Model[] = [
     strengths: ['参数量少，极高效率', '易于大规模扩展', '训练稳定'],
     limitations: ['只能建模对称关系', '表达能力受限'],
     complexity: 'O(N·d)', mrr: '0.241', hits10: '41.9', defaultDim: 256, defaultLr: '0.002', defaultBatch: 512,
+    preferredSpace: 'real',
     supportsSymmetry: true, supportsAntisymmetry: false, supportsInverse: false, supportsComposition: false,
   },
   {
@@ -72,6 +83,7 @@ const MODELS: Model[] = [
     strengths: ['支持非对称关系', '参数量与 DistMult 相当', '理论完备性强'],
     limitations: ['复数运算需额外开销', '可解释性稍弱'],
     complexity: 'O(N·d)', mrr: '0.247', hits10: '44.0', defaultDim: 256, defaultLr: '0.002', defaultBatch: 512,
+    preferredSpace: 'complex',
     supportsSymmetry: true, supportsAntisymmetry: true, supportsInverse: true, supportsComposition: false,
   },
   {
@@ -80,6 +92,7 @@ const MODELS: Model[] = [
     strengths: ['非线性交互建模', '参数高效', '泛化能力强'],
     limitations: ['超参数较多', '训练较慢', '可解释性低'],
     complexity: 'O(N·d + k·f)', mrr: '0.325', hits10: '50.1', defaultDim: 200, defaultLr: '0.003', defaultBatch: 128,
+    preferredSpace: 'real',
     supportsSymmetry: true, supportsAntisymmetry: true, supportsInverse: true, supportsComposition: true,
   },
   {
@@ -88,6 +101,7 @@ const MODELS: Model[] = [
     strengths: ['支持归纳学习', '可处理动态图', '利用图结构信息'],
     limitations: ['需要图结构输入', '训练复杂度较高', '对超参数敏感'],
     complexity: 'O(N·K·d²)', mrr: '0.289', hits10: '46.3', defaultDim: 256, defaultLr: '0.0005', defaultBatch: 64,
+    preferredSpace: 'real',
     supportsSymmetry: true, supportsAntisymmetry: true, supportsInverse: true, supportsComposition: true,
   },
 ];
@@ -106,6 +120,7 @@ const RELATION_PATTERNS = [
 ];
 
 interface HyperParams {
+  space: EmbeddingSpace;
   dim: number;
   lr: string;
   batch: number;
@@ -126,6 +141,7 @@ export function EncodingModelDemo() {
   const cat = CATEGORIES.find(c => c.id === model.category)!;
 
   const [params, setParams] = useState<HyperParams>({
+    space: model.preferredSpace,
     dim: model.defaultDim,
     lr: model.defaultLr,
     batch: model.defaultBatch,
@@ -140,8 +156,17 @@ export function EncodingModelDemo() {
     const m = MODELS.find(x => x.id === id)!;
     setSelectedModel(id);
     setSaved(false);
-    setParams(p => ({ ...p, dim: m.defaultDim, lr: m.defaultLr, batch: m.defaultBatch }));
+    setParams(p => ({
+      ...p,
+      space: m.preferredSpace,
+      dim: m.defaultDim,
+      lr: m.defaultLr,
+      batch: m.defaultBatch,
+    }));
   };
+
+  const spaceMismatch = model.preferredSpace === 'complex' && params.space === 'real';
+  const paramDim = params.space === 'complex' ? params.dim * 2 : params.dim;
 
   const SECTIONS = [
     { id: 'library' as const, label: '① 模型库' },
@@ -303,7 +328,7 @@ export function EncodingModelDemo() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-gray-900">模型选择与超参数配置</h3>
-              <p className="text-sm text-gray-500 mt-0.5">选择编码模型并配置训练超参数，保存后可直接发起训练</p>
+              <p className="text-sm text-gray-500 mt-0.5">选择编码模型、表示空间（实数 / 复数）并配置训练超参数，保存后可直接发起训练</p>
             </div>
             <button onClick={() => setActiveSection('library')} className="text-xs text-indigo-600 hover:underline flex items-center gap-1">
               ← 返回模型库
@@ -335,9 +360,38 @@ export function EncodingModelDemo() {
             <div className="flex items-center gap-3 mb-2">
               <span className={`text-base font-bold ${cat.color}`}>{model.name}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${cat.badge}`}>{cat.label}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${model.preferredSpace === 'complex' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                推荐{model.preferredSpace === 'complex' ? '复数空间' : '实数空间'}
+              </span>
               <span className="text-xs text-gray-500 font-mono">MRR {model.mrr} · Hits@10 {model.hits10}%</span>
             </div>
             <p className="text-sm text-gray-600">{model.desc}</p>
+          </div>
+
+          {/* Representation space */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-gray-700">表示空间</p>
+            <EmbeddingSpaceSelector
+              value={params.space}
+              onChange={(space) => { setParams(p => ({ ...p, space })); setSaved(false); }}
+              showHeader={false}
+            />
+            {spaceMismatch && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <Info className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>
+                  {model.name} 依赖 Hermitian 内积，建议选择<strong>复数空间嵌入</strong>，否则无法完整建模反对称与互逆关系。
+                </span>
+              </div>
+            )}
+            {params.space === 'complex' && model.preferredSpace === 'real' && (
+              <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                <Info className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>
+                  {model.name} 默认在实数域训练。选用复数空间后参数量约为原来的 2 倍（当前等效维度 {paramDim}），训练与显存开销会增加。
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Hyperparams */}
@@ -445,13 +499,13 @@ export function EncodingModelDemo() {
             <div className="grid grid-cols-4 gap-3 text-sm">
               {[
                 { label: '模型', value: model.name },
-                { label: '维度', value: `${params.dim}d` },
+                { label: '表示空间', value: embeddingSpaceLabel(params.space) },
+                { label: '嵌入维度', value: `${params.dim}d` },
+                { label: '实际参数维度', value: `${paramDim}d` },
                 { label: '学习率', value: params.lr },
                 { label: '批大小', value: String(params.batch) },
                 { label: '训练轮数', value: `${params.epochs}` },
-                { label: 'Margin', value: params.margin.toFixed(1) },
                 { label: '优化器', value: params.optimizer.toUpperCase() },
-                { label: '负采样', value: String(params.negSamples) },
               ].map(item => (
                 <div key={item.label} className="bg-white rounded-lg p-3 border border-gray-100">
                   <p className="text-xs text-gray-400 mb-0.5">{item.label}</p>

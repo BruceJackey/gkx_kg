@@ -10,7 +10,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Modality = 'image' | 'text' | 'audio' | 'video';
+type Modality = 'image' | 'text';
 type DatasetTab = 'overview' | 'metadata' | 'evaluation' | 'preprocess';
 type UploadMode = 'pairs' | 'label';
 type DataOrigin = 'upload' | 'database' | 'api';
@@ -323,10 +323,24 @@ function ModalityBadge({ m }: { m: Modality }) {
   const cfg: Record<Modality, { label: string; cls: string }> = {
     image: { label: '图像', cls: 'bg-violet-50 text-violet-700' },
     text: { label: '文本', cls: 'bg-blue-50 text-blue-700' },
-    audio: { label: '音频', cls: 'bg-amber-50 text-amber-700' },
-    video: { label: '视频', cls: 'bg-red-50 text-red-700' },
   };
   return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg[m].cls}`}>{cfg[m].label}</span>;
+}
+
+function ProvenanceMarks({ source, creator, compact }: { source: string; creator: string; compact?: boolean }) {
+  const textCls = compact ? 'text-[10px]' : 'text-[11px]';
+  return (
+    <div className={`flex flex-wrap items-center gap-x-3 gap-y-0.5 text-gray-500 ${textCls}`}>
+      <span className="inline-flex items-center gap-1 min-w-0" title={`来源：${source || '未标注'}`}>
+        <Globe size={10} className="flex-shrink-0 text-gray-400" />
+        <span className="truncate max-w-[160px]">{source || '未标注来源'}</span>
+      </span>
+      <span className="inline-flex items-center gap-1 min-w-0" title={`创建者：${creator || '未标注'}`}>
+        <User size={10} className="flex-shrink-0 text-gray-400" />
+        <span className="truncate max-w-[120px]">{creator || '未标注创建者'}</span>
+      </span>
+    </div>
+  );
 }
 
 function StatusBadge({ status }: { status: 'active' | 'archived' }) {
@@ -1005,12 +1019,15 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
 
 // ─── New Dataset Dialog ───────────────────────────────────────────────────────
 
-function NewDatasetDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (name: string, desc: string) => void }) {
+function NewDatasetDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (name: string, desc: string, source: string, creator: string) => void }) {
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
+  const [source, setSource] = useState('');
+  const [creator, setCreator] = useState('');
   const [selectedModalities, setSelectedModalities] = useState<Modality[]>(['image', 'text']);
-  const allModalities: Modality[] = ['image', 'text', 'audio', 'video'];
+  const allModalities: Modality[] = ['image', 'text'];
   const toggleModality = (m: Modality) => setSelectedModalities(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+  const canCreate = !!name.trim() && !!source.trim() && !!creator.trim();
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
@@ -1028,7 +1045,19 @@ function NewDatasetDialog({ onClose, onCreate }: { onClose: () => void; onCreate
           <div>
             <div className="text-xs text-gray-500 mb-1.5">数据集描述</div>
             <textarea rows={3} className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-violet-400 resize-none"
-              placeholder="描述数据集的用途、来源和特点…" value={desc} onChange={e => setDesc(e.target.value)} />
+              placeholder="描述数据集的用途和特点…" value={desc} onChange={e => setDesc(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-gray-500 mb-1.5">来源 <span className="text-red-400">*</span></div>
+              <input className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-violet-400"
+                placeholder="如 arXiv / 内部采集" value={source} onChange={e => setSource(e.target.value)} />
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1.5">创建者 <span className="text-red-400">*</span></div>
+              <input className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-violet-400"
+                placeholder="个人或团队名称" value={creator} onChange={e => setCreator(e.target.value)} />
+            </div>
           </div>
           <div>
             <div className="text-xs text-gray-500 mb-2">模态类型</div>
@@ -1041,6 +1070,7 @@ function NewDatasetDialog({ onClose, onCreate }: { onClose: () => void; onCreate
                 </button>
               ))}
             </div>
+            <p className="text-[11px] text-gray-400 mt-1.5">仅支持图像与文本图文对，不含音频、视频。</p>
           </div>
           <div>
             <div className="text-xs text-gray-500 mb-1.5">版本初始化</div>
@@ -1055,9 +1085,9 @@ function NewDatasetDialog({ onClose, onCreate }: { onClose: () => void; onCreate
         </div>
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100">
           <button onClick={onClose} className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg">取消</button>
-          <button onClick={() => { if (name.trim()) { onCreate(name, desc); onClose(); } }}
+          <button onClick={() => { if (canCreate) { onCreate(name.trim(), desc, source.trim(), creator.trim()); onClose(); } }}
             className="text-sm px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50"
-            disabled={!name.trim()}>
+            disabled={!canCreate}>
             <Plus size={13} /> 创建数据集
           </button>
         </div>
@@ -1580,10 +1610,16 @@ function MetadataPanel({
   };
 
   const handleSave = () => {
-    onSave({ metadata, taxonomy, description: metadata.description });
+    if (!metadata.source.trim() || !metadata.creator.trim()) return;
+    const nextTaxonomy: DatasetTaxonomy = {
+      ...taxonomy,
+      modalities: taxonomy.modalities.filter((m): m is Modality => m === 'image' || m === 'text'),
+    };
+    onSave({ metadata, taxonomy: nextTaxonomy, description: metadata.description });
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   };
+  const canSaveMeta = !!metadata.source.trim() && !!metadata.creator.trim();
 
   return (
     <div className="space-y-4">
@@ -1623,9 +1659,9 @@ function MetadataPanel({
           <div>
             <div className="text-xs text-gray-500 mb-2">数据模态</div>
             <div className="flex flex-wrap gap-2">
-              {(['image', 'text', 'audio', 'video'] as Modality[]).map(m => {
+              {(['image', 'text'] as Modality[]).map(m => {
                 const on = taxonomy.modalities.includes(m);
-                const labels: Record<Modality, string> = { image: '图像', text: '文本', audio: '音频', video: '视频' };
+                const labels: Record<Modality, string> = { image: '图像', text: '文本' };
                 return (
                   <button key={m} type="button" onClick={() => setTaxonomy(prev => ({ ...prev, modalities: toggleInList(prev.modalities, m) as Modality[] }))}
                     className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${on ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
@@ -1634,6 +1670,7 @@ function MetadataPanel({
                 );
               })}
             </div>
+            <p className="text-[11px] text-gray-400 mt-1.5">多模态数据集仅标记图像与文本，不包含音频、视频。</p>
           </div>
           <div>
             <div className="text-xs text-gray-500 mb-2">自定义标签</div>
@@ -1669,13 +1706,15 @@ function MetadataPanel({
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400 resize-none" />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">来源</label>
+            <label className="text-xs text-gray-500 mb-1 block">来源 <span className="text-red-400">*</span></label>
             <input value={metadata.source} onChange={e => setMeta('source', e.target.value)}
+              placeholder="数据出处，如公开论文附图、内部采集平台"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><User size={11} /> 创建者</label>
+            <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><User size={11} /> 创建者 <span className="text-red-400">*</span></label>
             <input value={metadata.creator} onChange={e => setMeta('creator', e.target.value)}
+              placeholder="个人或团队"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400" />
           </div>
           <div>
@@ -1695,10 +1734,11 @@ function MetadataPanel({
           </div>
         </div>
         <div className="mt-4 flex items-center gap-3">
-          <button type="button" onClick={handleSave}
-            className="text-sm px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg flex items-center gap-1.5">
+          <button type="button" onClick={handleSave} disabled={!canSaveMeta}
+            className="text-sm px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-lg flex items-center gap-1.5">
             <Check size={13} /> 保存元数据
           </button>
+          {!canSaveMeta && <span className="text-xs text-amber-600">来源与创建者均为必填</span>}
           {saved && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} /> 已保存</span>}
         </div>
       </div>
@@ -1915,7 +1955,7 @@ export default function MultimodalDatasetManagement() {
     return hitQuery && hitDomain && hitTask && hitModality;
   });
 
-  const createDataset = (name: string, desc: string) => {
+  const createDataset = (name: string, desc: string, source: string, creator: string) => {
     const id = 'ds_' + Date.now();
     const newDs: MultimodalDataset = {
       id, name, description: desc,
@@ -1926,8 +1966,8 @@ export default function MultimodalDatasetManagement() {
       pairs: [], commits: [], preprocessJobs: [], indexConfig: null,
       metadata: {
         description: desc,
-        source: '',
-        creator: '',
+        source,
+        creator,
         publishedAt: new Date().toISOString().slice(0, 10),
         license: '',
         homepage: '',
@@ -2008,8 +2048,6 @@ export default function MultimodalDatasetManagement() {
               <option value="全部">全部模态</option>
               <option value="image">图像</option>
               <option value="text">文本</option>
-              <option value="audio">音频</option>
-              <option value="video">视频</option>
             </select>
           </div>
           <div className="text-xs text-gray-400 flex items-center gap-1">
@@ -2044,6 +2082,9 @@ export default function MultimodalDatasetManagement() {
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                     {ds.modalities.map(m => <ModalityBadge key={m} m={m} />)}
                   </div>
+                  <div className="mt-1.5">
+                    <ProvenanceMarks source={ds.metadata.source} creator={ds.metadata.creator} compact />
+                  </div>
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="text-xs text-gray-400">{ds.pairCount.toLocaleString()} 对</span>
                     <span className="text-xs text-gray-400">{ds.version}</span>
@@ -2072,6 +2113,9 @@ export default function MultimodalDatasetManagement() {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-600">{selected.version}</span>
                   </div>
                   <p className="text-xs text-gray-500 max-w-2xl">{selected.description}</p>
+                  <div className="mt-2">
+                    <ProvenanceMarks source={selected.metadata.source} creator={selected.metadata.creator} />
+                  </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {selected.taxonomy.domains.map(d => (
                       <span key={d} className="text-[11px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">{d}</span>

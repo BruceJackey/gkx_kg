@@ -4,6 +4,12 @@ import { ScoringFunctionDemo } from './demos/ScoringFunctionDemo';
 import { SupervisedSimilarityDemo } from './demos/SupervisedSimilarityDemo';
 import { RepresentationSpaceDemo } from './demos/RepresentationSpaceDemo';
 import { EncodingModelDemo } from './demos/EncodingModelDemo';
+import {
+  EmbeddingSpaceSelector,
+  supportsEmbeddingSpace,
+  embeddingSpaceLabel,
+  type EmbeddingSpace,
+} from './demos/EmbeddingSpaceSelector';
 import { NodeSimilarityDemo } from './demos/NodeSimilarityDemo';
 import { SemanticRetrievalDemo } from './demos/SemanticRetrievalDemo';
 import { RuleExtensionDemo } from './demos/RuleExtensionDemo';
@@ -1017,6 +1023,98 @@ const algorithmDetails: Record<string, any> = {
       },
     ],
   },
+  'node2vec': {
+    name: 'Node2Vec',
+    englishName: 'Node2Vec Graph Embedding',
+    category: '图嵌入',
+    type: '随机游走/深度学习',
+    algorithmType: 'deep-learning',
+    trainable: true,
+    version: 'v2.0.0',
+    status: '已部署',
+    owner: '系统内置',
+    createdAt: '2026-01-15 09:00:00',
+    updatedAt: '2026-03-25 14:00:00',
+    id: 'ALG_NODE2VEC_001',
+    description: '基于二阶随机游走的图嵌入算法，通过调节返回参数 p 与进出参数 q 在广度优先与深度优先之间权衡，学习节点的低维向量表示。训练时可选择实数空间或复数空间嵌入，以适应不同关系模式的建模需求。',
+    intro: {
+      summary: 'Node2Vec 将网络中的节点映射到连续向量空间，使拓扑邻近或结构等价的节点在嵌入中距离更近。训练阶段支持在实数空间（ℝᵈ）与复数空间（ℂᵈ）之间切换：实数空间计算高效，适合同质邻居聚合；复数空间可更好地区分有向边与反对称结构。',
+      scenarios: [
+        '大规模知识图谱或社交网络的节点表示学习',
+        '链接预测、节点分类与社区发现的上游特征',
+        '需要对比实数 / 复数嵌入对下游任务影响的消融实验',
+      ],
+      inputFormat: '边列表或三元组文件，包含 source、target 及可选 weight；训练配置需指定 space_type（real / complex）与 embedding_dim',
+      outputFormat: 'JSON 或 NPY，返回每个节点的嵌入向量；复数空间下向量长度为 2d（实部 + 虚部）',
+      performance: {
+        f1: '—',
+        precision: 'Link Prediction: 85%',
+        recall: 'Hits@10: 0.78',
+        speed: '~5000 节点/秒（实数）',
+      },
+      notes: [
+        '实数空间为默认推荐，适合无向同质图',
+        '有向图谱或存在互逆关系时建议选用复数空间',
+        '切换表示空间后需重新训练，不可复用已有向量',
+      ],
+    },
+    features: [
+      {
+        title: '随机游走采样',
+        description: '可配置游走长度、窗口大小与 p/q 参数，灵活控制局部与全局结构的采样偏好。',
+      },
+      {
+        title: '实数 / 复数空间训练',
+        description: '发起训练时可选择将节点嵌入到实数空间或复数空间，系统按所选空间自动调整参数量、负采样与相似度计算。',
+      },
+    ],
+  },
+  'graph-sage': {
+    name: 'GraphSAGE',
+    englishName: 'Graph Sample and Aggregate',
+    category: '图嵌入',
+    type: '图神经网络',
+    algorithmType: 'deep-learning',
+    trainable: true,
+    version: 'v1.8.0',
+    status: '已部署',
+    owner: '系统内置',
+    createdAt: '2026-02-01 09:00:00',
+    updatedAt: '2026-04-05 11:00:00',
+    id: 'ALG_GRAPHSAGE_001',
+    description: '归纳式图神经网络嵌入方法，通过对邻居节点采样并聚合生成节点表示，支持对未见节点的泛化推断。训练阶段可选择实数空间或复数空间嵌入，分别适用于同质聚合与复杂有向关系建模。',
+    intro: {
+      summary: 'GraphSAGE 通过多层邻居采样与聚合学习可泛化的节点编码器。表示空间可在训练前配置：实数空间下使用均值/池化/LSTM 聚合；复数空间下聚合在 Hermitian 内积意义下进行，更适合反对称、互逆等关系模式。',
+      scenarios: [
+        '动态图谱、增量节点上的归纳式嵌入',
+        '节点分类、链接预测与图谱补全',
+        '对比实数与复数空间对 GNN 聚合效果的影响',
+      ],
+      inputFormat: '图结构（邻接表）+ 节点特征；训练配置包含 space_type（real / complex）、embedding_dim 与聚合器类型',
+      outputFormat: 'JSON，返回节点嵌入；复数空间下每个节点输出实部、虚部各 d 维',
+      performance: {
+        f1: 'Node Classification: 90%',
+        precision: 'MRR: 0.289',
+        recall: 'Hits@10: 46.3%',
+        speed: '~2000 节点/秒（实数）',
+      },
+      notes: [
+        '默认推荐实数空间 + mean 聚合，显存占用最低',
+        '关系模式复杂的知识图谱可改用复数空间提升链接预测',
+        '复数空间参数量约为实数空间的 2 倍，需预留显存',
+      ],
+    },
+    features: [
+      {
+        title: '邻居采样与聚合',
+        description: '支持 mean、max-pool、LSTM 三种聚合器，可配置每层采样邻居数与网络深度。',
+      },
+      {
+        title: '实数 / 复数空间训练',
+        description: '发起训练时可选择表示空间：实数空间适合节点分类基线；复数空间适合建模有向与反对称关系。',
+      },
+    ],
+  },
   'term-vector': {
     name: '术语向量生成',
     englishName: 'Term Vector Generation',
@@ -1208,7 +1306,7 @@ const algorithmDetails: Record<string, any> = {
     createdAt: '2026-06-01 00:00:00',
     updatedAt: '2026-08-04 10:00:00',
     id: 'ALG_ENC_MODEL_001',
-    description: '提供平移距离（TransE/TransH/TransR）、张量/矩阵分解（RESCAL/DistMult/ComplEx）、神经网络（ConvE/GraphSAGE）三大类共 8 个主流知识图谱嵌入编码模型。用户可根据图谱特点（关系模式、规模、任务类型）选择最合适的编码模型，并通过统一的超参数配置界面设置向量维度、学习率、批大小等参数后直接发起训练。',
+    description: '提供平移距离（TransE/TransH/TransR）、张量/矩阵分解（RESCAL/DistMult/ComplEx）、神经网络（ConvE/GraphSAGE）三大类共 8 个主流知识图谱嵌入编码模型。用户可根据图谱特点选择编码模型，并在训练前指定实数空间或复数空间嵌入，再统一配置向量维度、学习率、批大小等超参数后发起训练。',
     intro: {
       overview: '知识图谱嵌入编码模型是将图谱实体和关系映射到低维连续向量空间的核心方法，其选择直接决定了嵌入质量与下游任务（链接预测、关系推理、实体对齐）的性能上限。本模块汇聚三大模型族群，覆盖从轻量平移模型到表达能力最强的神经网络模型的完整谱系，并提供统一配置与训练入口。',
       features: [
@@ -1226,7 +1324,7 @@ const algorithmDetails: Record<string, any> = {
         },
         {
           title: '模型选择与超参数配置',
-          description: '提供清晰的模型对比界面（关系模式支持、MRR 基准、参数复杂度），并统一配置向量维度、学习率、批大小、Margin、优化器、负采样数等超参数，配置预览后一键发起训练。',
+          description: '提供清晰的模型对比界面（关系模式支持、MRR 基准、参数复杂度）。训练前可选择实数空间（ℝᵈ）或复数空间（ℂᵈ）嵌入，并统一配置向量维度、学习率、批大小、Margin、优化器、负采样数等超参数，配置预览后一键发起训练。',
         },
       ],
       performance: {
@@ -1985,12 +2083,13 @@ export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService }
         {activeTab === 'demo' && algorithmId === 'temporal-relation-dependency' && <TemporalRelationDependencyDemo />}
         {activeTab === 'demo' && algorithmId === 'cross-lingual-alignment' && <CrossLingualAlignmentDemo />}
         {activeTab === 'models' && <ModelsTab algorithmId={algorithmId} algorithmName={algo.name} />}
-        {activeTab === 'training' && <TrainingRecordsTab />}
+        {activeTab === 'training' && <TrainingRecordsTab algorithmId={algorithmId} />}
         {activeTab === 'deployment' && <DeploymentRecordsTab />}
       </div>
 
       {showTrainingModal && (
         <TrainingConfigModal
+          algorithmId={algorithmId}
           algorithmName={algo.name}
           onClose={() => setShowTrainingModal(false)}
         />
@@ -2154,25 +2253,76 @@ function IntroTab({ algo, onCopyId }: { algo: any; onCopyId: () => void }) {
   );
 }
 
-function TrainingRecordsTab() {
-  const records = [
-    {
-      id: 'TRAIN_001',
-      version: 'v2.3.1',
-      dataset: '文献数据集-v3',
-      initiator: '张三',
-      startTime: '2026-04-15 10:00:00',
-      endTime: '2026-04-15 12:30:00',
-      status: '成功',
-      result: 'F1: 92.5%',
-    },
-  ];
+function TrainingRecordsTab({ algorithmId }: { algorithmId: string }) {
+  const isGraph = supportsEmbeddingSpace(algorithmId);
+  const records = isGraph
+    ? [
+        {
+          id: 'TRAIN_GE_002',
+          version: 'v1.2.0',
+          dataset: 'FB15k-237_triples.txt',
+          space: 'complex' as EmbeddingSpace,
+          initiator: '张三',
+          startTime: '2026-08-12 09:20:00',
+          endTime: '2026-08-12 14:05:00',
+          status: '成功',
+          result: 'MRR: 0.412',
+        },
+        {
+          id: 'TRAIN_GE_001',
+          version: 'v1.1.0',
+          dataset: 'graph_embedding_samples.txt',
+          space: 'real' as EmbeddingSpace,
+          initiator: '李四',
+          startTime: '2026-08-04 10:00:00',
+          endTime: '2026-08-04 12:40:00',
+          status: '成功',
+          result: 'Hits@10: 0.54',
+        },
+      ]
+    : [
+        {
+          id: 'TRAIN_001',
+          version: 'v2.3.1',
+          dataset: '文献数据集-v3',
+          space: undefined as EmbeddingSpace | undefined,
+          initiator: '张三',
+          startTime: '2026-04-15 10:00:00',
+          endTime: '2026-04-15 12:30:00',
+          status: '成功',
+          result: 'F1: 92.5%',
+        },
+      ];
 
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
         <h4 className="text-sm font-semibold text-blue-900 mb-3">训练数据格式要求</h4>
         <div className="space-y-4 text-sm text-blue-800">
+          {isGraph ? (
+            <>
+              <div>
+                <p className="font-medium mb-2">图嵌入训练数据格式 (三元组 TXT / JSONL):</p>
+                <div className="bg-white rounded p-3 font-mono text-xs text-gray-800 overflow-x-auto">
+                  {`head\trelation\ttail\n张三\twork_at\t北京大学`}
+                </div>
+                <ul className="mt-2 space-y-1 text-xs">
+                  <li>• 每行一条三元组，使用 Tab 或空格分隔头实体、关系、尾实体</li>
+                  <li>• 训练时须指定表示空间：<strong>real</strong>（实数空间 ℝᵈ）或 <strong>complex</strong>（复数空间 ℂᵈ）</li>
+                  <li>• 复数空间下输出向量长度为 2d（实部 + 虚部）</li>
+                </ul>
+              </div>
+              <div className="pt-2 border-t border-blue-200">
+                <p className="font-medium text-blue-900">空间选择提示:</p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  <li>• 实数空间：TransE、DistMult、Node2Vec、GraphSAGE 的默认选择</li>
+                  <li>• 复数空间：ComplEx、RotatE 等建模反对称/互逆关系时必选</li>
+                  <li>• 切换空间后须重新训练，不可复用历史嵌入</li>
+                </ul>
+              </div>
+            </>
+          ) : (
+            <>
           <div>
             <p className="font-medium mb-2">实体抽取算法数据格式 (JSONL):</p>
             <div className="bg-white rounded p-3 font-mono text-xs text-gray-800 overflow-x-auto">
@@ -2219,6 +2369,8 @@ function TrainingRecordsTab() {
               <li>• 可在<a href="#" className="text-blue-600 underline">数据集管理</a>页面上传和管理训练数据</li>
             </ul>
           </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -2231,6 +2383,9 @@ function TrainingRecordsTab() {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">任务ID</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">版本</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">训练数据集</th>
+              {isGraph && (
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">表示空间</th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">发起人</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">开始时间</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">结束时间</th>
@@ -2245,6 +2400,15 @@ function TrainingRecordsTab() {
                 <td className="px-4 py-3 text-sm">{r.id}</td>
                 <td className="px-4 py-3 text-sm">{r.version}</td>
                 <td className="px-4 py-3 text-sm">{r.dataset}</td>
+                {isGraph && (
+                  <td className="px-4 py-3 text-sm">
+                    {r.space ? (
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${r.space === 'complex' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {embeddingSpaceLabel(r.space)}
+                      </span>
+                    ) : '—'}
+                  </td>
+                )}
                 <td className="px-4 py-3 text-sm">{r.initiator}</td>
                 <td className="px-4 py-3 text-sm">{r.startTime}</td>
                 <td className="px-4 py-3 text-sm">{r.endTime}</td>
@@ -2387,6 +2551,22 @@ const BASE_MODELS = [
   },
 ];
 
+const GRAPH_KGE_MODELS: { id: string; name: string; desc: string; space: EmbeddingSpace }[] = [
+  { id: 'transe', name: 'TransE', desc: '平移距离模型，推荐实数空间。', space: 'real' },
+  { id: 'distmult', name: 'DistMult', desc: '对角双线性分解，推荐实数空间。', space: 'real' },
+  { id: 'complex', name: 'ComplEx', desc: 'Hermitian 内积模型，须使用复数空间。', space: 'complex' },
+  { id: 'rotate', name: 'RotatE', desc: '关系建模为复数旋转，须使用复数空间。', space: 'complex' },
+  { id: 'node2vec', name: 'Node2Vec', desc: '基于随机游走的节点嵌入，默认可在实数或复数空间训练。', space: 'real' },
+  { id: 'graph-sage', name: 'GraphSAGE', desc: '邻居采样聚合的归纳式图神经网络嵌入。', space: 'real' },
+];
+
+function graphModelsForAlgorithm(algorithmId: string) {
+  if (algorithmId === 'node2vec') return GRAPH_KGE_MODELS.filter(m => m.id === 'node2vec');
+  if (algorithmId === 'graph-sage') return GRAPH_KGE_MODELS.filter(m => m.id === 'graph-sage');
+  if (algorithmId === 'encoding-model') return GRAPH_KGE_MODELS.filter(m => m.id !== 'node2vec');
+  return GRAPH_KGE_MODELS;
+}
+
 const MODEL_COLOR: Record<string, { badge: string; card: string; border: string; dot: string }> = {
   blue:    { badge: 'bg-blue-100 text-blue-700',    card: 'bg-blue-50 border-blue-200',    border: 'border-blue-300',   dot: 'bg-blue-400'   },
   slate:   { badge: 'bg-slate-100 text-slate-700',  card: 'bg-slate-50 border-slate-200',  border: 'border-slate-300',  dot: 'bg-slate-400'  },
@@ -2395,14 +2575,29 @@ const MODEL_COLOR: Record<string, { badge: string; card: string; border: string;
   emerald: { badge: 'bg-emerald-100 text-emerald-700', card: 'bg-emerald-50 border-emerald-200', border: 'border-emerald-300', dot: 'bg-emerald-400' },
 };
 
-function TrainingConfigModal({ algorithmName, onClose }: { algorithmName: string; onClose: () => void }) {
+function TrainingConfigModal({
+  algorithmId,
+  algorithmName,
+  onClose,
+}: {
+  algorithmId: string;
+  algorithmName: string;
+  onClose: () => void;
+}) {
   const [selectedDataset, setSelectedDataset] = useState('');
   const [selectedModelId, setSelectedModelId] = useState(BASE_MODELS[0].id);
+  const [embeddingSpace, setEmbeddingSpace] = useState<EmbeddingSpace>('real');
+  const [embeddingDim, setEmbeddingDim] = useState(256);
+  const graphModels = graphModelsForAlgorithm(algorithmId);
+  const [graphModelId, setGraphModelId] = useState(graphModels[0]?.id ?? 'transe');
+  const graphModel = graphModels.find(m => m.id === graphModelId) ?? graphModels[0];
 
   const selectedModel = BASE_MODELS.find(m => m.id === selectedModelId) ?? BASE_MODELS[0];
   const modelColors = MODEL_COLOR[selectedModel.color];
+  const showSpace = supportsEmbeddingSpace(algorithmId);
+  const paramDim = embeddingSpace === 'complex' ? embeddingDim * 2 : embeddingDim;
 
-  const datasets = [
+  const nerDatasets = [
     {
       id: 'dataset-1',
       name: 'medical_entities_training.jsonl',
@@ -2428,6 +2623,33 @@ function TrainingConfigModal({ algorithmName, onClose }: { algorithmName: string
       format: 'CSV',
     },
   ];
+  const graphDatasets = [
+    {
+      id: 'dataset-5',
+      name: 'graph_embedding_samples.txt',
+      records: 35000,
+      size: '102.5 MB',
+      type: '图嵌入',
+      format: 'TXT',
+    },
+    {
+      id: 'dataset-11',
+      name: 'knowledge_graph_structure.txt',
+      records: 28000,
+      size: '85.6 MB',
+      type: '图嵌入',
+      format: 'TXT',
+    },
+    {
+      id: 'dataset-fb15k',
+      name: 'FB15k-237_triples.txt',
+      records: 310116,
+      size: '24.1 MB',
+      type: '知识图谱三元组',
+      format: 'TXT',
+    },
+  ];
+  const datasets = showSpace ? graphDatasets : nerDatasets;
 
   const selectedDatasetInfo = datasets.find((d) => d.id === selectedDataset);
 
@@ -2439,11 +2661,59 @@ function TrainingConfigModal({ algorithmName, onClose }: { algorithmName: string
         </div>
         <div className="p-6 space-y-6 flex-1 overflow-y-auto">
 
-          {/* ── Base model selector ─────────────────────────────── */}
+          {showSpace && (
+            <div>
+              <EmbeddingSpaceSelector
+                value={embeddingSpace}
+                onChange={setEmbeddingSpace}
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                当前选择：{embeddingSpaceLabel(embeddingSpace)} · 配置维度 {embeddingDim}d
+                {embeddingSpace === 'complex' ? `（实部+虚部，实际参数维度 ${paramDim}）` : ''}
+              </p>
+              {graphModel?.space === 'complex' && embeddingSpace === 'real' && (
+                <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  {graphModel.name} 依赖复数运算，请改选复数空间嵌入，否则无法完整建模反对称与互逆关系。
+                </p>
+              )}
+            </div>
+          )}
+
+          {showSpace ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                编码 / 游走模型 <span className="text-red-500">*</span>
+                <span className="ml-2 text-xs font-normal text-gray-400">
+                  与表示空间一起决定本次训练的嵌入方案
+                </span>
+              </label>
+              <select
+                value={graphModelId}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setGraphModelId(next);
+                  const meta = GRAPH_KGE_MODELS.find(m => m.id === next);
+                  if (meta?.space === 'complex') setEmbeddingSpace('complex');
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400 bg-white text-sm"
+              >
+                {graphModels.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} — 推荐{m.space === 'complex' ? '复数空间' : '实数空间'}
+                  </option>
+                ))}
+              </select>
+              {graphModel && (
+                <p className="mt-2 text-xs text-gray-500">{graphModel.desc}</p>
+              )}
+            </div>
+          ) : (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               基础模型 <span className="text-red-500">*</span>
-              <span className="ml-2 text-xs font-normal text-gray-400">训练将以所选模型为底座进行微调</span>
+              <span className="ml-2 text-xs font-normal text-gray-400">
+                训练将以所选模型为底座进行微调
+              </span>
             </label>
             <select
               value={selectedModelId}
@@ -2482,6 +2752,7 @@ function TrainingConfigModal({ algorithmName, onClose }: { algorithmName: string
               </div>
             </div>
           </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2531,6 +2802,29 @@ function TrainingConfigModal({ algorithmName, onClose }: { algorithmName: string
           <div className="border-t pt-6">
             <h4 className="text-sm font-semibold text-gray-900 mb-4">训练参数配置</h4>
             <div className="grid grid-cols-2 gap-4">
+              {showSpace && (
+                <div className="col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-sm text-gray-700">嵌入维度 (d)</label>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {embeddingDim}d
+                      {embeddingSpace === 'complex' ? ` · 实际 ${paramDim}d` : ''}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={64}
+                    max={512}
+                    step={64}
+                    value={embeddingDim}
+                    onChange={(e) => setEmbeddingDim(+e.target.value)}
+                    className="w-full accent-blue-600"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                    <span>64</span><span>128</span><span>256</span><span>384</span><span>512</span>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm text-gray-700 mb-1">训练轮数 (Epochs)</label>
                 <input
@@ -2610,11 +2904,23 @@ function TrainingConfigModal({ algorithmName, onClose }: { algorithmName: string
               <div className="flex-1 text-sm text-blue-800">
                 <div className="font-medium mb-1">训练建议</div>
                 <ul className="space-y-1 text-xs">
-                  <li>• 建议使用至少5000条标注样本以获得较好效果</li>
-                  <li>• 学习率过大可能导致训练不稳定，建议从0.001开始调整</li>
-                  <li>• 开启早停可以防止过拟合，建议patience设置为3-5</li>
-                  <li>• 建议添加备注说明此次训练的特点，方便后续区分不同版本的模型</li>
-                  <li>• 训练成功后，模型会自动保存到"模型版本"tab，可查看和部署</li>
+                  {showSpace ? (
+                    <>
+                      <li>• 实数空间适合大多数同质图与平移模型，计算与显存开销更低</li>
+                      <li>• 图谱含大量反对称、互逆关系时，优先选择复数空间（ComplEx / RotatE）</li>
+                      <li>• 复数空间参数量约为实数空间的 2 倍，请相应提高 GPU 显存预算</li>
+                      <li>• 切换表示空间后须重新训练，历史嵌入不可跨空间迁移</li>
+                      <li>• 训练成功后，模型会自动保存到「模型版本」tab，可查看和部署</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>• 建议使用至少5000条标注样本以获得较好效果</li>
+                      <li>• 学习率过大可能导致训练不稳定，建议从0.001开始调整</li>
+                      <li>• 开启早停可以防止过拟合，建议patience设置为3-5</li>
+                      <li>• 建议添加备注说明此次训练的特点，方便后续区分不同版本的模型</li>
+                      <li>• 训练成功后，模型会自动保存到"模型版本"tab，可查看和部署</li>
+                    </>
+                  )}
                 </ul>
               </div>
             </div>

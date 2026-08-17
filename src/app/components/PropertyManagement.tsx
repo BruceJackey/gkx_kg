@@ -53,6 +53,119 @@ const graphSpaces: GraphSpace[] = [
   { id: 'gs3', name: '专利技术图谱', description: '覆盖专利申请人、技术方向、IPC分类等专利实体', entityCount: 56780, color: '#f59e0b' },
 ];
 
+interface OntoPropSchema {
+  key: string;
+  label: string;
+  type: Property['type'];
+  required?: boolean;
+}
+
+interface OntoClass {
+  type: string;
+  description: string;
+  properties: OntoPropSchema[];
+}
+
+const GRAPH_ONTOLOGY: Record<string, { ontologyName: string; classes: OntoClass[] }> = {
+  gs1: {
+    ontologyName: '科技论文知识图谱本体',
+    classes: [
+      { type: '人物', description: '科研人员、作者、学者', properties: [
+        { key: 'birth_date', label: '出生日期', type: 'date' },
+        { key: 'nationality', label: '国籍', type: 'string' },
+        { key: 'affiliation', label: '所属机构', type: 'string', required: true },
+        { key: 'research_field', label: '研究领域', type: 'string' },
+        { key: 'h_index', label: 'H指数', type: 'number' },
+        { key: 'publications', label: '发表论文数', type: 'number' },
+      ]},
+      { type: '组织', description: '科研院所、高校、企业', properties: [
+        { key: 'founded', label: '成立时间', type: 'date' },
+        { key: 'location', label: '所在地', type: 'string', required: true },
+        { key: 'employee_count', label: '员工人数', type: 'number' },
+        { key: 'research_areas', label: '研究方向', type: 'string' },
+        { key: 'website', label: '官网', type: 'string' },
+      ]},
+      { type: '概念', description: '学科概念与知识主题', properties: [
+        { key: 'coined_year', label: '提出年份', type: 'number' },
+        { key: 'parent_concept', label: '上位概念', type: 'string' },
+        { key: 'key_models', label: '关键模型', type: 'string' },
+        { key: 'applications', label: '应用场景', type: 'text' },
+      ]},
+      { type: '事件', description: '科研计划、会议、项目事件', properties: [
+        { key: 'start_date', label: '启动日期', type: 'date', required: true },
+        { key: 'budget', label: '总经费(亿元)', type: 'number' },
+        { key: 'lead_agency', label: '主管部门', type: 'string' },
+        { key: 'focus_areas', label: '重点领域', type: 'text' },
+      ]},
+      { type: '地点', description: '园区、城市、地理单元', properties: [
+        { key: 'area_km2', label: '占地面积(km²)', type: 'number' },
+        { key: 'established', label: '建立时间', type: 'date' },
+        { key: 'companies', label: '入驻企业数', type: 'number' },
+        { key: 'address', label: '地址', type: 'string', required: true },
+      ]},
+      { type: '技术', description: '模型、算法、技术框架', properties: [
+        { key: 'proposed_year', label: '提出年份', type: 'number' },
+        { key: 'authors', label: '提出者', type: 'string' },
+        { key: 'paper', label: '原始论文', type: 'string' },
+        { key: 'key_mechanism', label: '核心机制', type: 'string' },
+        { key: 'variants', label: '衍生模型', type: 'text' },
+      ]},
+    ],
+  },
+  gs2: {
+    ontologyName: '医疗健康本体',
+    classes: [
+      { type: '疾病', description: '疾病与综合征', properties: [
+        { key: 'icd_code', label: 'ICD-10编码', type: 'string', required: true },
+        { key: 'prevalence', label: '全球患病率', type: 'string' },
+        { key: 'onset_age', label: '常见发病年龄', type: 'string' },
+        { key: 'complication', label: '主要并发症', type: 'text' },
+      ]},
+      { type: '药物', description: '药品与制剂', properties: [
+        { key: 'drug_class', label: '药物类别', type: 'string', required: true },
+        { key: 'mechanism', label: '作用机制', type: 'text' },
+        { key: 'dosage', label: '常用剂量', type: 'string' },
+        { key: 'approval_year', label: '上市年份', type: 'number' },
+      ]},
+      { type: '症状', description: '临床表现', properties: [
+        { key: 'severity', label: '严重程度', type: 'string' },
+        { key: 'related_disease', label: '相关疾病', type: 'string' },
+      ]},
+      { type: '基因', description: '基因与位点', properties: [
+        { key: 'chromosome', label: '染色体位置', type: 'string', required: true },
+        { key: 'function', label: '功能', type: 'text' },
+        { key: 'mutation_risk', label: '突变携带者患癌风险', type: 'string' },
+      ]},
+    ],
+  },
+  gs3: {
+    ontologyName: '专利技术本体',
+    classes: [
+      { type: '专利', description: '专利申请与授权', properties: [
+        { key: 'applicant', label: '申请人', type: 'string', required: true },
+        { key: 'filing_date', label: '申请日', type: 'date', required: true },
+        { key: 'ipc', label: 'IPC分类', type: 'string' },
+        { key: 'claims_count', label: '权利要求数', type: 'number' },
+      ]},
+      { type: '发明人', description: '专利发明人', properties: [
+        { key: 'affiliation', label: '所属机构', type: 'string', required: true },
+        { key: 'patent_count', label: '专利申请数', type: 'number' },
+        { key: 'research_area', label: '研究方向', type: 'string' },
+      ]},
+      { type: '技术方向', description: '技术领域分类', properties: [
+        { key: 'ipc_codes', label: '相关IPC', type: 'string' },
+        { key: 'patent_count_5y', label: '近5年专利量', type: 'number' },
+        { key: 'growth_rate', label: '年增长率', type: 'string' },
+      ]},
+      { type: '申请人', description: '机构申请人', properties: [
+        { key: 'founded', label: '成立年份', type: 'number' },
+        { key: 'total_patents', label: '专利总量', type: 'number' },
+        { key: 'main_field', label: '主要技术方向', type: 'text' },
+      ]},
+    ],
+  },
+};
+
 const graphSpaceEntities: Record<string, Entity[]> = {
   gs1: [],
   gs2: [
@@ -77,6 +190,14 @@ const entityTypeColors: Record<string, string> = {
   '事件': 'bg-yellow-500/20 text-yellow-400',
   '概念': 'bg-orange-500/20 text-orange-400',
   '技术': 'bg-cyan-500/20 text-cyan-400',
+  '疾病': 'bg-red-500/20 text-red-500',
+  '药物': 'bg-emerald-500/20 text-emerald-600',
+  '症状': 'bg-amber-500/20 text-amber-600',
+  '基因': 'bg-indigo-500/20 text-indigo-500',
+  '专利': 'bg-sky-500/20 text-sky-600',
+  '发明人': 'bg-blue-500/20 text-blue-500',
+  '技术方向': 'bg-teal-500/20 text-teal-600',
+  '申请人': 'bg-violet-500/20 text-violet-600',
 };
 
 const entityNodeStyle: Record<string, { fill: string; stroke: string; text: string }> = {
@@ -1425,6 +1546,142 @@ function TimeSeriesPanel() {
   );
 }
 
+function AddOntologyNodeDialog({
+  graphName,
+  ontologyName,
+  classes,
+  existingCount,
+  onClose,
+  onAdd,
+}: {
+  graphName: string;
+  ontologyName: string;
+  classes: OntoClass[];
+  existingCount: number;
+  onClose: () => void;
+  onAdd: (entity: Entity) => void;
+}) {
+  const [classType, setClassType] = useState(classes[0]?.type ?? '');
+  const schema = classes.find(c => c.type === classType) ?? classes[0];
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [aliases, setAliases] = useState('');
+  const [propValues, setPropValues] = useState<Record<string, string>>({});
+
+  const setClass = (type: string) => {
+    setClassType(type);
+    setPropValues({});
+  };
+
+  const missingRequired = (schema?.properties ?? []).filter(p => p.required && !(propValues[p.key] ?? '').trim());
+  const canSubmit = name.trim() && schema && missingRequired.length === 0;
+
+  const handleAdd = () => {
+    if (!canSubmit || !schema) return;
+    const prefix = classType.slice(0, 1).toUpperCase();
+    onAdd({
+      id: `${prefix}${String(existingCount + 101).padStart(3, '0')}`,
+      name: name.trim(),
+      type: schema.type,
+      description: description.trim() || `从「${ontologyName}」的「${schema.type}」类添加的节点`,
+      aliases: aliases.split(/[,，、]/).map(s => s.trim()).filter(Boolean),
+      properties: schema.properties.map(p => ({
+        key: p.key,
+        label: p.label,
+        type: p.type,
+        value: (propValues[p.key] ?? '').trim(),
+      })),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-[640px] max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">从本体添加节点</h3>
+            <p className="text-xs text-gray-400 mt-0.5">目标图谱「{graphName}」· 本体「{ontologyName}」</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          <div>
+            <div className="text-xs font-semibold text-gray-600 mb-2">选择本体类</div>
+            <div className="flex flex-wrap gap-2">
+              {classes.map(c => (
+                <button key={c.type} type="button" onClick={() => setClass(c.type)}
+                  className={`text-left px-3 py-2 rounded-xl border text-sm transition-colors ${
+                    classType === c.type ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-blue-200'
+                  }`}>
+                  <div className="font-medium">{c.type}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{c.properties.length} 个属性</div>
+                </button>
+              ))}
+            </div>
+            {schema && <p className="text-xs text-gray-400 mt-2">{schema.description}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="text-xs text-gray-500 mb-1 block">节点名称 <span className="text-red-400">*</span></label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="输入实体名称…"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs text-gray-500 mb-1 block">描述</label>
+              <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="可为空，默认带上本体类说明"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none" />
+            </div>
+            <div className="col-span-2">
+              <label className="text-xs text-gray-500 mb-1 block">别名（逗号分隔）</label>
+              <input value={aliases} onChange={e => setAliases(e.target.value)} placeholder="可选"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs font-semibold text-gray-600 mb-2">本体属性（按 Schema 预填字段）</div>
+            <div className="space-y-2">
+              {(schema?.properties ?? []).map(p => (
+                <div key={p.key} className="grid grid-cols-[140px_1fr] gap-2 items-center">
+                  <div>
+                    <div className="text-xs text-gray-700">
+                      {p.label}{p.required && <span className="text-red-400 ml-0.5">*</span>}
+                    </div>
+                    <div className="text-[10px] font-mono text-gray-400">{p.key}</div>
+                  </div>
+                  {p.type === 'text' ? (
+                    <textarea rows={2} value={propValues[p.key] ?? ''} onChange={e => setPropValues(v => ({ ...v, [p.key]: e.target.value }))}
+                      className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400 resize-none" />
+                  ) : (
+                    <input
+                      type={p.type === 'number' ? 'number' : p.type === 'date' ? 'date' : 'text'}
+                      value={propValues[p.key] ?? ''}
+                      onChange={e => setPropValues(v => ({ ...v, [p.key]: e.target.value }))}
+                      className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
+          <button onClick={onClose} className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg">取消</button>
+          <button onClick={handleAdd} disabled={!canSubmit}
+            className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg flex items-center gap-1.5">
+            <Plus className="w-4 h-4" />添加节点
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Main component
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1437,18 +1694,27 @@ export default function PropertyManagement() {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [entities, setEntities] = useState<Entity[]>(mockEntities);
+  const [entitiesBySpace, setEntitiesBySpace] = useState<Record<string, Entity[]>>({
+    gs1: mockEntities,
+    gs2: graphSpaceEntities.gs2,
+    gs3: graphSpaceEntities.gs3,
+  });
   const [entityPage, setEntityPage] = useState(1);
   const [filterType, setFilterType] = useState('全部');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [relations, setRelations] = useState<Relation[]>(SEED_RELATIONS);
+  const [showAddNode, setShowAddNode] = useState(false);
 
   const activeSpace = graphSpaces.find(s => s.id === activeSpaceId)!;
+  const ontologyMeta = GRAPH_ONTOLOGY[activeSpaceId];
+  const spaceEntities: Entity[] = entitiesBySpace[activeSpaceId] ?? [];
 
-  // When switching to gs2/gs3, use those entities; gs1 uses mockEntities
-  const spaceEntities: Entity[] = activeSpaceId === 'gs1'
-    ? entities
-    : graphSpaceEntities[activeSpaceId] ?? [];
+  const updateSpaceEntities = (updater: (list: Entity[]) => Entity[]) => {
+    setEntitiesBySpace(prev => ({
+      ...prev,
+      [activeSpaceId]: updater(prev[activeSpaceId] ?? []),
+    }));
+  };
 
   const pageSize = 5;
   const entityTypes = ['全部', ...Array.from(new Set(spaceEntities.map(e => e.type)))];
@@ -1462,22 +1728,31 @@ export default function PropertyManagement() {
 
   const saveEdit = () => {
     if (!selectedEntity || !editingKey) return;
-    const updated = entities.map(e =>
+    const updatedList = spaceEntities.map(e =>
       e.id === selectedEntity.id
         ? { ...e, properties: e.properties.map(p => p.key === editingKey ? { ...p, value: editValue } : p) }
         : e
     );
-    setEntities(updated);
-    setSelectedEntity(updated.find(e => e.id === selectedEntity.id) ?? null);
+    updateSpaceEntities(() => updatedList);
+    setSelectedEntity(updatedList.find(e => e.id === selectedEntity.id) ?? null);
     setEditingKey(null);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   };
 
   const handleDeleteEntities = (ids: string[]) => {
-    setEntities(prev => prev.filter(e => !ids.includes(e.id)));
+    updateSpaceEntities(list => list.filter(e => !ids.includes(e.id)));
     setRelations(prev => prev.filter(r => !ids.includes(r.sourceId) && !ids.includes(r.targetId)));
     if (selectedEntity && ids.includes(selectedEntity.id)) setSelectedEntity(null);
+  };
+
+  const handleAddOntologyNode = (entity: Entity) => {
+    updateSpaceEntities(list => [entity, ...list]);
+    setSelectedEntity(entity);
+    setFilterType('全部');
+    setSearchQuery('');
+    setEntityPage(1);
+    setShowAddNode(false);
   };
 
   return (
@@ -1546,6 +1821,15 @@ export default function PropertyManagement() {
           <div className="flex gap-4 h-full min-h-0">
             {/* Entity list */}
             <div className="w-80 flex flex-col gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowAddNode(true)}
+                className="w-full text-sm px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />从本体添加节点
+              </button>
+              {ontologyMeta && (
+                <p className="text-[11px] text-gray-400 -mt-1">基于「{ontologyMeta.ontologyName}」· {ontologyMeta.classes.length} 个实体类</p>
+              )}
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -1667,25 +1951,25 @@ export default function PropertyManagement() {
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
                   <Search className="w-12 h-12 mb-3 opacity-30" />
-                  <p className="text-sm">搜索并选择一个实体以查看和编辑属性</p>
+                  <p className="text-sm">搜索并选择一个实体，或从本体添加节点</p>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {activeTab === 'search' && <SearchPanel entities={entities} />}
+        {activeTab === 'search' && <SearchPanel entities={spaceEntities} />}
 
         {activeTab === 'add-relation' && (
           <AddRelationPanel
-            entities={entities.slice(0, 6)}
+            entities={spaceEntities.slice(0, 8)}
             onAdd={r => setRelations(prev => [r, ...prev])}
           />
         )}
 
         {activeTab === 'delete-entity' && (
           <DeleteEntityPanel
-            entities={entities}
+            entities={spaceEntities}
             relations={relations}
             onDelete={handleDeleteEntities}
           />
@@ -1702,6 +1986,17 @@ export default function PropertyManagement() {
 
         {activeTab === 'timeseries' && <TimeSeriesPanel />}
       </div>
+
+      {showAddNode && ontologyMeta && (
+        <AddOntologyNodeDialog
+          graphName={activeSpace.name}
+          ontologyName={ontologyMeta.ontologyName}
+          classes={ontologyMeta.classes}
+          existingCount={spaceEntities.length}
+          onClose={() => setShowAddNode(false)}
+          onAdd={handleAddOntologyNode}
+        />
+      )}
     </div>
   );
 }

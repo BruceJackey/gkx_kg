@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { ElementType } from 'react';
 import {
   Plus, Trash2, RotateCcw, CheckCircle2, Database, Layers, Shield,
-  Wifi, SlidersHorizontal, Globe, Server, AlertCircle, ChevronRight, Play, Users,
+  Wifi, SlidersHorizontal, Globe, Server, AlertCircle, ChevronRight, Play, Users, X,
 } from 'lucide-react';
 import { REVIEWER_OPTIONS, saveReviewTask } from '../utils/reviewAssignment';
 
@@ -91,8 +91,22 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
   // 阈值
   const [threshold, setThreshold] = useState(75);
 
+  // 挖掘算法核心参数
+  type MiningAlgo = 'apriori' | 'fpgrowth';
+  const [miningAlgo, setMiningAlgo] = useState<MiningAlgo>('apriori');
+  const [minSupport, setMinSupport] = useState(8);       // %
+  const [minConfidence, setMinConfidence] = useState(70); // %
+  const [minLift, setMinLift] = useState(1.2);
+  const clampPct = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(Number.isFinite(n) ? n : lo)));
+  const clampLift = (n: number) => Math.max(1.0, Math.min(5.0, Math.round((Number.isFinite(n) ? n : 1.2) * 10) / 10));
+  const estimatedRules = Math.max(
+    12,
+    Math.round(420 * Math.pow(8 / Math.max(minSupport, 1), 1.15) * Math.pow(70 / Math.max(minConfidence, 1), 0.85) * Math.pow(1.2 / Math.max(minLift, 1), 0.6)),
+  );
+
   // 审核员（提交前必选 1–2 人）
   const [reviewerIds, setReviewerIds] = useState<string[]>(['user_003', 'user_002']);
+  const [reviewerPickId, setReviewerPickId] = useState('');
 
   // 多策略权重 (0-100, 归一化后使用)
   const [weights, setWeights] = useState({ rule: 40, dict: 30, ml: 30 });
@@ -137,12 +151,16 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
     : checkedEntities.length === 0 ? '请至少选择一个实体类型'
     : !reviewersOk ? '请配置 1–2 名审核员' : '';
 
-  const toggleReviewer = (id: string) => {
-    setReviewerIds(prev => {
-      if (prev.includes(id)) return prev.filter(x => x !== id);
-      if (prev.length >= 2) return prev;
-      return [...prev, id];
-    });
+  const availableReviewers = REVIEWER_OPTIONS.filter(r => !reviewerIds.includes(r.id));
+
+  const addReviewer = () => {
+    if (!reviewerPickId || reviewerIds.length >= 2 || reviewerIds.includes(reviewerPickId)) return;
+    setReviewerIds(prev => [...prev, reviewerPickId]);
+    setReviewerPickId('');
+  };
+
+  const removeReviewer = (id: string) => {
+    setReviewerIds(prev => prev.filter(x => x !== id));
   };
 
   const toggleEntity = (name: string) => setCheckedEntities(p => p.includes(name) ? p.filter(x => x !== name) : [...p, name]);
@@ -167,7 +185,9 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
     setCheckedEntities(['论文', '作者', '机构', '概念']);
     setCheckedRelations(['WRITTEN_BY', 'AFFILIATED_WITH']);
     setGlobalRules(['r1', 'r2']); setFieldRules([]); setRelationRules([]);
-    setRemoteServices([]); setThreshold(75); setReviewerIds(['user_003', 'user_002']); setActiveTab('data');
+    setRemoteServices([]); setThreshold(75);
+    setMiningAlgo('apriori'); setMinSupport(8); setMinConfidence(70); setMinLift(1.2);
+    setReviewerIds(['user_003', 'user_002']); setReviewerPickId(''); setActiveTab('data');
   };
 
   const handleSubmit = () => {
@@ -604,6 +624,140 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
           <p className="text-xs text-gray-400 mt-3">所选模型将用于实体、关系的全部抽取步骤</p>
         </div>
 
+        {/* 挖掘算法核心参数 */}
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-sm font-semibold text-gray-800">挖掘算法参数</div>
+            <span className="text-xs px-2.5 py-1 rounded-full font-medium border bg-slate-50 text-slate-600 border-slate-200">
+              预计产出 {estimatedRules} 条候选规则
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">
+            关联规则挖掘用于从语料与图谱中发现候选关系模式。最小支持度、最小置信度决定规则是否被保留，与下方「综合置信度阈值」（采纳/审核分流）相互独立。
+          </p>
+
+          <div className="flex border border-gray-200 rounded-lg overflow-hidden text-xs mb-5 w-fit">
+            {([
+              { id: 'apriori' as const, label: 'Apriori' },
+              { id: 'fpgrowth' as const, label: 'FP-Growth' },
+            ]).map(opt => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setMiningAlgo(opt.id)}
+                className={`px-3.5 py-1.5 transition-colors ${miningAlgo === opt.id ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700 bg-white'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-400 -mt-3 mb-4">
+            {miningAlgo === 'apriori'
+              ? 'Apriori 逐层生成频繁项集，参数可解释性强，适合中小规模语料。'
+              : 'FP-Growth 用频繁模式树压缩扫描，大规模语料下通常更快。'}
+          </p>
+
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <div className="text-sm font-medium text-gray-800">最小支持度 <span className="font-mono text-xs text-gray-400">minsup</span></div>
+                  <p className="text-[11px] text-gray-400 mt-0.5">项集在语料/图谱中出现频率下限，过低会产生大量低频噪声规则</p>
+                </div>
+                <div className="text-lg font-bold tabular-nums text-blue-600">{minSupport}%</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range" min={1} max={40} value={minSupport}
+                  onChange={e => setMinSupport(Number(e.target.value))}
+                  className="flex-1 accent-blue-600"
+                />
+                <input
+                  type="number" min={1} max={40} value={minSupport}
+                  onChange={e => setMinSupport(clampPct(Number(e.target.value), 1, 40))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 w-20 text-center"
+                />
+              </div>
+              <div className="flex justify-between text-[11px] text-gray-400 mt-1">
+                <span>1% 召回优先</span>
+                <span>8% 推荐</span>
+                <span>40% 高精度</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <div className="text-sm font-medium text-gray-800">最小置信度 <span className="font-mono text-xs text-gray-400">minconf</span></div>
+                  <p className="text-[11px] text-gray-400 mt-0.5">规则 X→Y 的条件概率下限，过低会引入不可靠推断</p>
+                </div>
+                <div className={`text-lg font-bold tabular-nums ${minConfidence >= 80 ? 'text-green-600' : minConfidence >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{minConfidence}%</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range" min={40} max={95} value={minConfidence}
+                  onChange={e => setMinConfidence(Number(e.target.value))}
+                  className="flex-1 accent-blue-600"
+                />
+                <input
+                  type="number" min={40} max={95} value={minConfidence}
+                  onChange={e => setMinConfidence(clampPct(Number(e.target.value), 40, 95))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 w-20 text-center"
+                />
+              </div>
+              <div className="flex justify-between text-[11px] text-gray-400 mt-1">
+                <span>40% 宽松</span>
+                <span>70% 推荐</span>
+                <span>95% 严格</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <div className="text-sm font-medium text-gray-800">最小提升度 <span className="font-mono text-xs text-gray-400">minlift</span></div>
+                  <p className="text-[11px] text-gray-400 mt-0.5">相对独立假设的增益倍数，lift=1 表示无关联，建议 ≥ 1.2</p>
+                </div>
+                <div className="text-lg font-bold tabular-nums text-violet-600">{minLift.toFixed(1)}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range" min={10} max={50} value={Math.round(minLift * 10)}
+                  onChange={e => setMinLift(Number(e.target.value) / 10)}
+                  className="flex-1 accent-violet-600"
+                />
+                <input
+                  type="number" min={1} max={5} step={0.1} value={minLift}
+                  onChange={e => setMinLift(clampLift(Number(e.target.value)))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400 w-20 text-center"
+                />
+              </div>
+              <div className="flex justify-between text-[11px] text-gray-400 mt-1">
+                <span>1.0 无过滤</span>
+                <span>1.2 推荐</span>
+                <span>5.0 强关联</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-3 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+              <div className="text-[11px] text-blue-500 mb-0.5">保留条件</div>
+              <div className="text-xs font-medium text-blue-800">
+                support ≥ {minSupport}% 且 confidence ≥ {minConfidence}%
+              </div>
+            </div>
+            <div className="bg-violet-50 border border-violet-200 rounded-xl p-3">
+              <div className="text-[11px] text-violet-500 mb-0.5">关联强度</div>
+              <div className="text-xs font-medium text-violet-800">lift ≥ {minLift.toFixed(1)}</div>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <div className="text-[11px] text-slate-500 mb-0.5">预计候选</div>
+              <div className="text-xs font-medium text-slate-800">{estimatedRules} 条规则进入打分</div>
+            </div>
+          </div>
+        </div>
+
         {/* 多策略加权配置 */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
@@ -699,37 +853,49 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
               已选 {reviewerIds.length}/2
             </span>
           </div>
-          <p className="text-xs text-gray-400 mb-4">提交构造任务前须指定 1–2 名审核员；仅被分配者可在人工审核页看到本任务条目，并可查看彼此审核标记。</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {REVIEWER_OPTIONS.map(r => {
-              const checked = reviewerIds.includes(r.id);
-              const disabled = !checked && reviewerIds.length >= 2;
+          <p className="text-xs text-gray-400 mb-4">提交构造任务前须指定 1–2 名审核员；从下拉列表选择后添加。仅被分配者可在人工审核页看到本任务条目，并可查看彼此审核标记。</p>
+
+          <div className="flex flex-wrap gap-2 min-h-[36px] mb-3">
+            {reviewerIds.length === 0 && (
+              <span className="text-xs text-gray-400 py-1.5">尚未添加审核员</span>
+            )}
+            {reviewerIds.map(id => {
+              const r = REVIEWER_OPTIONS.find(o => o.id === id);
               return (
-                <button
-                  key={r.id}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => toggleReviewer(r.id)}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left transition-colors ${
-                    checked
-                      ? 'border-blue-400 bg-blue-50 text-blue-700'
-                      : disabled
-                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50/40'
-                  }`}
-                >
-                  <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 text-[10px] ${
-                    checked ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 bg-white'
-                  }`}>
-                    {checked ? '✓' : ''}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium truncate">{r.name}</span>
-                    <span className="block text-[10px] text-gray-400 truncate">@{r.username}</span>
-                  </span>
-                </button>
+                <span key={id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm">
+                  <span className="font-medium">{r?.name ?? id}</span>
+                  <span className="text-[10px] text-blue-400">@{r?.username}</span>
+                  <button type="button" onClick={() => removeReviewer(id)}
+                    className="p-0.5 rounded hover:bg-blue-100 text-blue-400 hover:text-blue-700">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </span>
               );
             })}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={reviewerPickId}
+              onChange={e => setReviewerPickId(e.target.value)}
+              disabled={reviewerIds.length >= 2 || availableReviewers.length === 0}
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-400"
+            >
+              <option value="">
+                {reviewerIds.length >= 2 ? '已达 2 人上限' : availableReviewers.length === 0 ? '无可添加人员' : '选择审核员…'}
+              </option>
+              {availableReviewers.map(r => (
+                <option key={r.id} value={r.id}>{r.name}（@{r.username}）</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={addReviewer}
+              disabled={!reviewerPickId || reviewerIds.length >= 2}
+              className="flex items-center gap-1.5 text-sm px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />添加
+            </button>
           </div>
         </div>
 
@@ -739,6 +905,7 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
             <div className="text-sm font-semibold text-gray-800">综合置信度阈值</div>
             <div className={`text-xl font-bold tabular-nums ${thresholdColor}`}>{threshold}%</div>
           </div>
+          <p className="text-xs text-gray-400 mb-4">对挖掘产出并完成多策略打分后的候选做采纳分流，不同于上方挖掘阶段的 minconf。</p>
           <div className="flex items-center gap-3 mb-5">
             <input type="range" min={0} max={100} value={threshold}
               onChange={e => setThreshold(Number(e.target.value))}
@@ -830,6 +997,9 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
               <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">{checkedRelations.length} 类关系</span>
               {totalRules > 0 && <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full">{totalRules} 规则绑定</span>}
               {enabledRemote > 0 && <span className="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">{enabledRemote} 远程服务</span>}
+              <span className="text-xs bg-cyan-50 text-cyan-700 px-2 py-0.5 rounded-full">
+                {miningAlgo === 'apriori' ? 'Apriori' : 'FP-Growth'} · sup≥{minSupport}% · conf≥{minConfidence}%
+              </span>
               <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{syncMode}</span>
               {reviewerIds.length > 0 && (
                 <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">

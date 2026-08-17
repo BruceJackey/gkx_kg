@@ -414,7 +414,7 @@ export const algorithmsByCategory: Record<string, AlgorithmEntry[]> = {
     {
       id: 'node2vec',
       name: 'Node2Vec',
-      description: '基于随机游走的图嵌入算法',
+      description: '基于随机游走的图嵌入算法，训练支持实数空间与复数空间嵌入选择',
       type: 'deep-learning',
       trainable: true,
       version: 'v2.0.0',
@@ -426,7 +426,7 @@ export const algorithmsByCategory: Record<string, AlgorithmEntry[]> = {
     {
       id: 'graph-sage',
       name: 'GraphSAGE',
-      description: '归纳式图神经网络嵌入',
+      description: '归纳式图神经网络嵌入，训练支持实数空间与复数空间嵌入选择',
       type: 'deep-learning',
       trainable: true,
       version: 'v1.8.0',
@@ -486,7 +486,7 @@ export const algorithmsByCategory: Record<string, AlgorithmEntry[]> = {
     {
       id: 'encoding-model',
       name: '编码模型',
-      description: '提供平移距离（TransE/TransH/TransR）、张量分解（RESCAL/DistMult/ComplEx）、神经网络（ConvE/GraphSAGE）三大类主流知识图谱嵌入编码模型，支持模型选择与超参数配置',
+      description: '提供平移距离（TransE/TransH/TransR）、张量分解（RESCAL/DistMult/ComplEx）、神经网络（ConvE/GraphSAGE）三大类主流知识图谱嵌入编码模型，支持实数/复数表示空间选择与超参数配置',
       type: 'deep-learning',
       trainable: true,
       version: 'v1.0.0',

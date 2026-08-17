@@ -7,19 +7,36 @@ import {
   FlaskConical, Send, Bot, User, Loader2, X, Underline,
   LayoutTemplate, Columns, Download,
   PanelLeftOpen, PanelRightOpen, Star, FileText, Sparkles,
-  AlertCircle, ExternalLink, Tag
+  AlertCircle, ExternalLink, Tag, Layers, Cloud, Stamp, Paperclip,
+  Search, Pentagon, Spline, Replace, TextCursorInput, Eye, EyeOff,
 } from 'lucide-react';
 import NoteGenerationDialog from './NoteGenerationDialog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tool = 'select' | 'highlight' | 'underline' | 'note' | 'rect' | 'circle' | 'draw' | 'text';
+type Tool =
+  | 'select' | 'highlight' | 'underline' | 'note'
+  | 'rect' | 'circle' | 'polygon' | 'cloud'
+  | 'draw' | 'curve'
+  | 'freetext' | 'inserttext' | 'replacetext'
+  | 'file' | 'stamp';
 type AnnotationType = 'highlight' | 'underline' | 'note' | 'rect' | 'circle';
+type OverlayKind =
+  | 'rect' | 'circle' | 'polygon' | 'cloud'
+  | 'draw' | 'curve'
+  | 'freetext' | 'inserttext' | 'replacetext'
+  | 'file' | 'stamp';
+type LayerGroup = 'markup' | 'shape' | 'ink' | 'attach';
 type EntityType = 'person' | 'organization' | 'dataset' | 'method' | 'concept' | 'venue';
+type Pt = { x: number; y: number };
 
 interface Annotation {
   id: string; paraId: string; type: AnnotationType;
   color: string; note?: string; page: number;
+}
+interface OverlayAnn {
+  id: string; page: number; kind: OverlayKind; color: string;
+  points: Pt[]; text?: string; fileName?: string; stampId?: string; hidden?: boolean;
 }
 interface Bookmark_ { id: string; page: number; title: string; createdAt: string; }
 interface ChatMsg { id: string; role: 'user' | 'assistant'; content: string; }
@@ -425,12 +442,241 @@ const TOOLS: { id: Tool; icon: any; label: string; color?: string }[] = [
   { id: 'select', icon: MousePointer2, label: '选择' },
   { id: 'highlight', icon: Highlighter, label: '高亮', color: '#fbbf24' },
   { id: 'underline', icon: Underline, label: '下划线', color: '#3b82f6' },
+  { id: 'draw', icon: PenLine, label: '手绘', color: '#ef4444' },
+  { id: 'curve', icon: Spline, label: '曲线', color: '#f97316' },
+  { id: 'freetext', icon: Type, label: '自由文本', color: '#6366f1' },
+  { id: 'inserttext', icon: TextCursorInput, label: '插入文本', color: '#0ea5e9' },
+  { id: 'replacetext', icon: Replace, label: '替换文本', color: '#ec4899' },
   { id: 'note', icon: StickyNote, label: '添加备注', color: '#f59e0b' },
-  { id: 'rect', icon: Square, label: '矩形标注', color: '#10b981' },
-  { id: 'circle', icon: Circle, label: '椭圆标注', color: '#8b5cf6' },
-  { id: 'draw', icon: PenLine, label: '自由绘制', color: '#ef4444' },
-  { id: 'text', icon: Type, label: '插入文本', color: '#6366f1' },
+  { id: 'rect', icon: Square, label: '矩形', color: '#10b981' },
+  { id: 'circle', icon: Circle, label: '椭圆', color: '#8b5cf6' },
+  { id: 'polygon', icon: Pentagon, label: '多边形', color: '#14b8a6' },
+  { id: 'cloud', icon: Cloud, label: '云形', color: '#06b6d4' },
+  { id: 'file', icon: Paperclip, label: '插入文件', color: '#64748b' },
+  { id: 'stamp', icon: Stamp, label: '盖章', color: '#dc2626' },
 ];
+
+const OVERLAY_TOOLS: Tool[] = ['rect', 'circle', 'polygon', 'cloud', 'draw', 'curve', 'freetext', 'inserttext', 'replacetext', 'file', 'stamp'];
+const PARA_TOOLS: Tool[] = ['highlight', 'underline', 'note'];
+
+const STAMPS = [
+  { id: 'approved', label: '已审核', color: '#dc2626' },
+  { id: 'confidential', label: '机密', color: '#7c3aed' },
+  { id: 'draft', label: '草稿', color: '#2563eb' },
+];
+
+const OVERLAY_KIND_LABEL: Record<OverlayKind, string> = {
+  rect: '矩形', circle: '椭圆', polygon: '多边形', cloud: '云形',
+  draw: '手绘', curve: '曲线',
+  freetext: '自由文本', inserttext: '插入文本', replacetext: '替换文本',
+  file: '附件', stamp: '印章',
+};
+
+const LAYER_GROUPS: { id: LayerGroup; label: string; kinds: OverlayKind[]; paraTypes?: AnnotationType[] }[] = [
+  { id: 'markup', label: '文本注释', kinds: ['freetext', 'inserttext', 'replacetext'], paraTypes: ['highlight', 'underline', 'note'] },
+  { id: 'shape', label: '形状标记', kinds: ['rect', 'circle', 'polygon', 'cloud'] },
+  { id: 'ink', label: '手绘图层', kinds: ['draw', 'curve'] },
+  { id: 'attach', label: '附件与盖章', kinds: ['file', 'stamp'] },
+];
+
+const DOC_PASSAGES = [
+  { page: 1, title: 'Abstract', snippet: 'Knowledge graph embedding (KGE) aims to represent entities and relations as low-dimensional vectors. TKGEmbed uses multi-head self-attention.' },
+  { page: 1, title: '1. Introduction', snippet: '知识图谱嵌入方法研究。传统平移模型难以捕获长距离语义依赖，本文提出 Transformer 框架 TKGEmbed。' },
+  { page: 2, title: '2. Related Work', snippet: 'TransE、RotatE 平移模型与 CompGCN 图神经网络。TKGEmbed 用注意力选择性聚合邻居。' },
+  { page: 2, title: '3.1 Model Architecture', snippet: 'TKGEmbed 编码器由 L 层 Transformer 组成，关系感知位置编码：e′ᵢ = Σⱼ αᵢⱼ · Wᵥeⱼ。' },
+  { page: 3, title: '3.2 Training Objective', snippet: 'margin-based ranking loss 结合对比正则化 ℒ = ℒ_rank + λℒ_con。' },
+  { page: 3, title: '4.1 Main Results', snippet: 'FB15k-237 上 MRR 0.383，Hits@10 0.567，相对 CompGCN 提升 7.9%。' },
+  { page: 4, title: '4.2 Ablation Study', snippet: '去掉 Transformer 模块 MRR 下降 16.1%，关系感知 PE 与对比损失同样重要。' },
+  { page: 4, title: '5. Conclusion', snippet: '未来工作包括多模态知识图谱与十亿级图谱扩展。' },
+];
+
+function overlayKindOf(tool: Tool): OverlayKind | null {
+  if (OVERLAY_TOOLS.includes(tool)) return tool as OverlayKind;
+  return null;
+}
+
+function cloudPath(x: number, y: number, w: number, h: number) {
+  const n = 8;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  const rx = w / 2;
+  const ry = h / 2;
+  const pts: string[] = [];
+  for (let i = 0; i <= n; i++) {
+    const a = (Math.PI * 2 * i) / n - Math.PI / 2;
+    const bump = i % 2 === 0 ? 1.12 : 0.88;
+    const px = cx + Math.cos(a) * rx * bump;
+    const py = cy + Math.sin(a) * ry * bump;
+    pts.push(`${i === 0 ? 'M' : 'L'}${px.toFixed(1)},${py.toFixed(1)}`);
+  }
+  return pts.join(' ') + ' Z';
+}
+
+function polylineToSmooth(pts: { x: number; y: number }[], w: number, h: number) {
+  if (pts.length === 0) return '';
+  const P = pts.map(p => `${p.x * w},${p.y * h}`);
+  return `M${P[0]} ` + P.slice(1).map(p => `L${p}`).join(' ');
+}
+
+function OverlayShapes({ anns, w, h }: { anns: OverlayAnn[]; w: number; h: number }) {
+  return (
+    <>
+      {anns.filter(a => !a.hidden).map(a => {
+        const pts = a.points;
+        if (a.kind === 'draw' || a.kind === 'curve') {
+          return (
+            <path key={a.id} d={polylineToSmooth(pts, w, h)} fill="none" stroke={a.color} strokeWidth={a.kind === 'curve' ? 2.5 : 2}
+              strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
+          );
+        }
+        if ((a.kind === 'rect' || a.kind === 'circle' || a.kind === 'cloud') && pts.length >= 2) {
+          const x = Math.min(pts[0].x, pts[1].x) * w;
+          const y = Math.min(pts[0].y, pts[1].y) * h;
+          const rw = Math.abs(pts[1].x - pts[0].x) * w;
+          const rh = Math.abs(pts[1].y - pts[0].y) * h;
+          if (a.kind === 'rect') return <rect key={a.id} x={x} y={y} width={rw} height={rh} fill={`${a.color}22`} stroke={a.color} strokeWidth={2} rx={2} />;
+          if (a.kind === 'circle') return <ellipse key={a.id} cx={x + rw / 2} cy={y + rh / 2} rx={rw / 2} ry={rh / 2} fill={`${a.color}22`} stroke={a.color} strokeWidth={2} />;
+          return <path key={a.id} d={cloudPath(x, y, rw, rh)} fill={`${a.color}22`} stroke={a.color} strokeWidth={2} />;
+        }
+        if (a.kind === 'polygon' && pts.length >= 2) {
+          return <polygon key={a.id} points={pts.map(p => `${p.x * w},${p.y * h}`).join(' ')} fill={`${a.color}22`} stroke={a.color} strokeWidth={2} />;
+        }
+        if ((a.kind === 'freetext' || a.kind === 'inserttext' || a.kind === 'replacetext') && pts[0]) {
+          const deco = a.kind === 'replacetext' ? 'line-through' : a.kind === 'inserttext' ? 'underline' : 'none';
+          return (
+            <text key={a.id} x={pts[0].x * w} y={pts[0].y * h} fill={a.color} fontSize={13} fontFamily="serif" textDecoration={deco}>
+              {a.kind === 'inserttext' ? `+ ${a.text || ''}` : a.kind === 'replacetext' ? `→ ${a.text || ''}` : (a.text || '')}
+            </text>
+          );
+        }
+        if (a.kind === 'stamp' && pts[0]) {
+          const s = STAMPS.find(x => x.id === a.stampId) ?? STAMPS[0];
+          return (
+            <g key={a.id} transform={`translate(${pts[0].x * w},${pts[0].y * h}) rotate(-18)`}>
+              <circle r={28} fill="none" stroke={s.color} strokeWidth={3} opacity={0.85} />
+              <circle r={22} fill="none" stroke={s.color} strokeWidth={1} opacity={0.7} />
+              <text textAnchor="middle" dominantBaseline="middle" fill={s.color} fontSize={11} fontWeight={700} opacity={0.9}>{s.label}</text>
+            </g>
+          );
+        }
+        if (a.kind === 'file' && pts[0]) {
+          return (
+            <g key={a.id}>
+              <rect x={pts[0].x * w - 6} y={pts[0].y * h - 12} width={132} height={22} rx={4} fill="#f8fafc" stroke="#94a3b8" />
+              <text x={pts[0].x * w} y={pts[0].y * h + 3} fill="#475569" fontSize={10}>📎 {a.fileName || '附件'}</text>
+            </g>
+          );
+        }
+        return null;
+      })}
+    </>
+  );
+}
+
+function PageOverlay({
+  page, tool, overlays, onCommit, draftPts, setDraftPts, polygonPts, setPolygonPts,
+  textDraft, setTextDraft, stampId,
+}: {
+  page: number;
+  tool: Tool;
+  overlays: OverlayAnn[];
+  onCommit: (ann: Omit<OverlayAnn, 'id'>) => void;
+  draftPts: Pt[] | null;
+  setDraftPts: (pts: Pt[] | null) => void;
+  polygonPts: Pt[];
+  setPolygonPts: (pts: Pt[]) => void;
+  textDraft: { page: number; pt: Pt; mode: OverlayKind } | null;
+  setTextDraft: (v: { page: number; pt: Pt; mode: OverlayKind } | null) => void;
+  stampId: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const drawing = useRef(false);
+  const local = (e: React.MouseEvent) => {
+    const r = ref.current!.getBoundingClientRect();
+    return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
+  };
+  const interactive = OVERLAY_TOOLS.includes(tool);
+
+  const onDown = (e: React.MouseEvent) => {
+    if (!interactive) return;
+    e.preventDefault();
+    const pt = local(e);
+    const kind = overlayKindOf(tool);
+    if (!kind) return;
+    if (kind === 'freetext' || kind === 'inserttext' || kind === 'replacetext') {
+      setTextDraft({ page, pt, mode: kind });
+      return;
+    }
+    if (kind === 'stamp') {
+      onCommit({ page, kind: 'stamp', color: '#dc2626', points: [pt], stampId });
+      return;
+    }
+    if (kind === 'file') {
+      onCommit({ page, kind: 'file', color: '#64748b', points: [pt], fileName: '实验补充材料.xlsx' });
+      return;
+    }
+    if (kind === 'polygon') {
+      setPolygonPts([...polygonPts, pt]);
+      return;
+    }
+    drawing.current = true;
+    setDraftPts([pt, pt]);
+  };
+
+  const onMove = (e: React.MouseEvent) => {
+    if (!drawing.current || !draftPts) return;
+    const pt = local(e);
+    if (tool === 'draw' || tool === 'curve') setDraftPts([...draftPts, pt]);
+    else setDraftPts([draftPts[0], pt]);
+  };
+
+  const onUp = () => {
+    if (!drawing.current || !draftPts) return;
+    drawing.current = false;
+    const kind = overlayKindOf(tool);
+    if (kind && draftPts.length >= 2) {
+      const meta = TOOLS.find(t => t.id === tool);
+      onCommit({ page, kind, color: meta?.color || '#3b82f6', points: draftPts });
+    }
+    setDraftPts(null);
+  };
+
+  const finishPolygon = () => {
+    if (polygonPts.length >= 3) {
+      onCommit({ page, kind: 'polygon', color: '#14b8a6', points: polygonPts });
+    }
+    setPolygonPts([]);
+  };
+
+  const draftAnn: OverlayAnn | null = draftPts ? {
+    id: 'draft', page, kind: (overlayKindOf(tool) || 'draw'), color: TOOLS.find(t => t.id === tool)?.color || '#3b82f6', points: draftPts,
+  } : null;
+  const polyDraft: OverlayAnn | null = polygonPts.length ? {
+    id: 'poly-draft', page, kind: 'polygon', color: '#14b8a6', points: polygonPts,
+  } : null;
+
+  return (
+    <div
+      ref={ref}
+      className={`absolute inset-0 z-[5] ${interactive ? 'cursor-crosshair' : 'pointer-events-none'}`}
+      onMouseDown={onDown}
+      onMouseMove={onMove}
+      onMouseUp={onUp}
+      onMouseLeave={onUp}
+      onDoubleClick={(e) => { e.preventDefault(); if (tool === 'polygon') finishPolygon(); }}
+    >
+      <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 620 878" preserveAspectRatio="none">
+        <OverlayShapes anns={[...overlays.filter(a => a.page === page), ...(polyDraft ? [polyDraft] : []), ...(draftAnn ? [draftAnn] : [])]} w={620} h={878} />
+      </svg>
+      {tool === 'polygon' && polygonPts.length > 0 && (
+        <button type="button" onClick={finishPolygon}
+          className="absolute bottom-8 right-4 z-10 px-2 py-1 text-[10px] bg-teal-600 text-white rounded shadow pointer-events-auto">
+          闭合多边形（{polygonPts.length} 点）
+        </button>
+      )}
+    </div>
+  );
+}
 
 const HL_COLORS: Record<AnnotationType, string> = {
   highlight: '#fef08a',
@@ -672,7 +918,7 @@ export default function LiteratureReader() {
   const [viewMode, setViewMode] = useState<'single' | 'double'>('single');
   const [rotation, setRotation] = useState(0);
   const [activeTool, setActiveTool] = useState<Tool>('select');
-  const [leftTab, setLeftTab] = useState<'outline' | 'thumbnails' | 'bookmarks'>('outline');
+  const [leftTab, setLeftTab] = useState<'outline' | 'thumbnails' | 'bookmarks' | 'layers'>('outline');
   const [rightTab, setRightTab] = useState<'ai' | 'translate' | 'notes' | 'entities' | 'molecular'>('ai');
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
@@ -683,6 +929,18 @@ export default function LiteratureReader() {
     { id: uid(), paraId: 'exp-2', type: 'underline', color: '#bfdbfe', page: 3 },
     { id: uid(), paraId: 'conclusion', type: 'highlight', color: '#fef08a', page: 4 },
   ]);
+  const [overlays, setOverlays] = useState<OverlayAnn[]>([
+    { id: uid(), page: 3, kind: 'rect', color: '#10b981', points: [{ x: 0.12, y: 0.38 }, { x: 0.88, y: 0.58 }] },
+    { id: uid(), page: 1, kind: 'stamp', color: '#dc2626', points: [{ x: 0.82, y: 0.12 }], stampId: 'approved' },
+  ]);
+  const [layerOn, setLayerOn] = useState<Record<LayerGroup, boolean>>({ markup: true, shape: true, ink: true, attach: true });
+  const [draftPts, setDraftPts] = useState<Pt[] | null>(null);
+  const [polygonPts, setPolygonPts] = useState<Pt[]>([]);
+  const [textDraft, setTextDraft] = useState<{ page: number; pt: Pt; mode: OverlayKind } | null>(null);
+  const [textDraftValue, setTextDraftValue] = useState('');
+  const [stampId, setStampId] = useState('approved');
+  const [docQuery, setDocQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark_[]>([
     { id: uid(), page: 2, title: '3.1 模型架构（含关键公式）', createdAt: '2026-06-10' },
     { id: uid(), page: 3, title: 'Table 1 实验结果', createdAt: '2026-06-10' },
@@ -714,17 +972,64 @@ export default function LiteratureReader() {
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMsgs]);
 
   const handleParaClick = (paraId: string, page: number) => {
-    if (activeTool === 'select') return;
+    if (!PARA_TOOLS.includes(activeTool)) return;
     if (activeTool === 'note') {
       setPendingNoteParaId(paraId);
       return;
     }
-    const type: AnnotationType = activeTool === 'highlight' ? 'highlight' : activeTool === 'underline' ? 'underline' : activeTool === 'rect' ? 'rect' : activeTool === 'circle' ? 'circle' : 'highlight';
+    const type: AnnotationType = activeTool === 'underline' ? 'underline' : 'highlight';
     setAnnotations(prev => {
       const existing = prev.findIndex(a => a.paraId === paraId && a.page === page);
       if (existing >= 0) return prev.filter((_, i) => i !== existing);
       return [...prev, { id: uid(), paraId, type, color: HL_COLORS[type], page }];
     });
+  };
+
+  const commitOverlay = (ann: Omit<OverlayAnn, 'id'>) => {
+    setOverlays(prev => [...prev, { ...ann, id: uid() }]);
+  };
+
+  const saveTextDraft = () => {
+    if (!textDraft || !textDraftValue.trim()) { setTextDraft(null); setTextDraftValue(''); return; }
+    const colors: Record<string, string> = { freetext: '#6366f1', inserttext: '#0ea5e9', replacetext: '#ec4899' };
+    commitOverlay({ page: textDraft.page, kind: textDraft.mode, color: colors[textDraft.mode] || '#6366f1', points: [textDraft.pt], text: textDraftValue.trim() });
+    setTextDraft(null);
+    setTextDraftValue('');
+  };
+
+  const visibleOverlays = overlays.filter(o => {
+    const g = LAYER_GROUPS.find(lg => lg.kinds.includes(o.kind));
+    return !g || layerOn[g.id];
+  });
+
+  const searchHits = (() => {
+    const q = docQuery.trim().toLowerCase();
+    if (!q) return [];
+    return DOC_PASSAGES.filter(p =>
+      p.title.toLowerCase().includes(q) || p.snippet.toLowerCase().includes(q)
+      || (q.includes('贡献') || q.includes('创新')) && p.page === 1
+      || (q.includes('实验') || q.includes('mrr') || q.includes('结果')) && (p.title.includes('Results') || p.title.includes('Ablation'))
+      || (q.includes('架构') || q.includes('模型') || q.includes('方法')) && p.title.includes('Architecture')
+      || (q.includes('未来') || q.includes('局限')) && p.title.includes('Conclusion'),
+    );
+  })();
+
+  const runSmartSearch = () => {
+    if (!docQuery.trim()) return;
+    setSearchOpen(true);
+    const isQuestion = /[？?吗什么如何为何怎么贡献实验]/.test(docQuery);
+    if (isQuestion) {
+      setRightOpen(true);
+      setRightTab('ai');
+      const msg: ChatMsg = { id: uid(), role: 'user', content: docQuery.trim() };
+      setChatMsgs(prev => [...prev, msg]);
+      setIsThinking(true);
+      setTimeout(() => {
+        setChatMsgs(prev => [...prev, { id: uid(), role: 'assistant', content: getAIReply(msg.content) }]);
+        setIsThinking(false);
+      }, 600);
+    }
+    if (searchHits.length > 0) setCurrentPage(searchHits[0].page);
   };
 
   const saveNote = () => {
@@ -756,10 +1061,40 @@ export default function LiteratureReader() {
   return (
     <div className="h-full flex flex-col bg-gray-100 overflow-hidden">
       {/* ── Toolbar ── */}
-      <div className="flex items-center gap-1 px-3 py-2 bg-white border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center gap-2 mr-3 min-w-0">
+      <div className="flex items-center gap-1 px-3 py-2 bg-white border-b border-gray-200 flex-shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 mr-2 min-w-0">
           <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
-          <span className="text-xs text-gray-600 truncate max-w-[180px]">KG_Embedding_Transformer.pdf</span>
+          <span className="text-xs text-gray-600 truncate max-w-[140px]">KG_Embedding_Transformer.pdf</span>
+        </div>
+
+        <div className="relative flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 focus-within:border-blue-400 focus-within:bg-white min-w-[220px] max-w-sm flex-1">
+          <Search className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+          <input
+            value={docQuery}
+            onChange={e => { setDocQuery(e.target.value); setSearchOpen(true); }}
+            onFocus={() => setSearchOpen(true)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); runSmartSearch(); } }}
+            placeholder="自然语言检索全文，或直接提问…"
+            className="flex-1 text-xs bg-transparent outline-none text-gray-800 placeholder-gray-400 min-w-0"
+          />
+          <button onClick={runSmartSearch} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white flex-shrink-0">检索</button>
+          {searchOpen && docQuery.trim() && (
+            <div className="absolute left-0 top-full mt-1 w-[360px] bg-white border border-gray-200 rounded-xl shadow-lg z-40 p-2">
+              <p className="text-[10px] text-gray-400 px-1 mb-1">检索到 {searchHits.length} 处 · Enter 同时触发智能问答</p>
+              {searchHits.length === 0 ? (
+                <p className="text-xs text-gray-400 px-2 py-3">未命中段落，仍可用问答解释该问题</p>
+              ) : searchHits.map(h => (
+                <button key={h.title} onClick={() => { setCurrentPage(h.page); setSearchOpen(false); }}
+                  className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-blue-50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-800">{h.title}</span>
+                    <span className="text-[10px] text-gray-400">第{h.page}页</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 line-clamp-2 mt-0.5">{h.snippet}</p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="w-px h-5 bg-gray-200 mx-1" />
@@ -791,12 +1126,23 @@ export default function LiteratureReader() {
         <div className="w-px h-5 bg-gray-200 mx-1" />
 
         {TOOLS.map(tool => (
-          <button key={tool.id} title={tool.label} onClick={() => setActiveTool(tool.id)}
+          <button key={tool.id} title={tool.label} onClick={() => { setActiveTool(tool.id); setPolygonPts([]); setDraftPts(null); }}
             className={`p-1.5 rounded transition-colors ${activeTool === tool.id ? 'text-white' : 'hover:bg-gray-100 text-gray-500'}`}
             style={activeTool === tool.id ? { backgroundColor: tool.color || '#3b82f6' } : {}}>
             <tool.icon className="w-4 h-4" />
           </button>
         ))}
+        {activeTool === 'stamp' && (
+          <div className="flex items-center gap-1 ml-1">
+            {STAMPS.map(s => (
+              <button key={s.id} onClick={() => setStampId(s.id)}
+                className={`text-[10px] px-1.5 py-0.5 rounded border ${stampId === s.id ? 'border-current font-semibold' : 'border-gray-200 text-gray-500'}`}
+                style={stampId === s.id ? { color: s.color, backgroundColor: `${s.color}14` } : {}}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="w-px h-5 bg-gray-200 mx-1" />
 
@@ -818,7 +1164,7 @@ export default function LiteratureReader() {
         {leftOpen && (
           <div className="w-52 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
             <div className="flex border-b border-gray-100">
-              {([['outline', List, '大纲'], ['thumbnails', LayoutTemplate, '缩略图'], ['bookmarks', Bookmark, '书签']] as const).map(([id, Icon, label]) => (
+              {([['outline', List, '大纲'], ['thumbnails', LayoutTemplate, '缩略图'], ['bookmarks', Bookmark, '书签'], ['layers', Layers, '图层']] as const).map(([id, Icon, label]) => (
                 <button key={id} onClick={() => setLeftTab(id)}
                   className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] transition-colors ${leftTab === id ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-700'}`}>
                   <Icon className="w-3.5 h-3.5" />{label}
@@ -884,6 +1230,32 @@ export default function LiteratureReader() {
                   )}
                 </div>
               )}
+
+              {leftTab === 'layers' && (
+                <div className="py-2 px-2 space-y-3">
+                  {LAYER_GROUPS.map(g => {
+                    const count = overlays.filter(o => g.kinds.includes(o.kind)).length
+                      + (g.paraTypes ? annotations.filter(a => g.paraTypes!.includes(a.type)).length : 0);
+                    const on = layerOn[g.id];
+                    return (
+                      <div key={g.id}>
+                        <button onClick={() => setLayerOn(p => ({ ...p, [g.id]: !p[g.id] }))}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50">
+                          {on ? <Eye className="w-3.5 h-3.5 text-blue-600" /> : <EyeOff className="w-3.5 h-3.5 text-gray-300" />}
+                          <span className={`text-xs flex-1 text-left ${on ? 'text-gray-800' : 'text-gray-400'}`}>{g.label}</span>
+                          <span className="text-[10px] text-gray-400">{count}</span>
+                        </button>
+                        {on && overlays.filter(o => g.kinds.includes(o.kind)).map(o => (
+                          <button key={o.id} onClick={() => setCurrentPage(o.page)}
+                            className="w-full text-left pl-8 pr-2 py-1 text-[11px] text-gray-500 hover:text-blue-600">
+                            {OVERLAY_KIND_LABEL[o.kind]} · 第{o.page}页{o.text ? ` · ${o.text}` : ''}{o.fileName ? ` · ${o.fileName}` : ''}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -908,15 +1280,50 @@ export default function LiteratureReader() {
             </div>
           )}
 
+          {textDraft && (
+            <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" onClick={() => { setTextDraft(null); setTextDraftValue(''); }}>
+              <div className="bg-white rounded-xl shadow-xl p-5 w-80" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-2 mb-3">
+                  <Type className="w-4 h-4 text-indigo-500" />
+                  <span className="text-sm font-medium text-gray-800">
+                    {textDraft.mode === 'inserttext' ? '插入文本' : textDraft.mode === 'replacetext' ? '替换文本' : '自由文本'}
+                  </span>
+                </div>
+                <textarea autoFocus value={textDraftValue} onChange={e => setTextDraftValue(e.target.value)}
+                  placeholder={textDraft.mode === 'replacetext' ? '输入替换后的文本…' : textDraft.mode === 'inserttext' ? '输入要插入的文本…' : '输入自由批注…'}
+                  rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 resize-none focus:outline-none focus:border-indigo-400 mb-3" />
+                <div className="flex gap-2">
+                  <button onClick={() => { setTextDraft(null); setTextDraftValue(''); }} className="flex-1 py-2 border border-gray-200 text-sm text-gray-500 rounded-lg hover:bg-gray-50">取消</button>
+                  <button onClick={saveTextDraft} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">确定</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {[currentPage, ...(viewMode === 'double' && currentPage < TOTAL_PAGES ? [currentPage + 1] : [])].map(pg => {
             const PC = PAGES[pg - 1];
             return (
               <div key={pg} className="flex-shrink-0 relative"
                 style={{ transform: `rotate(${rotation}deg) scale(${zoom / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}>
                 <div className="w-[620px] min-h-[878px] bg-white shadow-lg rounded-sm p-14 relative">
-                  <PC annotations={annotations} activeTool={activeTool} onParaClick={(id, p) => handleParaClick(id, p)} activeNoteId={activeNoteId} />
+                  <div className={layerOn.markup ? '' : 'opacity-40'}>
+                    <PC annotations={layerOn.markup ? annotations : []} activeTool={activeTool} onParaClick={(id, p) => handleParaClick(id, p)} activeNoteId={activeNoteId} />
+                  </div>
+                  <PageOverlay
+                    page={pg}
+                    tool={activeTool}
+                    overlays={visibleOverlays}
+                    onCommit={commitOverlay}
+                    draftPts={draftPts}
+                    setDraftPts={setDraftPts}
+                    polygonPts={polygonPts}
+                    setPolygonPts={setPolygonPts}
+                    textDraft={textDraft}
+                    setTextDraft={setTextDraft}
+                    stampId={stampId}
+                  />
 
-                  {annotations.filter(a => a.page === pg && a.type === 'note').map(ann => (
+                  {layerOn.markup && annotations.filter(a => a.page === pg && a.type === 'note').map(ann => (
                     <div key={ann.id} className="absolute right-3 top-20 group">
                       <div className="w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center shadow cursor-pointer hover:scale-110 transition-transform"
                         onClick={() => setActiveNoteId(activeNoteId === ann.paraId ? null : ann.paraId)}>
@@ -1047,13 +1454,13 @@ export default function LiteratureReader() {
                 >
                   <Sparkles className="w-3.5 h-3.5" /> 一键生成笔记
                 </button>
-                <div className="text-xs text-gray-500 mb-1">{annotations.length} 条标注 · 点击可跳转</div>
+                <div className="text-xs text-gray-500 mb-1">{annotations.length + overlays.length} 条标注 · 点击可跳转</div>
                 {annotations.map(ann => (
                   <div key={ann.id} className="border border-gray-200 rounded-lg p-2.5 hover:border-gray-300 transition-colors cursor-pointer group"
                     onClick={() => setCurrentPage(ann.page)}>
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: ann.color }} />
-                      <span className="text-[10px] text-gray-500 capitalize">{ann.type === 'highlight' ? '高亮' : ann.type === 'underline' ? '下划线' : ann.type === 'note' ? '备注' : ann.type === 'rect' ? '矩形' : '椭圆'}</span>
+                      <span className="text-[10px] text-gray-500 capitalize">{ann.type === 'highlight' ? '高亮' : ann.type === 'underline' ? '下划线' : '备注'}</span>
                       <span className="text-[10px] text-gray-400 ml-auto">第{ann.page}页</span>
                       <button onClick={e => { e.stopPropagation(); setAnnotations(prev => prev.filter(a => a.id !== ann.id)); }}
                         className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all">
@@ -1062,6 +1469,22 @@ export default function LiteratureReader() {
                     </div>
                     {ann.note && <p className="text-[11px] text-gray-600 leading-relaxed">{ann.note}</p>}
                     <p className="text-[10px] text-gray-400 font-mono">{ann.paraId}</p>
+                  </div>
+                ))}
+                {overlays.map(o => (
+                  <div key={o.id} className="border border-gray-200 rounded-lg p-2.5 hover:border-gray-300 transition-colors cursor-pointer group"
+                    onClick={() => setCurrentPage(o.page)}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: o.color }} />
+                      <span className="text-[10px] text-gray-500">{OVERLAY_KIND_LABEL[o.kind]}</span>
+                      <span className="text-[10px] text-gray-400 ml-auto">第{o.page}页</span>
+                      <button onClick={e => { e.stopPropagation(); setOverlays(prev => prev.filter(a => a.id !== o.id)); }}
+                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                    {o.text && <p className="text-[11px] text-gray-600 leading-relaxed">{o.text}</p>}
+                    {o.fileName && <p className="text-[11px] text-gray-600">{o.fileName}</p>}
                   </div>
                 ))}
               </div>
