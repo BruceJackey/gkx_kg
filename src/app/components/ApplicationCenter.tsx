@@ -5,7 +5,7 @@ import {
   Target, ShieldCheck, Search, Trash2, Clock,
   ChevronRight, Sparkles, MessageCircle, Network,
   ZoomIn, ZoomOut, Maximize2, X, CornerDownLeft,
-  TrendingUp, SlidersHorizontal,
+  TrendingUp, SlidersHorizontal, FileText, BookOpen, Link2,
 } from 'lucide-react';
 
 // ─── Assistant definitions ────────────────────────────────────────────────────
@@ -243,8 +243,115 @@ const DEFAULT_GRAPH: EvidenceGraph = {
 interface Message {
   id: string; role: 'user' | 'assistant'; content: string;
   entities?: string[]; // detected KG entities in this message
+  evidences?: EvidenceItem[];
 }
 interface Conversation { id: string; assistantId: string; title: string; messages: Message[]; createdAt: Date; }
+
+interface EvidenceItem {
+  id: string;
+  type: 'paper' | 'triple' | 'patent' | 'report' | 'dataset';
+  title: string;
+  snippet: string;
+  source: string;
+  year?: string;
+  confidence: number;
+  keywords: string[];
+}
+
+const EVIDENCE_TYPE_META: Record<EvidenceItem['type'], { label: string; color: string; bg: string }> = {
+  paper:   { label: '论文',     color: 'text-blue-700',   bg: 'bg-blue-50 border-blue-200' },
+  triple:  { label: '三元组',   color: 'text-indigo-700', bg: 'bg-indigo-50 border-indigo-200' },
+  patent:  { label: '专利',     color: 'text-amber-700',  bg: 'bg-amber-50 border-amber-200' },
+  report:  { label: '报告',     color: 'text-slate-700',  bg: 'bg-slate-50 border-slate-200' },
+  dataset: { label: '数据集',   color: 'text-teal-700',   bg: 'bg-teal-50 border-teal-200' },
+};
+
+const EVIDENCE_POOL: EvidenceItem[] = [
+  {
+    id: 'ev1', type: 'paper', title: 'TKGEmbed: Transformer-based Temporal Knowledge Graph Embedding',
+    source: 'IEEE TKDE', year: '2024', confidence: 0.94,
+    snippet: '利用多头自注意力聚合实体邻居，相比 TransE 在 MRR 上平均提升 7–12%。',
+    keywords: ['transformer', '嵌入', 'tkg', '时序', 'mrr'],
+  },
+  {
+    id: 'ev2', type: 'paper', title: 'BERT-KG: Pretrained Language Models for Knowledge Graph Completion',
+    source: 'ACL', year: '2023', confidence: 0.91,
+    snippet: '将实体描述编码为上下文向量，少样本关系补全 Hits@10 达到 0.68。',
+    keywords: ['bert', 'kg', '补全', 'llm', 'transformer'],
+  },
+  {
+    id: 'ev3', type: 'paper', title: 'Unify to Retrieve: Knowledge Graph Augmented Large Language Models',
+    source: 'ICLR', year: '2024', confidence: 0.93,
+    snippet: 'KG+LLM 融合架构使开放域问答 F1 提升 6.4%，幻觉率下降 18%。',
+    keywords: ['kg+llm', 'llm', 'rag', '问答', '热点', '趋势'],
+  },
+  {
+    id: 'ev4', type: 'triple', title: 'Transformer —应用于→ 知识图谱嵌入',
+    source: '科技论文知识图谱', year: '2024', confidence: 0.96,
+    snippet: '共现 1,203 次，路径：Transformer → 自注意力 → 邻居聚合 → 图谱嵌入。',
+    keywords: ['transformer', '知识图谱', '关系', '关联'],
+  },
+  {
+    id: 'ev5', type: 'triple', title: '清华大学 —合作→ 北京大学',
+    source: '机构合作子图', year: '2023', confidence: 0.88,
+    snippet: '近五年共同发表 47 篇 NLP / 知识图谱论文，主要合作学者 12 人。',
+    keywords: ['清华', '北大', '机构', '合作', '学者'],
+  },
+  {
+    id: 'ev6', type: 'triple', title: '知识图谱 —演化方向→ KG+LLM',
+    source: '概念演化图谱', year: '2024', confidence: 0.90,
+    snippet: '2022–2024 发文量年增超 40%，ICLR / ACL 均出现专题研讨。',
+    keywords: ['kg+llm', '热点', '趋势', '知识图谱'],
+  },
+  {
+    id: 'ev7', type: 'patent', title: '一种基于注意力机制的知识图谱补全方法',
+    source: 'CN115862341A', year: '2023', confidence: 0.82,
+    snippet: '公开了关系感知位置编码与多跳推理模块，已进入实质审查。',
+    keywords: ['专利', '补全', 'transformer', '嵌入'],
+  },
+  {
+    id: 'ev8', type: 'report', title: '全球知识图谱与大模型融合技术发展报告',
+    source: '中国信通院', year: '2024', confidence: 0.86,
+    snippet: '产业侧对 KG 增强检索、可解释问答的需求同比增长 67%。',
+    keywords: ['产业', '决策', '趋势', '需求', '报告'],
+  },
+  {
+    id: 'ev9', type: 'dataset', title: 'FB15k-237 / WN18RR 评测子集',
+    source: '图谱评测库', year: '2024', confidence: 0.89,
+    snippet: '标准链接预测基准，当前最佳 MRR 分别为 0.365 与 0.497。',
+    keywords: ['数据集', '评测', '嵌入', 'mrr', '校验'],
+  },
+  {
+    id: 'ev10', type: 'paper', title: 'Temporal Knowledge Graphs: A Survey of Recent Advances',
+    source: 'ACM Computing Surveys', year: '2024', confidence: 0.87,
+    snippet: '梳理时序图谱表示、外推与事件预测三类任务，并给出统一评测协议。',
+    keywords: ['时序', '综述', '趋势', '知识图谱'],
+  },
+  {
+    id: 'ev11', type: 'paper', title: 'Multimodal Knowledge Graphs for Scientific Discovery',
+    source: 'KDD', year: '2023', confidence: 0.84,
+    snippet: '融合论文全文、图表与实验表格，跨模态检索 NDCG@10 提升 5.8%。',
+    keywords: ['多模态', '文献', '推荐', '检索'],
+  },
+  {
+    id: 'ev12', type: 'report', title: '知识图谱节点质量扫描月报',
+    source: '平台校验任务', year: '2026', confidence: 0.92,
+    snippet: '6,204 个正常节点，89 个属性缺失警告，12 个孤立/关系错误异常。',
+    keywords: ['校验', '异常', '质量', '冗余', '节点'],
+  },
+  {
+    id: 'ev13', type: 'triple', title: '李明 —就职于→ 北京人工智能研究院',
+    source: '学者画像库', year: '2024', confidence: 0.95,
+    snippet: 'h 指数 42，近五年 ACL/EMNLP 发文 18 篇，研究方向为图谱嵌入。',
+    keywords: ['学者', '专家', '检索', '李明'],
+  },
+  {
+    id: 'ev14', type: 'paper', title: 'Rule Mining on Large-scale Knowledge Graphs',
+    source: 'VLDB', year: '2023', confidence: 0.85,
+    snippet: '在 1.2 亿三元组上挖掘置信度 ≥ 0.8 的关联规则 47 条，支持规则导出。',
+    keywords: ['规则', '挖掘', '推理', '预测'],
+  },
+];
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -270,6 +377,74 @@ function generateResponse(assistantId: string, question: string): string {
     default:
       return `基于图谱数据，关于"${question}"的分析：\n\n已检索到相关实体 156个，关系路径 423条。如需具体维度的深入分析，请继续提问。`;
   }
+}
+
+function pickEvidences(assistantId: string, question: string): EvidenceItem[] {
+  const q = question.toLowerCase();
+  const scored = EVIDENCE_POOL.map(ev => {
+    const hits = ev.keywords.filter(k => q.includes(k)).length;
+    let bias = 0;
+    if (assistantId === 'paper-recommendation' && ev.type === 'paper') bias += 2;
+    if (assistantId === 'scholar-search' && (ev.type === 'triple' || ev.id === 'ev13')) bias += 2;
+    if (assistantId === 'relation-analysis' && ev.type === 'triple') bias += 2;
+    if (assistantId === 'inference-prediction' && (ev.type === 'paper' || ev.id === 'ev14')) bias += 1;
+    if (assistantId === 'decision-support' && ev.type === 'report') bias += 2;
+    if (assistantId === 'knowledge-validation' && (ev.type === 'dataset' || ev.id === 'ev12')) bias += 2;
+    return { ev, score: hits * 3 + bias };
+  }).sort((a, b) => b.score - a.score || b.ev.confidence - a.ev.confidence);
+
+  const picked: EvidenceItem[] = [];
+  for (const row of scored) {
+    if (picked.length >= 4) break;
+    if (row.score > 0 || picked.length < 3) picked.push(row.ev);
+  }
+  return picked.slice(0, 4);
+}
+
+function EvidenceList({ evidences }: { evidences: EvidenceItem[] }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="mt-3 pt-2.5 border-t border-gray-100">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-1.5 text-[11px] font-medium text-gray-600 hover:text-gray-800"
+      >
+        <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
+        支撑证据
+        <span className="text-[10px] text-gray-400 font-normal">{evidences.length} 条</span>
+        <ChevronRight className={`w-3 h-3 text-gray-400 ml-auto transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open && (
+        <ol className="mt-2 space-y-2">
+          {evidences.map((ev, i) => {
+            const meta = EVIDENCE_TYPE_META[ev.type];
+            return (
+              <li key={ev.id} className="flex gap-2">
+                <span className="w-4 h-4 rounded-full bg-gray-100 text-[10px] text-gray-500 flex items-center justify-center flex-shrink-0 mt-0.5 font-medium">
+                  {i + 1}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-1.5">
+                    <FileText className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-[12px] font-medium text-gray-800 leading-snug">{ev.title}</p>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed pl-[18px]">{ev.snippet}</p>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1 pl-[18px]">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${meta.bg} ${meta.color}`}>{meta.label}</span>
+                    <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                      <Link2 className="w-2.5 h-2.5" />{ev.source}{ev.year ? ` · ${ev.year}` : ''}
+                    </span>
+                    <span className="text-[10px] text-gray-400 tabular-nums">置信度 {(ev.confidence * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
+  );
 }
 
 // ─── Decision Orchestration Canvas ───────────────────────────────────────────
@@ -1073,7 +1248,8 @@ export function ApplicationCenter() {
     setTimeout(() => {
       const content = generateResponse(activeAssistant.id, userMsg.content);
       const entities = detectEntities(content);
-      const reply: Message = { id: uid(), role: 'assistant', content, entities };
+      const evidences = pickEvidences(activeAssistant.id, userMsg.content);
+      const reply: Message = { id: uid(), role: 'assistant', content, entities, evidences };
       const final = [...next, reply];
       setMessages(final);
       setLoading(false);
@@ -1273,6 +1449,9 @@ export function ApplicationCenter() {
                           })}
                           <span className="text-[10px] text-gray-400 self-center ml-1">点击实体可继续追问</span>
                         </div>
+                      )}
+                      {msg.role === 'assistant' && (msg.evidences?.length ?? 0) > 0 && (
+                        <EvidenceList evidences={msg.evidences!} />
                       )}
                     </div>
                   </div>

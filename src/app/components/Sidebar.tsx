@@ -84,7 +84,7 @@ const allMenuItems: MenuItem[] = [
     icon: Network,
     children: [
       { id: 'algorithm-service-list', label: '算法服务', icon: Bot },
-      { id: 'pipeline-service-list', label: '流程服务', icon: GitBranch },
+      // { id: 'pipeline-service-list', label: '流程服务', icon: GitBranch },
       { id: 'api-keys', label: 'API 密钥', icon: Key },
     ],
   },

@@ -680,7 +680,7 @@ function AgentRuleDrawer({
   onClose: () => void;
   onSave: (r: Rule) => void;
 }) {
-  const [drawerMode, setDrawerMode] = useState<'agent' | 'visual' | 'manual'>(isNew ? 'agent' : 'manual');
+  const [drawerMode, setDrawerMode] = useState<'agent' | 'visual' | 'manual'>(isNew ? 'visual' : 'manual');
 
   // Agent state
   const [nlText, setNlText] = useState(NL_EXAMPLE);
@@ -767,17 +767,19 @@ function AgentRuleDrawer({
               <h2 className="text-lg font-semibold text-gray-900">
                 {isNew ? '新增规则' : `编辑规则 · ${rule.name}`}
               </h2>
-              <p className="text-sm text-gray-500 mt-0.5">自然语言编排、断点单步调试、单元测试后确认保存</p>
+              <p className="text-sm text-gray-500 mt-0.5">可视化编辑、断点单步调试、单元测试后确认保存</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {/* Mode tabs */}
               <div className="flex border border-gray-200 rounded-lg overflow-hidden text-sm">
+                {/* Agent 编排 暂时隐去
                 <button onClick={() => setDrawerMode('agent')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${drawerMode === 'agent' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
                   <Bot className="w-3.5 h-3.5" />Agent 编排
                 </button>
+                */}
                 <button onClick={() => setDrawerMode('visual')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors border-l border-gray-200 ${drawerMode === 'visual' ? 'bg-violet-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${drawerMode === 'visual' ? 'bg-violet-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
                   <MousePointerClick className="w-3.5 h-3.5" />可视化编辑器
                 </button>
                 <button onClick={() => setDrawerMode('manual')}
@@ -2726,7 +2728,7 @@ export default function RuleManagement() {
         <div className="flex border-b border-gray-200 -mt-2 flex-shrink-0">
           {[
             { id: 'rules', label: '规则列表', icon: Shield },
-            { id: 'validation', label: '校验报告', icon: ScanSearch },
+            // { id: 'validation', label: '校验报告', icon: ScanSearch },
             { id: 'candidate', label: '候选规则', icon: Bot },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}

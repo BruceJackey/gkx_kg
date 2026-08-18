@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Plus, Save, Trash2, Edit2, ChevronDown, ChevronRight,
   Sparkles, X, AlertCircle, Loader2, Check, Download, FileJson, FileCode2, FileText,
-  Upload, FileUp, Network, RefreshCw
+  Upload, FileUp, Network, RefreshCw, Info
 } from 'lucide-react';
 
 type PropType = 'string' | 'text' | 'int' | 'number' | 'boolean' | 'date' | 'datetime' | 'json';
@@ -698,6 +698,12 @@ function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps }: 
               <div className="px-3 py-2 flex items-center gap-1.5">
                 <ChevronDown size={12} className="text-violet-400" />
                 <span className="text-[11px] font-semibold text-violet-700">继承属性</span>
+                <span className="relative group/tip inline-flex items-center">
+                  <Info size={12} className="text-violet-400 cursor-help" />
+                  <span className="pointer-events-none absolute left-0 top-full mt-1 z-20 hidden group-hover/tip:block w-56 px-2.5 py-1.5 text-[11px] leading-relaxed text-white bg-gray-800 rounded-lg shadow-lg">
+                    来自父实体类，只读不可修改。子类会自动带上这些属性。
+                  </span>
+                </span>
                 <span className="text-[10px] text-violet-400">来自父实体类 · 只读，不可修改</span>
               </div>
               <table className="w-full text-sm">
@@ -738,6 +744,18 @@ function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps }: 
           )}
 
           {/* 自有属性 */}
+          <div>
+            <div className="px-3 py-2 flex items-center gap-1.5 bg-gray-50/80">
+              <ChevronDown size={12} className="text-gray-400" />
+              <span className="text-[11px] font-semibold text-gray-700">自有属性</span>
+              <span className="relative group/tip inline-flex items-center">
+                <Info size={12} className="text-gray-400 cursor-help" />
+                <span className="pointer-events-none absolute left-0 top-full mt-1 z-20 hidden group-hover/tip:block w-56 px-2.5 py-1.5 text-[11px] leading-relaxed text-white bg-gray-800 rounded-lg shadow-lg">
+                  本类型自定义的属性，可编辑、删除或新增，不会回写到父类。
+                </span>
+              </span>
+              <span className="text-[10px] text-gray-400">本类型自定义 · 可编辑</span>
+            </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -759,6 +777,7 @@ function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps }: 
             <button onClick={addProp} className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
               <Plus size={12} /> 添加属性
             </button>
+          </div>
           </div>
         </div>
       )}

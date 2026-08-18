@@ -49,7 +49,7 @@ const TABS: { id: TabId; label: string; icon: ElementType }[] = [
   { id: 'data', label: '数据与本体', icon: Database },
   { id: 'scope', label: '抽取范围', icon: Layers },
   { id: 'rules', label: '规则配置', icon: Shield },
-  { id: 'remote', label: '远程抽取', icon: Wifi },
+  // { id: 'remote', label: '远程抽取', icon: Wifi },
   { id: 'threshold', label: '阈值策略', icon: SlidersHorizontal },
 ];
 
