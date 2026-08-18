@@ -338,14 +338,14 @@ function RunDashboard({
               pulse={isActive}
             />
             <KpiCard
-              label="处理行数"
+              label="成功数"
               value={run.processedRows.toLocaleString()}
               sub={`实体 ${run.entityCount.toLocaleString()} · 关系 ${run.relationCount.toLocaleString()}`}
               accent="bg-emerald-500"
               icon={CheckCircle}
             />
             <KpiCard
-              label="异常记录"
+              label="失败数"
               value={totalErrors.toLocaleString()}
               sub={`跳过 ${run.delCount} · 重复 ${run.modCount}`}
               accent="bg-amber-500"

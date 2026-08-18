@@ -3,6 +3,7 @@ import type { ElementType } from 'react';
 import {
   Plus, Trash2, RotateCcw, CheckCircle2, Database, Layers, Shield,
   Wifi, SlidersHorizontal, Globe, Server, AlertCircle, ChevronRight, Play, Users, X,
+  Sparkles,
 } from 'lucide-react';
 import { REVIEWER_OPTIONS, saveReviewTask } from '../utils/reviewAssignment';
 
@@ -126,6 +127,18 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
     { value: 'glm5.1', label: 'GLM-5.1', desc: '稳定版本，速度更快，适合大批量任务' },
   ];
 
+  // 知识补全
+  type CompletionModel = 'glm5.2' | 'glm5.1' | 'qwen2.5' | 'gpt4o';
+  const [enableKnowledgeCompletion, setEnableKnowledgeCompletion] = useState(false);
+  const [completionModel, setCompletionModel] = useState<CompletionModel>('glm5.2');
+  const COMPLETION_MODEL_OPTIONS: { value: CompletionModel; label: string; tag?: string; desc: string }[] = [
+    { value: 'glm5.2', label: 'GLM-5.2', tag: '推荐', desc: '长上下文，适合补全缺失属性与关系' },
+    { value: 'glm5.1', label: 'GLM-5.1', desc: '稳定版本，吞吐更高，适合大批量补全' },
+    { value: 'qwen2.5', label: 'Qwen2.5-72B', desc: '中文知识覆盖广，百科类补全效果好' },
+    { value: 'gpt4o', label: 'GPT-4o', desc: '综合推理强，适合复杂关系推断' },
+  ];
+  const completionModelLabel = COMPLETION_MODEL_OPTIONS.find(m => m.value === completionModel)?.label ?? completionModel;
+
   // Submit
   const [submitting, setSubmitting] = useState(false);
 
@@ -187,6 +200,7 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
     setGlobalRules(['r1', 'r2']); setFieldRules([]); setRelationRules([]);
     setRemoteServices([]); setThreshold(75);
     setMiningAlgo('apriori'); setMinSupport(8); setMinConfidence(70); setMinLift(1.2);
+    setEnableKnowledgeCompletion(false); setCompletionModel('glm5.2');
     setReviewerIds(['user_003', 'user_002']); setReviewerPickId(''); setActiveTab('data');
   };
 
@@ -937,6 +951,72 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
             </div>
           </div>
         </div>
+
+        {/* 知识补全配置 */}
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="flex items-start justify-between gap-4 mb-1">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                <Sparkles className="w-4 h-4 text-violet-600" />知识补全配置
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                构造完成后调用大模型补全缺失三元组与属性；关闭则跳过此步骤。
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={enableKnowledgeCompletion}
+              onClick={() => setEnableKnowledgeCompletion(v => !v)}
+              className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors ${enableKnowledgeCompletion ? 'bg-violet-600' : 'bg-gray-300'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${enableKnowledgeCompletion ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+          <div className="mt-3 mb-4">
+            <span className={`text-xs px-2 py-0.5 rounded-full ${enableKnowledgeCompletion ? 'bg-violet-50 text-violet-700' : 'bg-gray-100 text-gray-500'}`}>
+              {enableKnowledgeCompletion ? `执行知识补全 · ${completionModelLabel}` : '不执行知识补全'}
+            </span>
+          </div>
+
+          <div className={`space-y-2.5 ${enableKnowledgeCompletion ? '' : 'opacity-45 pointer-events-none'}`}>
+            <div className="text-xs font-medium text-gray-600 mb-1">补全大模型</div>
+            {COMPLETION_MODEL_OPTIONS.map(opt => {
+              const selected = completionModel === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setCompletionModel(opt.value)}
+                  className={`w-full flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${
+                    selected
+                      ? 'border-violet-500 bg-violet-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <span className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+                    selected ? 'border-violet-500' : 'border-gray-300'
+                  }`}>
+                    {selected && <span className="w-2 h-2 rounded-full bg-violet-500 block" />}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-semibold ${selected ? 'text-violet-700' : 'text-gray-800'}`}>
+                        {opt.label}
+                      </span>
+                      {opt.tag && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded-full font-medium">
+                          {opt.tag}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     );
 
@@ -1000,6 +1080,11 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
               <span className="text-xs bg-cyan-50 text-cyan-700 px-2 py-0.5 rounded-full">
                 {miningAlgo === 'apriori' ? 'Apriori' : 'FP-Growth'} · sup≥{minSupport}% · conf≥{minConfidence}%
               </span>
+              {enableKnowledgeCompletion && (
+                <span className="text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full">
+                  知识补全 · {completionModelLabel}
+                </span>
+              )}
               <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{syncMode}</span>
               {reviewerIds.length > 0 && (
                 <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">

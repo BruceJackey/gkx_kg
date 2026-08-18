@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, File, Upload, Download, Trash2, Calendar, HardDrive, CheckCircle, Eye, Code,
   Star, GitCommit, Scissors, RotateCcw, ChevronDown, ChevronRight, AlertTriangle, Info,
@@ -41,6 +41,8 @@ interface VersionEntry {
   timestamp: string;
   changes: number;
   note: string;
+  records: number;
+  size: string;
 }
 
 // ── mock data ─────────────────────────────────────────────────────────────────
@@ -158,26 +160,26 @@ const datasetsByCategory: Record<string, Dataset[]> = {
 
 const VERSIONS_BY_DATASET: Record<string, VersionEntry[]> = {
   'dataset-1': [
-    { version: 'v1.4', op: '审核通过', operator: '王医师', timestamp: '2026-04-15 14:32', changes: 0, note: '专家复核全部通过，标记为 A 级数据源' },
-    { version: 'v1.3', op: '修正', operator: '李标注员', timestamp: '2026-04-14 09:15', changes: 238, note: '修正 238 条实体边界偏移问题' },
-    { version: 'v1.2', op: '标注', operator: '张标注员', timestamp: '2026-04-12 16:40', changes: 1520, note: '新增 1520 条医疗实体标注' },
-    { version: 'v1.1', op: '修正', operator: '李标注员', timestamp: '2026-04-10 11:00', changes: 86, note: '修正重复记录 86 条' },
-    { version: 'v1.0', op: '创建', operator: '系统', timestamp: '2026-04-08 09:00', changes: 10656, note: '初始版本，导入原始数据' },
+    { version: 'v1.4', op: '审核通过', operator: '王医师', timestamp: '2026-04-15 14:32', changes: 0, note: '专家复核全部通过，标记为 A 级数据源', records: 12500, size: '45.2 MB' },
+    { version: 'v1.3', op: '修正', operator: '李标注员', timestamp: '2026-04-14 09:15', changes: 238, note: '修正 238 条实体边界偏移问题', records: 12500, size: '45.1 MB' },
+    { version: 'v1.2', op: '标注', operator: '张标注员', timestamp: '2026-04-12 16:40', changes: 1520, note: '新增 1520 条医疗实体标注', records: 12262, size: '43.8 MB' },
+    { version: 'v1.1', op: '修正', operator: '李标注员', timestamp: '2026-04-10 11:00', changes: 86, note: '修正重复记录 86 条', records: 10742, size: '38.6 MB' },
+    { version: 'v1.0', op: '创建', operator: '系统', timestamp: '2026-04-08 09:00', changes: 10656, note: '初始版本，导入原始数据', records: 10656, size: '38.2 MB' },
   ],
   'dataset-3': [
-    { version: 'v2.1', op: '修正', operator: '陈研究员', timestamp: '2026-04-10 15:22', changes: 112, note: '修正科技术语边界标注 112 条' },
-    { version: 'v2.0', op: '标注', operator: '王标注员', timestamp: '2026-04-08 10:00', changes: 900, note: '第二轮人工标注，新增 900 条' },
-    { version: 'v1.0', op: '创建', operator: '系统', timestamp: '2026-04-05 09:00', changes: 4700, note: '初始版本' },
+    { version: 'v2.1', op: '修正', operator: '陈研究员', timestamp: '2026-04-10 15:22', changes: 112, note: '修正科技术语边界标注 112 条', records: 5600, size: '15.3 MB' },
+    { version: 'v2.0', op: '标注', operator: '王标注员', timestamp: '2026-04-08 10:00', changes: 900, note: '第二轮人工标注，新增 900 条', records: 5488, size: '15.0 MB' },
+    { version: 'v1.0', op: '创建', operator: '系统', timestamp: '2026-04-05 09:00', changes: 4700, note: '初始版本', records: 4700, size: '12.8 MB' },
   ],
   'dataset-7': [
-    { version: 'v1.1', op: '修正', operator: '质检机器人', timestamp: '2026-04-03 08:00', changes: 340, note: '自动质检修正 340 条低置信度标注' },
-    { version: 'v1.0', op: '创建', operator: '众包平台', timestamp: '2026-04-01 00:00', changes: 18000, note: '众包平台批量导入' },
+    { version: 'v1.1', op: '修正', operator: '质检机器人', timestamp: '2026-04-03 08:00', changes: 340, note: '自动质检修正 340 条低置信度标注', records: 18000, size: '68.5 MB' },
+    { version: 'v1.0', op: '创建', operator: '众包平台', timestamp: '2026-04-01 00:00', changes: 18000, note: '众包平台批量导入', records: 18340, size: '69.2 MB' },
   ],
 };
 
 const DEFAULT_VERSIONS: VersionEntry[] = [
-  { version: 'v1.1', op: '修正', operator: '管理员', timestamp: '2026-04-01 10:00', changes: 50, note: '例行质检修正' },
-  { version: 'v1.0', op: '创建', operator: '系统', timestamp: '2026-03-28 09:00', changes: 0, note: '初始版本' },
+  { version: 'v1.1', op: '修正', operator: '管理员', timestamp: '2026-04-01 10:00', changes: 50, note: '例行质检修正', records: 0, size: '0 B' },
+  { version: 'v1.0', op: '创建', operator: '系统', timestamp: '2026-03-28 09:00', changes: 0, note: '初始版本', records: 0, size: '0 B' },
 ];
 
 const categoryInfo: Record<string, { name: string; description: string }> = {
@@ -214,6 +216,15 @@ const OP_COLOR: Record<string, string> = {
   '审核通过': 'bg-emerald-100 text-emerald-700',
 };
 
+function getDatasetVersions(ds: Dataset, map: Record<string, VersionEntry[]>): VersionEntry[] {
+  if (map[ds.id]?.length) return map[ds.id];
+  return DEFAULT_VERSIONS.map((v, i) => ({
+    ...v,
+    records: i === 0 ? ds.records : Math.max(0, ds.records - v.changes),
+    size: ds.size,
+  }));
+}
+
 function GradeStars({ grade }: { grade: ConfidenceGrade }) {
   const cfg = GRADE_CONFIG[grade];
   return (
@@ -227,60 +238,227 @@ function GradeStars({ grade }: { grade: ConfidenceGrade }) {
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
-function DatasetListPanel({ datasets, onViewSample }: { datasets: Dataset[]; onViewSample: (s: string) => void }) {
+function DatasetListPanel({
+  datasets,
+  versionsMap,
+  onViewSample,
+  onDeleteVersion,
+}: {
+  datasets: Dataset[];
+  versionsMap: Record<string, VersionEntry[]>;
+  onViewSample: (s: string) => void;
+  onDeleteVersion: (datasetId: string, version: string) => void;
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailVersion, setDetailVersion] = useState<{ dataset: Dataset; version: VersionEntry } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ dataset: Dataset; version: VersionEntry; remaining: number } | null>(null);
+
+  if (datasets.length === 0) {
+    return (
+      <div className="text-center py-14 text-gray-400">
+        <File className="w-10 h-10 mx-auto mb-3 opacity-40" />
+        <p className="text-sm">暂无数据集</p>
+        <p className="text-xs mt-1">删除全部版本后，数据集将从列表中移除</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {datasets.map(dataset => {
         const gradeCfg = GRADE_CONFIG[dataset.confidenceGrade];
+        const versions = getDatasetVersions(dataset, versionsMap);
+        const head = versions[0];
+        const older = versions.slice(1);
+        const expanded = expandedId === dataset.id;
         return (
-          <div key={dataset.id} className="border border-gray-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-md transition-all">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4 flex-1">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <File className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <h3 className="text-base font-semibold text-gray-900">{dataset.name}</h3>
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{dataset.format}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SOURCE_TYPE_COLOR[dataset.sourceType]}`}>{dataset.sourceType}</span>
-                    <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold border ${gradeCfg.bg} ${gradeCfg.color} ${gradeCfg.border}`}>
-                      {gradeCfg.label}
-                    </span>
-                    {dataset.status === 'ready' && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
-                        <CheckCircle className="w-3 h-3" />就绪
+          <div key={dataset.id} className="border border-gray-200 rounded-xl overflow-hidden hover:border-blue-300 transition-all">
+            <div className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4 flex-1 min-w-0">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <File className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <h3 className="text-base font-semibold text-gray-900">{dataset.name}</h3>
+                      {head && (
+                        <span className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full font-medium">当前 {head.version}</span>
+                      )}
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{dataset.format}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SOURCE_TYPE_COLOR[dataset.sourceType]}`}>{dataset.sourceType}</span>
+                      <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold border ${gradeCfg.bg} ${gradeCfg.color} ${gradeCfg.border}`}>
+                        {gradeCfg.label}
                       </span>
+                      {dataset.status === 'ready' && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                          <CheckCircle className="w-3 h-3" />就绪
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{dataset.description}</p>
+                    <div className="flex items-center gap-6 text-sm text-gray-500">
+                      <span className="flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5" />{dataset.size}</span>
+                      <span className="flex items-center gap-1.5"><File className="w-3.5 h-3.5" />{dataset.records.toLocaleString()} 条</span>
+                      <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{dataset.uploadDate}</span>
+                      <span className="flex items-center gap-1.5"><GitCommit className="w-3.5 h-3.5" />{versions.length} 个版本</span>
+                    </div>
+                    {dataset.usedBy.length > 0 && (
+                      <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-gray-400">使用算法:</span>
+                        {dataset.usedBy.map((a, i) => <span key={i} className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs rounded">{a}</span>)}
+                      </div>
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 mb-3">{dataset.description}</p>
-                  <div className="flex items-center gap-6 text-sm text-gray-500">
-                    <span className="flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5" />{dataset.size}</span>
-                    <span className="flex items-center gap-1.5"><File className="w-3.5 h-3.5" />{dataset.records.toLocaleString()} 条</span>
-                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{dataset.uploadDate}</span>
-                  </div>
-                  {dataset.usedBy.length > 0 && (
-                    <div className="mt-2.5 flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-gray-400">使用算法:</span>
-                      {dataset.usedBy.map((a, i) => <span key={i} className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs rounded">{a}</span>)}
-                    </div>
+                </div>
+                <div className="flex gap-1.5 flex-shrink-0">
+                  {dataset.sampleData && (
+                    <button onClick={() => onViewSample(dataset.sampleData!)}
+                      className="flex items-center gap-1.5 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm">
+                      <Code className="w-4 h-4" />示例
+                    </button>
+                  )}
+                  {head && (
+                    <button onClick={() => setDetailVersion({ dataset, version: head })}
+                      className="flex items-center gap-1.5 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm">
+                      <Eye className="w-4 h-4" />管理
+                    </button>
+                  )}
+                  <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors" title="下载当前版本"><Download className="w-4 h-4" /></button>
+                  {head && (
+                    <button onClick={() => setDeleteTarget({ dataset, version: head, remaining: versions.length - 1 })}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="删除当前版本">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
               </div>
-              <div className="flex gap-1.5 flex-shrink-0">
-                {dataset.sampleData && (
-                  <button onClick={() => onViewSample(dataset.sampleData!)}
-                    className="flex items-center gap-1.5 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm">
-                    <Code className="w-4 h-4" />示例
-                  </button>
-                )}
-                <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"><Download className="w-4 h-4" /></button>
-                <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
-              </div>
             </div>
+
+            {older.length > 0 && (
+              <>
+                <button
+                  onClick={() => setExpandedId(expanded ? null : dataset.id)}
+                  className="w-full flex items-center justify-between px-5 py-2.5 bg-gray-50 border-t border-gray-100 text-xs text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  <span>{expanded ? '收起历史版本' : `展开其他版本（${older.length}）`}</span>
+                  {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                </button>
+
+                {expanded && (
+                  <div className="border-t border-gray-100 divide-y divide-gray-50">
+                    {older.map((v, idx) => (
+                      <div key={v.version} className="px-5 py-3 flex items-start gap-4 bg-white">
+                        <div className="flex flex-col items-center flex-shrink-0 mt-1">
+                          <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+                          {idx < older.length - 1 && <div className="w-px flex-1 bg-gray-200 mt-1 min-h-[12px]" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-gray-800">{v.version}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${OP_COLOR[v.op]}`}>{v.op}</span>
+                            <span className="text-xs text-gray-500">{v.records.toLocaleString()} 条 · {v.size}</span>
+                          </div>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                            <span className="flex items-center gap-1"><User className="w-3 h-3" />{v.operator}</span>
+                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{v.timestamp}</span>
+                            {v.changes > 0 && <span>{v.changes.toLocaleString()} 条变更</span>}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">{v.note}</p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button onClick={() => setDetailVersion({ dataset, version: v })}
+                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100">
+                            <Eye className="w-3.5 h-3.5" />管理
+                          </button>
+                          <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="下载此版本">
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => setDeleteTarget({ dataset, version: v, remaining: versions.length - 1 })}
+                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded" title="删除此版本">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         );
       })}
+
+      {detailVersion && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setDetailVersion(null)}>
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h4 className="text-base font-semibold text-gray-900">版本管理 · {detailVersion.version.version}</h4>
+                <p className="text-xs text-gray-500 mt-0.5">{detailVersion.dataset.name}</p>
+              </div>
+              <button onClick={() => setDetailVersion(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-2 text-sm text-gray-700">
+              <div className="flex justify-between"><span className="text-gray-500">操作类型</span><span className={`px-2 py-0.5 rounded-full text-xs ${OP_COLOR[detailVersion.version.op]}`}>{detailVersion.version.op}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">操作人</span><span>{detailVersion.version.operator}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">时间</span><span>{detailVersion.version.timestamp}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">记录数</span><span>{detailVersion.version.records.toLocaleString()} 条 · {detailVersion.version.size}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">变更条数</span><span>{detailVersion.version.changes.toLocaleString()}</span></div>
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">说明</p>
+                <p className="text-sm text-gray-700">{detailVersion.version.note}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button className="flex-1 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center justify-center gap-1.5">
+                <Download className="w-4 h-4" />下载此版本
+              </button>
+              <button onClick={() => {
+                const v = detailVersion.version;
+                const ds = detailVersion.dataset;
+                const remaining = getDatasetVersions(ds, versionsMap).length - 1;
+                setDetailVersion(null);
+                setDeleteTarget({ dataset: ds, version: v, remaining });
+              }}
+                className="flex-1 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50 flex items-center justify-center gap-1.5">
+                <Trash2 className="w-4 h-4" />删除此版本
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h4 className="text-base font-semibold text-gray-900">确认删除 {deleteTarget.version.version}</h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  {deleteTarget.remaining === 0
+                    ? <>这是 <strong>{deleteTarget.dataset.name}</strong> 的最后一个版本，删除后整个数据集将从列表中移除。</>
+                    : getDatasetVersions(deleteTarget.dataset, versionsMap)[0]?.version === deleteTarget.version.version
+                      ? <>将删除当前版本。下一版本 <strong>{getDatasetVersions(deleteTarget.dataset, versionsMap)[1]?.version}</strong> 会自动升为当前版本。</>
+                      : <>将删除历史版本 <strong>{deleteTarget.version.version}</strong>，不影响当前版本。</>}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteTarget(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">取消</button>
+              <button onClick={() => {
+                onDeleteVersion(deleteTarget.dataset.id, deleteTarget.version.version);
+                setDeleteTarget(null);
+              }}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">确认删除</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -383,127 +561,6 @@ function ConfidenceRatingPanel({ datasets, grades, onChangeGrade }: {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function VersionControlPanel({ datasets }: { datasets: Dataset[] }) {
-  const [selectedDatasetId, setSelectedDatasetId] = useState(datasets[0]?.id ?? '');
-  const [expandedVersion, setExpandedVersion] = useState<string | null>(null);
-  const [rollbackTarget, setRollbackTarget] = useState<string | null>(null);
-  const [rolledBack, setRolledBack] = useState<Record<string, string>>({});
-
-  const versions = VERSIONS_BY_DATASET[selectedDatasetId] ?? DEFAULT_VERSIONS;
-  const currentVersion = rolledBack[selectedDatasetId] ?? versions[0]?.version ?? '';
-  const dataset = datasets.find(d => d.id === selectedDatasetId);
-
-  const confirmRollback = (version: string) => {
-    setRolledBack(prev => ({ ...prev, [selectedDatasetId]: version }));
-    setRollbackTarget(null);
-  };
-
-  return (
-    <div className="space-y-5">
-      <div>
-        <h3 className="text-base font-semibold text-gray-900">标注数据版本控制</h3>
-        <p className="text-sm text-gray-500 mt-0.5">记录所有标注和修正操作，支持查看历史版本与一键回滚</p>
-      </div>
-
-      {/* dataset selector */}
-      <div className="flex items-center gap-3">
-        <label className="text-sm font-medium text-gray-600 flex-shrink-0">选择数据集</label>
-        <select value={selectedDatasetId} onChange={e => { setSelectedDatasetId(e.target.value); setExpandedVersion(null); }}
-          className="flex-1 max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
-          {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
-        {dataset && (
-          <span className="text-xs text-gray-500">当前版本：<span className="font-semibold text-gray-800">{currentVersion}</span></span>
-        )}
-      </div>
-
-      {/* version timeline */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
-        <div className="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-700">版本历史（{versions.length} 条）</span>
-          <span className="flex items-center gap-1.5 text-xs text-gray-500">
-            <Clock className="w-3.5 h-3.5" />按时间倒序
-          </span>
-        </div>
-        <div className="divide-y divide-gray-100">
-          {versions.map((v, idx) => {
-            const isCurrent = v.version === currentVersion;
-            const isExpanded = expandedVersion === v.version;
-            return (
-              <div key={v.version} className={`${isCurrent ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'} transition-colors`}>
-                <div className="px-5 py-3.5 flex items-start gap-4">
-                  {/* timeline dot */}
-                  <div className="flex flex-col items-center flex-shrink-0 mt-1">
-                    <div className={`w-3 h-3 rounded-full border-2 ${isCurrent ? 'bg-blue-500 border-blue-600' : 'bg-white border-gray-300'}`} />
-                    {idx < versions.length - 1 && <div className="w-px flex-1 bg-gray-200 mt-1 min-h-[16px]" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-sm font-bold ${isCurrent ? 'text-blue-700' : 'text-gray-800'}`}>{v.version}</span>
-                      {isCurrent && <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-medium">当前</span>}
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${OP_COLOR[v.op]}`}>{v.op}</span>
-                      {v.changes > 0 && <span className="text-xs text-gray-500">{v.changes.toLocaleString()} 条变更</span>}
-                    </div>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                      <span className="flex items-center gap-1"><User className="w-3 h-3" />{v.operator}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{v.timestamp}</span>
-                    </div>
-                    {isExpanded && (
-                      <div className="mt-2 p-3 bg-white border border-gray-200 rounded-lg text-xs text-gray-700">{v.note}</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={() => setExpandedVersion(isExpanded ? null : v.version)}
-                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100">
-                      <Eye className="w-3.5 h-3.5" />详情
-                      {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                    </button>
-                    {!isCurrent && (
-                      <button onClick={() => setRollbackTarget(v.version)}
-                        className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 px-2 py-1 rounded hover:bg-amber-50 border border-amber-200">
-                        <RotateCcw className="w-3.5 h-3.5" />回滚至此
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* rollback confirm dialog */}
-      {rollbackTarget && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h4 className="text-base font-semibold text-gray-900">确认版本回滚</h4>
-                <p className="text-sm text-gray-600 mt-1">
-                  将把 <strong>{dataset?.name}</strong> 回滚至 <strong>{rollbackTarget}</strong>。当前版本（{currentVersion}）的所有变更将被还原，此操作会生成新的回滚版本记录。
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setRollbackTarget(null)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
-                取消
-              </button>
-              <button onClick={() => confirmRollback(rollbackTarget)}
-                className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium">
-                确认回滚
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1048,20 +1105,66 @@ interface DatasetCategoryDetailProps {
   onBack: () => void;
 }
 
+function seedVersionsMap(list: Dataset[]): Record<string, VersionEntry[]> {
+  const map: Record<string, VersionEntry[]> = { ...VERSIONS_BY_DATASET };
+  list.forEach(ds => {
+    if (!map[ds.id]?.length) map[ds.id] = getDatasetVersions(ds, {});
+  });
+  return map;
+}
+
 export function DatasetCategoryDetail({ categoryId, onBack }: DatasetCategoryDetailProps) {
-  const [activeTab, setActiveTab] = useState<'list' | 'confidence' | 'versions' | 'split' | 'annotation'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'confidence' | 'split' | 'annotation'>('list');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSampleModal, setShowSampleModal] = useState(false);
   const [selectedSample, setSelectedSample] = useState('');
   const [grades, setGrades] = useState<Record<string, ConfidenceGrade>>({});
+  const [datasets, setDatasets] = useState<Dataset[]>(() => datasetsByCategory[categoryId] ?? []);
+  const [versionsMap, setVersionsMap] = useState<Record<string, VersionEntry[]>>(() =>
+    seedVersionsMap(datasetsByCategory[categoryId] ?? [])
+  );
 
-  const datasets = datasetsByCategory[categoryId] ?? [];
+  useEffect(() => {
+    const list = datasetsByCategory[categoryId] ?? [];
+    setDatasets(list);
+    setVersionsMap(seedVersionsMap(list));
+    setActiveTab('list');
+    setGrades({});
+  }, [categoryId]);
+
   const category = categoryInfo[categoryId];
+
+  const onDeleteVersion = (datasetId: string, version: string) => {
+    const dataset = datasets.find(d => d.id === datasetId);
+    if (!dataset) return;
+    const current = versionsMap[datasetId]?.length
+      ? versionsMap[datasetId]
+      : getDatasetVersions(dataset, versionsMap);
+    const next = current.filter(v => v.version !== version);
+    if (next.length === 0) {
+      setDatasets(ds => ds.filter(d => d.id !== datasetId));
+      setVersionsMap(prev => {
+        const rest = { ...prev };
+        delete rest[datasetId];
+        return rest;
+      });
+      return;
+    }
+    if (current[0]?.version === version) {
+      const head = next[0];
+      setDatasets(ds => ds.map(d => d.id !== datasetId ? d : {
+        ...d,
+        records: head.records,
+        size: head.size,
+        uploadDate: head.timestamp.slice(0, 10),
+      }));
+    }
+    setVersionsMap(prev => ({ ...prev, [datasetId]: next }));
+  };
 
   const TABS = [
     { id: 'list' as const, label: '数据集列表' },
     { id: 'confidence' as const, label: '置信度评级' },
-    { id: 'versions' as const, label: '版本控制' },
     { id: 'split' as const, label: '构建与划分' },
     ...(categoryId === 'entity-similarity' ? [{ id: 'annotation' as const, label: '相似度标注' }] : []),
   ];
@@ -1108,12 +1211,16 @@ export function DatasetCategoryDetail({ categoryId, onBack }: DatasetCategoryDet
         {/* tab content */}
         <div className="p-6">
           {activeTab === 'list' && (
-            <DatasetListPanel datasets={datasets} onViewSample={s => { setSelectedSample(s); setShowSampleModal(true); }} />
+            <DatasetListPanel
+              datasets={datasets}
+              versionsMap={versionsMap}
+              onViewSample={s => { setSelectedSample(s); setShowSampleModal(true); }}
+              onDeleteVersion={onDeleteVersion}
+            />
           )}
           {activeTab === 'confidence' && (
             <ConfidenceRatingPanel datasets={datasets} grades={grades} onChangeGrade={(id, g) => setGrades(prev => ({ ...prev, [id]: g }))} />
           )}
-          {activeTab === 'versions' && <VersionControlPanel datasets={datasets} />}
           {activeTab === 'split' && <DatasetSplitPanel datasets={datasets} grades={grades} />}
           {activeTab === 'annotation' && categoryId === 'entity-similarity' && <SimilarityAnnotationPanel datasets={datasets} />}
         </div>
