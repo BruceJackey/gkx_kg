@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ElementType } from 'react';
 import {
   Plus, Trash2, RotateCcw, CheckCircle2, Database, Layers, Shield,
@@ -48,13 +48,25 @@ const ENTITY_ATTRS: Record<string, string[]> = {
 const TABS: { id: TabId; label: string; icon: ElementType }[] = [
   { id: 'data', label: '数据与本体', icon: Database },
   { id: 'scope', label: '抽取范围', icon: Layers },
-  { id: 'rules', label: '规则配置', icon: Shield },
+  { id: 'rules', label: '基于规则映射的抽取策略', icon: Shield },
   // { id: 'remote', label: '远程抽取', icon: Wifi },
-  { id: 'threshold', label: '阈值策略', icon: SlidersHorizontal },
+  { id: 'threshold', label: '策略配置', icon: SlidersHorizontal },
 ];
 
-export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (page: string) => void }) {
-  const [activeTab, setActiveTab] = useState<TabId>('data');
+export type GraphConstructionTab = TabId;
+
+export default function GraphConstruction({
+  onNavigateTo,
+  initialTab,
+}: {
+  onNavigateTo?: (page: string) => void;
+  initialTab?: GraphConstructionTab;
+}) {
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'data');
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
 
   // 数据与本体
   const [selectedOntoId, setSelectedOntoId] = useState('o1');
@@ -159,8 +171,8 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
 
   const reviewersOk = reviewerIds.length >= 1 && reviewerIds.length <= 2;
   const configValid = !!selectedOntoId && !!selectedDsId && (isStructured ? !!selectedMappingId : true) && checkedEntities.length > 0 && reviewersOk;
-  const configReason = !selectedOntoId ? '请选择本体' : !selectedDsId ? '请选择数据源'
-    : (isStructured && !selectedMappingId) ? '结构化数据源需要选择映射模板'
+  const configReason = !selectedOntoId ? '请选择本体' : !selectedDsId ? '请选择语料库'
+    : (isStructured && !selectedMappingId) ? '结构化语料库需要选择映射模板'
     : checkedEntities.length === 0 ? '请至少选择一个实体类型'
     : !reviewersOk ? '请配置 1–2 名审核员' : '';
 
@@ -231,7 +243,7 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
             <div className="mt-2 text-xs text-gray-400">{currentOnto.entities.length} 实体 · {currentOnto.relations.length} 关系</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="text-sm font-semibold text-gray-800 mb-3">数据源</div>
+            <div className="text-sm font-semibold text-gray-800 mb-3">语料库</div>
             <select value={selectedDsId} onChange={e => setSelectedDsId(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white">
               {DATASOURCES.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -327,7 +339,7 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
       </div>
     );
 
-    // ── 规则配置 ──
+    // ── 基于规则映射的抽取策略 ──
     if (activeTab === 'rules') return (
       <div className="grid grid-cols-3 gap-4 max-w-4xl">
         {/* 全局规则 */}
@@ -592,13 +604,13 @@ export default function GraphConstruction({ onNavigateTo }: { onNavigateTo?: (pa
       </div>
     );
 
-    // ── 阈值策略 ──
+    // ── 策略配置 ──
     if (activeTab === 'threshold') return (
       <div className="max-w-2xl space-y-4">
 
-        {/* 模型选择 */}
+        {/* 基于统计学习的抽取策略 */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <div className="text-sm font-semibold text-gray-800 mb-3">抽取模型</div>
+          <div className="text-sm font-semibold text-gray-800 mb-3">基于统计学习的抽取策略</div>
           <div className="space-y-2.5">
             {MODEL_OPTIONS.map(opt => {
               const selected = extractModel === opt.value;

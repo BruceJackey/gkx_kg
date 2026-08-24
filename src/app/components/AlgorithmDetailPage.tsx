@@ -35,6 +35,10 @@ interface AlgorithmDetailProps {
   onBack: () => void;
   onNavigateToService?: (algorithmId: string) => void;
   initialDemoTab?: CandidateTermDemoTab;
+  /** 进入算法页时默认打开的 Tab（审计目录跳转用） */
+  initialTab?: 'intro' | 'demo' | 'models' | 'training' | 'deployment';
+  /** 依存图抽样可视化：进入 demo 时自动启动测试 */
+  autoStartDepTest?: boolean;
 }
 
 const algorithmDetails: Record<string, any> = {
@@ -1677,16 +1681,37 @@ const algorithmDetails: Record<string, any> = {
   },
 };
 
-export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService, initialDemoTab }: AlgorithmDetailProps) {
-  const [activeTab, setActiveTab] = useState<'intro' | 'demo' | 'models' | 'training' | 'deployment'>(
-    algorithmId === 'candidate-term-generation' && initialDemoTab ? 'demo' : 'intro',
-  );
+export function AlgorithmDetailPage({
+  algorithmId,
+  onBack,
+  onNavigateToService,
+  initialDemoTab,
+  initialTab,
+  autoStartDepTest = false,
+}: AlgorithmDetailProps) {
+  const resolveInitialTab = (): 'intro' | 'demo' | 'models' | 'training' | 'deployment' => {
+    if (initialTab) return initialTab;
+    if (algorithmId === 'candidate-term-generation' && initialDemoTab) return 'demo';
+    return 'intro';
+  };
+
+  const [activeTab, setActiveTab] = useState<'intro' | 'demo' | 'models' | 'training' | 'deployment'>(resolveInitialTab);
+  const [depAutoTest, setDepAutoTest] = useState(autoStartDepTest);
+  const [depDemoKey, setDepDemoKey] = useState(0);
 
   useEffect(() => {
-    if (algorithmId === 'candidate-term-generation' && initialDemoTab) {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    } else if (algorithmId === 'candidate-term-generation' && initialDemoTab) {
       setActiveTab('demo');
     }
-  }, [algorithmId, initialDemoTab]);
+  }, [algorithmId, initialDemoTab, initialTab]);
+
+  useEffect(() => {
+    setDepAutoTest(autoStartDepTest);
+    if (autoStartDepTest) setDepDemoKey((k) => k + 1);
+  }, [autoStartDepTest, algorithmId]);
+
   const [showTrainingModal, setShowTrainingModal] = useState(false);
   const [showDeployModal, setShowDeployModal] = useState(false);
 
@@ -1825,7 +1850,7 @@ export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService, 
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
-                <GitBranch className="w-3.5 h-3.5" />句法可视化
+                <GitBranch className="w-3.5 h-3.5" />抽样可视化 API
               </button>
             )}
             {algorithmId === 'term-vector' && (
@@ -2120,7 +2145,7 @@ export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService, 
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              部署管理
+              {algorithmId === 'dependency-graph' ? '句法分析任务管理' : '部署管理'}
             </button>
           </nav>
         </div>
@@ -2128,7 +2153,9 @@ export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService, 
 
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         {activeTab === 'intro' && <IntroTab algo={algo} onCopyId={handleCopyId} />}
-        {activeTab === 'demo' && algorithmId === 'dependency-graph' && <DependencyTreeDemo />}
+        {activeTab === 'demo' && algorithmId === 'dependency-graph' && (
+          <DependencyTreeDemo key={depDemoKey} autoStartTest={depAutoTest} />
+        )}
         {activeTab === 'demo' && algorithmId === 'term-vector' && <TermVectorDemo />}
         {activeTab === 'demo' && algorithmId === 'rgat-relation' && <RGATDemo />}
         {activeTab === 'demo' && algorithmId === 'hypernym-generation' && <HypernymDemo />}
@@ -2156,7 +2183,21 @@ export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService, 
         {activeTab === 'demo' && algorithmId === 'cross-lingual-alignment' && <CrossLingualAlignmentDemo />}
         {activeTab === 'models' && <ModelsTab algorithmId={algorithmId} algorithmName={algo.name} />}
         {activeTab === 'training' && <TrainingRecordsTab algorithmId={algorithmId} />}
-        {activeTab === 'deployment' && <DeploymentRecordsTab />}
+        {activeTab === 'deployment' && (
+          <DeploymentRecordsTab
+            algorithmId={algorithmId}
+            onViewApi={algorithmId === 'dependency-graph' ? () => {
+              setDepAutoTest(false);
+              setDepDemoKey((k) => k + 1);
+              setActiveTab('demo');
+            } : undefined}
+            onStartTest={algorithmId === 'dependency-graph' ? () => {
+              setDepAutoTest(true);
+              setDepDemoKey((k) => k + 1);
+              setActiveTab('demo');
+            } : undefined}
+          />
+        )}
       </div>
 
       {showTrainingModal && (
@@ -2505,30 +2546,63 @@ function TrainingRecordsTab({ algorithmId }: { algorithmId: string }) {
   );
 }
 
-function DeploymentRecordsTab() {
-  const records = [
-    {
-      id: 'DEPLOY_001',
-      version: 'v2.3.1',
-      serviceName: 'bert-lstm-crf-service',
-      serviceUrl: 'http://api.example.com/entity-extract',
-      status: '运行中',
-      createdAt: '2026-04-15 14:00:00',
-    },
-  ];
+function DeploymentRecordsTab({
+  algorithmId,
+  onViewApi,
+  onStartTest,
+}: {
+  algorithmId?: string;
+  onViewApi?: () => void;
+  onStartTest?: () => void;
+}) {
+  const isDep = algorithmId === 'dependency-graph';
+  const records = isDep
+    ? [
+        {
+          id: 'SYN_TASK_001',
+          version: 'v1.2.0',
+          serviceName: 'dependency-syntax-parser',
+          serviceUrl: 'http://api.example.com/dependency-graph/parse',
+          status: '运行中',
+          createdAt: '2026-04-15 14:00:00',
+        },
+        {
+          id: 'SYN_TASK_002',
+          version: 'v1.2.0',
+          serviceName: 'dependency-syntax-parser-batch',
+          serviceUrl: 'http://api.example.com/dependency-graph/batch',
+          status: '已暂停',
+          createdAt: '2026-05-02 09:30:00',
+        },
+      ]
+    : [
+        {
+          id: 'DEPLOY_001',
+          version: 'v2.3.1',
+          serviceName: 'bert-lstm-crf-service',
+          serviceUrl: 'http://api.example.com/entity-extract',
+          status: '运行中',
+          createdAt: '2026-04-15 14:00:00',
+        },
+      ];
 
   return (
-    <div>
+    <div className="space-y-4">
+      {isDep && (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-indigo-900">
+          句法分析任务管理：启动、暂停或终止大规模语料的依存句法分析任务。可通过「查看 API / 启动测试」体验结果抽样可视化。
+        </div>
+      )}
       {records.length > 0 ? (
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">部署ID</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">{isDep ? '任务ID' : '部署ID'}</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">版本</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">服务名称</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">{isDep ? '任务名称' : '服务名称'}</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">服务地址</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">状态</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">部署时间</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">{isDep ? '创建时间' : '部署时间'}</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600">操作</th>
             </tr>
           </thead>
@@ -2540,21 +2614,32 @@ function DeploymentRecordsTab() {
                 <td className="px-4 py-3 text-sm">{r.serviceName}</td>
                 <td className="px-4 py-3 text-sm text-blue-600">{r.serviceUrl}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+                  <span className={`px-2 py-1 text-xs rounded ${r.status === '运行中' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                     {r.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm">{r.createdAt}</td>
-                <td className="px-4 py-3 text-sm space-x-2">
-                  <button className="text-blue-600 hover:text-blue-800">查看API</button>
-                  <button className="text-blue-600 hover:text-blue-800">重新部署</button>
+                <td className="px-4 py-3 text-sm space-x-2 whitespace-nowrap">
+                  {isDep ? (
+                    <>
+                      <button type="button" onClick={onViewApi} className="text-blue-600 hover:text-blue-800">查看 API</button>
+                      <button type="button" onClick={onStartTest} className="text-indigo-600 hover:text-indigo-800">启动测试</button>
+                      <button type="button" className="text-gray-500 hover:text-gray-700">{r.status === '运行中' ? '暂停' : '启动'}</button>
+                      <button type="button" className="text-red-500 hover:text-red-700">终止</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" className="text-blue-600 hover:text-blue-800">查看API</button>
+                      <button type="button" className="text-blue-600 hover:text-blue-800">重新部署</button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       ) : (
-        <div className="text-center py-12 text-gray-500">暂无部署记录</div>
+        <div className="text-center py-12 text-gray-500">暂无{isDep ? '任务' : '部署'}记录</div>
       )}
     </div>
   );

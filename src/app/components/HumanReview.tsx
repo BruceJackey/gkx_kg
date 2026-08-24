@@ -214,7 +214,7 @@ type TopTab = 'kg-review' | 'seed-term' | 'hyponymy' | 'event-review' | 'conflic
 const TOP_TABS: { id: TopTab; label: string; icon: any }[] = [
   { id: 'kg-review',    label: '图谱候选审核',   icon: CheckSquare },
   { id: 'seed-term',    label: '种子术语审核',   icon: Tag },
-  { id: 'hyponymy',     label: '上下位关系审核', icon: GitBranch },
+  { id: 'hyponymy',     label: '上下位关系管理', icon: GitBranch },
   { id: 'event-review', label: '术语/事件优化',  icon: CalendarDays },
   { id: 'conflict',     label: '冲突管理',       icon: AlertTriangle },
 ];

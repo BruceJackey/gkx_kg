@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Play, Database, GitBranch, Shuffle } from 'lucide-react';
 
 interface DepToken { id: number; word: string; pos: string; head: number; dep: string; }
@@ -174,13 +174,27 @@ function DependencyTreeViz({ sentence }: { sentence: DepSentence }) {
   );
 }
 
-export function DependencyTreeDemo() {
+export function DependencyTreeDemo({ autoStartTest = false }: { autoStartTest?: boolean }) {
   const [sampleIdx, setSampleIdx] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [preprocessDone, setPreprocessDone] = useState(false);
   const [preprocessing, setPreprocessing] = useState(false);
+  const [showApi, setShowApi] = useState(true);
+  const [testRunning, setTestRunning] = useState(false);
+  const [testDone, setTestDone] = useState(false);
+  const [testLatency, setTestLatency] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [showViz, setShowViz] = useState(false);
 
   const sample = DEP_SAMPLES[sampleIdx];
+
+  const requestJson = JSON.stringify({
+    corpus_id: 'corpus_001',
+    sample_size: 1,
+    strategy: 'random',
+    include_pos: true,
+    include_arcs: true,
+  }, null, 2);
 
   const randomSample = useCallback(() => {
     setAnimating(true);
@@ -196,6 +210,24 @@ export function DependencyTreeDemo() {
     setTimeout(() => { setPreprocessing(false); setPreprocessDone(true); }, 1800);
   };
 
+  const runSampleTest = useCallback(() => {
+    setTestRunning(true);
+    setTestDone(false);
+    setTestLatency(null);
+    setShowViz(false);
+    setTimeout(() => {
+      setSampleIdx(Math.floor(Math.random() * DEP_SAMPLES.length));
+      setTestRunning(false);
+      setTestDone(true);
+      setTestLatency(48 + Math.floor(Math.random() * 40));
+      setShowViz(true);
+    }, 900);
+  }, []);
+
+  useEffect(() => {
+    if (autoStartTest) runSampleTest();
+  }, [autoStartTest, runSampleTest]);
+
   const PREPROCESS_STEPS = [
     { key: '分句', desc: '基于规则 + HMM 切分长段落', result: '3,241 句' },
     { key: '分词', desc: '细粒度分词（最大熵模型）', result: '68,904 词次' },
@@ -205,6 +237,86 @@ export function DependencyTreeDemo() {
 
   return (
     <div className="space-y-6">
+      {/* API intro for sampling visualization */}
+      <div className="border-2 border-indigo-200 rounded-xl overflow-hidden">
+        <div className="bg-indigo-50 border-b border-indigo-200 px-5 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded font-bold">POST</span>
+            <code className="text-sm font-mono text-indigo-900 truncate">/api/dependency-graph/sample-visualize</code>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowApi(v => !v)}
+              className="text-xs px-3 py-1.5 border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 rounded-lg"
+            >
+              {showApi ? '收起 API' : '查看 API'}
+            </button>
+            <button
+              type="button"
+              onClick={runSampleTest}
+              disabled={testRunning}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg"
+            >
+              <Play className="w-3.5 h-3.5" />
+              {testRunning ? '测试中…' : '启动测试'}
+            </button>
+          </div>
+        </div>
+
+        {showApi && (
+          <div className="p-5 space-y-4">
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900">结果抽样可视化 API</h4>
+              <p className="text-xs text-gray-500 mt-0.5">
+                从句法分析结果中随机抽取句子，返回依存句法树结构，供前端可视化展示。
+              </p>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-medium text-gray-600">请求体预览</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(requestJson);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {copied ? '已复制' : '复制'}
+                </button>
+              </div>
+              <pre className="bg-gray-950 text-green-400 rounded-xl px-4 py-3 text-xs font-mono overflow-x-auto">{requestJson}</pre>
+            </div>
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700">接口参数</div>
+              <div className="divide-y divide-gray-100">
+                {[
+                  { field: 'corpus_id', type: 'string', req: true, desc: '语料库标识' },
+                  { field: 'sample_size', type: 'integer', req: false, desc: '抽样句子数，默认 1，最大 20' },
+                  { field: 'strategy', type: 'string', req: false, desc: '抽样策略：random / stratified' },
+                  { field: 'include_pos', type: 'boolean', req: false, desc: '是否返回词性标签' },
+                  { field: 'include_arcs', type: 'boolean', req: false, desc: '是否返回依存弧' },
+                ].map(p => (
+                  <div key={p.field} className="flex items-center gap-4 px-4 py-2.5 text-sm">
+                    <code className="font-mono text-indigo-700 w-28 flex-shrink-0">{p.field}</code>
+                    <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono w-16 text-center">{p.type}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded w-10 text-center ${p.req ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400'}`}>{p.req ? '必填' : '可选'}</span>
+                    <span className="text-gray-600 flex-1">{p.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {testLatency !== null && (
+              <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg">
+                200 OK · {testLatency}ms · 已返回抽样依存树
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Preprocessing panel */}
       <div className="border border-gray-200 rounded-xl overflow-hidden">
         <div className="flex items-center justify-between bg-gray-50 px-5 py-3 border-b border-gray-200">
@@ -238,37 +350,44 @@ export function DependencyTreeDemo() {
         </div>
       </div>
 
-      {/* Sampling viz panel */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between bg-gray-50 px-5 py-3 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <GitBranch className="w-4 h-4 text-indigo-500" />
-            <span className="text-sm font-semibold text-gray-800">结果抽样可视化</span>
-            <span className="text-xs text-gray-400">依存句法树 · 鼠标悬停高亮依存路径</span>
+      {/* Sampling viz panel — shown after test or always available */}
+      {(showViz || testDone) && (
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between bg-gray-50 px-5 py-3 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <GitBranch className="w-4 h-4 text-indigo-500" />
+              <span className="text-sm font-semibold text-gray-800">结果抽样可视化</span>
+              <span className="text-xs text-gray-400">依存句法树 · 鼠标悬停高亮依存路径</span>
+            </div>
+            <button onClick={randomSample}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 rounded-lg transition-colors">
+              <Shuffle className="w-3.5 h-3.5" />随机抽样
+            </button>
           </div>
-          <button onClick={randomSample}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 rounded-lg transition-colors">
-            <Shuffle className="w-3.5 h-3.5" />随机抽样
-          </button>
+          <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+            <span className="text-xs text-blue-600 font-medium">原句：</span>
+            <span className="text-sm text-blue-900 font-medium">{sample.text}</span>
+          </div>
+          <div className={`px-4 py-5 bg-white overflow-x-auto transition-opacity duration-200 ${animating ? 'opacity-0' : 'opacity-100'}`}>
+            <DependencyTreeViz sentence={sample} />
+          </div>
+          <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-3">
+            {['root', 'nsubj', 'dobj', 'compound', 'amod', 'advmod', 'nmod', 'obl'].map(dep => (
+              <span key={dep} className="flex items-center gap-1 text-[11px] text-gray-600">
+                <span className="w-4 h-1 rounded-full inline-block" style={{ background: depColor(dep) }} />
+                {dep}
+              </span>
+            ))}
+            <span className="text-[11px] text-gray-400 ml-auto">共 {DEP_SAMPLES.length} 个样本，点击「随机抽样」切换</span>
+          </div>
         </div>
-        <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
-          <span className="text-xs text-blue-600 font-medium">原句：</span>
-          <span className="text-sm text-blue-900 font-medium">{sample.text}</span>
+      )}
+
+      {!showViz && !testDone && (
+        <div className="border border-dashed border-gray-200 rounded-xl px-5 py-8 text-center text-sm text-gray-400">
+          点击上方「启动测试」调用抽样可视化 API，并展示依存句法树结果
         </div>
-        <div className={`px-4 py-5 bg-white overflow-x-auto transition-opacity duration-200 ${animating ? 'opacity-0' : 'opacity-100'}`}>
-          <DependencyTreeViz sentence={sample} />
-        </div>
-        {/* Legend */}
-        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-3">
-          {['root', 'nsubj', 'dobj', 'compound', 'amod', 'advmod', 'nmod', 'obl'].map(dep => (
-            <span key={dep} className="flex items-center gap-1 text-[11px] text-gray-600">
-              <span className="w-4 h-1 rounded-full inline-block" style={{ background: depColor(dep) }} />
-              {dep}
-            </span>
-          ))}
-          <span className="text-[11px] text-gray-400 ml-auto">共 {DEP_SAMPLES.length} 个样本，点击「随机抽样」切换</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

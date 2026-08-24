@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Play, Plus, Check, X, Search } from 'lucide-react';
 
 type JobStatus = 'queued' | 'running' | 'done' | 'failed';
@@ -46,8 +46,12 @@ function genPairs(seed: number, threshold: number): HyponymPair[] {
   }))).filter(p => p.confidence >= threshold);
 }
 
-export function HypernymDemo() {
-  const [tab, setTab] = useState<'tasks' | 'results'>('tasks');
+export function HypernymDemo({ initialTab = 'tasks' }: { initialTab?: 'tasks' | 'results' }) {
+  const [tab, setTab] = useState<'tasks' | 'results'>(initialTab);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   // Task creation form
   const [selConceptSet, setSelConceptSet] = useState('cs1');

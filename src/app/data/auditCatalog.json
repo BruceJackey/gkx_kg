@@ -205,7 +205,7 @@
                           "name": "交互式审核与采纳",
                           "type": "feature",
                           "reqId": "5",
-                          "pagePath": "图谱构造引擎/人工审核/种子术语审核",
+                          "pagePath": "基于置信度图传播的术语排序/交互式审核与采纳",
                           "featureDesc": "提供一个列表界面，让用户对排序后的术语进行“接受”或“拒绝”的操作。",
                           "auditNote": "无调整"
                         }
@@ -237,18 +237,18 @@
                           "name": "句法分析任务管理",
                           "type": "feature",
                           "reqId": "6",
-                          "pagePath": "算法任务/部署任务",
+                          "pagePath": "算法管理/算法仓库/抽取类算法/依存关系图构建/句法分析任务管理",
                           "featureDesc": "提供后台任务管理界面，启动、暂停或终止大规模语料的句法分析任务。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应依存关系图构建 · 句法分析任务管理"
                         },
                         {
                           "id": "fp-6-20",
                           "name": "结果抽样可视化",
                           "type": "feature",
                           "reqId": "6",
-                          "pagePath": "算法管理/算法仓库/抽取类算法/LAC",
+                          "pagePath": "算法管理/算法仓库/抽取类算法/依存关系图构建/结果抽样可视化",
                           "featureDesc": "允许用户随机抽取句子，可视化展示其依存句法分析树。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应依存关系图构建 · 抽样可视化 API"
                         }
                       ]
                     },
@@ -262,9 +262,9 @@
                           "name": "概念对共现索引",
                           "type": "feature",
                           "reqId": "7",
-                          "pagePath": "",
+                          "pagePath": "子图生成/概念对共现索引",
                           "featureDesc": "快速索引在同一句子中共同出现的概念实体对，作为生成子图的输入。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用简易接口页"
                         },
                         {
                           "id": "fp-7-22",
@@ -296,27 +296,27 @@
                           "name": "预训练模型管理",
                           "type": "feature",
                           "reqId": "8",
-                          "pagePath": "算法管理/算法仓库/抽取类算法/关系图注意网络",
+                          "pagePath": "算法管理/算法仓库/抽取类算法/关系图注意网络/预训练模型管理",
                           "featureDesc": "内置针对特定科技领域预训练好的关系抽取模型。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应关系抽取 · 关系图注意力网络"
                         },
                         {
                           "id": "fp-8-25",
                           "name": "模型训练与微调",
                           "type": "feature",
                           "reqId": "8",
-                          "pagePath": "算法管理/算法仓库/抽取类算法/关系图注意网络",
+                          "pagePath": "算法管理/算法仓库/抽取类算法/关系图注意网络/模型训练与微调",
                           "featureDesc": "提供模型训练界面，允许用户使用自有已标注数据对模型进行微调。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应关系抽取 · 关系图注意力网络"
                         },
                         {
                           "id": "fp-8-26",
                           "name": "训练过程监控",
                           "type": "feature",
                           "reqId": "8",
-                          "pagePath": "算法任务/训练任务/查看日志",
+                          "pagePath": "算法管理/算法仓库/抽取类算法/关系图注意网络/训练过程监控",
                           "featureDesc": "可视化展示模型训练过程中的Loss、准确率等关键指标。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应关系抽取 · 关系图注意力网络"
                         }
                       ]
                     },
@@ -330,18 +330,18 @@
                           "name": "批量预测任务",
                           "type": "feature",
                           "reqId": "9",
-                          "pagePath": "",
+                          "pagePath": "上下位关系生成/批量预测任务",
                           "featureDesc": "支持创建批量预测任务，指定要处理的概念集和使用的关系模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用简易接口页"
                         },
                         {
                           "id": "fp-9-28",
                           "name": "置信度阈值过滤",
                           "type": "feature",
                           "reqId": "9",
-                          "pagePath": "",
+                          "pagePath": "上下位关系生成/置信度阈值过滤",
                           "featureDesc": "允许用户设定一个置信度阈值，自动过滤掉低可信度的预测结果。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用简易接口页"
                         }
                       ]
                     },
@@ -455,36 +455,36 @@
                           "name": "属性定义与编辑",
                           "type": "feature",
                           "reqId": "13",
-                          "pagePath": "数据概览/属性管理",
+                          "pagePath": "图谱构造引擎/本体管理/概念及属性管理/属性定义与编辑",
                           "featureDesc": "支持用户手动创建新的属性，并定义其名称、描述、值域（数据类型）和基数。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应本体管理 · 概念及属性管理"
                         },
                         {
                           "id": "fp-13-38",
                           "name": "概念属性关联",
                           "type": "feature",
                           "reqId": "13",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/本体管理/概念及属性管理/概念属性关联",
                           "featureDesc": "在概念的详情页，支持用户将已定义的属性关联到该概念上，并设置约束。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应本体管理 · 概念及属性管理"
                         },
                         {
                           "id": "fp-13-39",
                           "name": "属性层级管理",
                           "type": "feature",
                           "reqId": "13",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/本体管理/概念及属性管理/属性层级管理",
                           "featureDesc": "支持定义属性之间的父子关系。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应本体管理 · 概念及属性管理"
                         },
                         {
                           "id": "fp-13-40",
                           "name": "属性继承与查看",
                           "type": "feature",
                           "reqId": "13",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/本体管理/概念及属性管理/属性继承与查看",
                           "featureDesc": "子概念能自动继承父概念的属性，并提供清晰的界面展示自有属性和继承属性。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应本体管理 · 概念及属性管理"
                         }
                       ]
                     },
@@ -498,27 +498,27 @@
                           "name": "抽取任务配置",
                           "type": "feature",
                           "reqId": "14",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/图谱构造/抽取任务配置",
                           "featureDesc": "支持用户创建一个属性抽取任务，选择目标概念并关联用于抽取的语料库。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱构造 · 数据与本体"
                         },
                         {
                           "id": "fp-14-42",
                           "name": "基于规则映射的抽取策略",
                           "type": "feature",
                           "reqId": "14",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/图谱构造/基于规则映射的抽取策略",
                           "featureDesc": "提供一个规则管理模块，用户可以创建或启用基于正则表达式或依存句法模式的抽取规则。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱构造 · 基于规则映射的抽取策略"
                         },
                         {
                           "id": "fp-14-43",
                           "name": "基于统计学习的抽取策略",
                           "type": "feature",
                           "reqId": "14",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/图谱构造/基于统计学习的抽取策略",
                           "featureDesc": "允许用户选择一个预训练的、专门用于属性抽取的序列标注或关系抽取模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱构造 · 策略配置"
                         },
                         {
                           "id": "fp-14-44",
@@ -548,27 +548,27 @@
                           "name": "可视化规则编辑器",
                           "type": "feature",
                           "reqId": "15",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/可视化规则编辑器",
                           "featureDesc": "提供一个图形化的规则构建界面，用户通过拖拽和配置即可定义规则，无需编写代码。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 新增规则 · 可视化编辑器"
                         },
                         {
                           "id": "fp-15-46",
                           "name": "规则文本编辑器",
                           "type": "feature",
                           "reqId": "15",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/规则文本编辑器",
                           "featureDesc": "为高级用户提供基于标准规则语言（如SWRL）的文本编辑器，支持语法高亮和自动补全。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 新增规则 · 规则文本编辑器"
                         },
                         {
                           "id": "fp-15-47",
                           "name": "规则库管理",
                           "type": "feature",
                           "reqId": "15",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/规则库管理",
                           "featureDesc": "支持对规则进行分类、版本控制、搜索和权限管理，形成可复用的规则资产库。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 规则列表"
                         }
                       ]
                     },
@@ -582,18 +582,18 @@
                           "name": "分类规则建模",
                           "type": "feature",
                           "reqId": "16",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/分类规则建模",
                           "featureDesc": "支持创建用于实体分类的规则。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 分类规则建模筛选"
                         },
                         {
                           "id": "fp-16-49",
                           "name": "属性值推断规则",
                           "type": "feature",
                           "reqId": "16",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/属性值推断规则",
                           "featureDesc": "支持创建用于计算或推断属性值的规则。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 属性值推断规则筛选"
                         }
                       ]
                     },
@@ -607,18 +607,18 @@
                           "name": "数据质量约束定义",
                           "type": "feature",
                           "reqId": "17",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/数据质量约束定义",
                           "featureDesc": "支持用户定义数据格式、取值范围、唯一性等约束规则。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 数据质量约束定义筛选"
                         },
                         {
                           "id": "fp-17-51",
                           "name": "知识一致性自动校验",
                           "type": "feature",
                           "reqId": "17",
-                          "pagePath": "",
+                          "pagePath": "约束规则建模与校验/知识一致性自动校验",
                           "featureDesc": "提供一个校验引擎，能够定期或按需扫描知识库，发现并报告所有违反约束规则的数据。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用简易校验页"
                         }
                       ]
                     },

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type ReactNode } from 'react';
+import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
 import {
   BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, Cell, ResponsiveContainer,
   ScatterChart, Scatter, ZAxis, CartesianGrid, ReferenceLine,
@@ -672,15 +672,21 @@ function RuleUnitTestPanel() {
 function AgentRuleDrawer({
   rule,
   isNew,
+  initialMode,
   onClose,
   onSave,
 }: {
   rule: Rule;
   isNew: boolean;
+  initialMode?: 'agent' | 'visual' | 'manual';
   onClose: () => void;
   onSave: (r: Rule) => void;
 }) {
-  const [drawerMode, setDrawerMode] = useState<'agent' | 'visual' | 'manual'>(isNew ? 'visual' : 'manual');
+  const [drawerMode, setDrawerMode] = useState<'agent' | 'visual' | 'manual'>(initialMode ?? (isNew ? 'visual' : 'manual'));
+
+  useEffect(() => {
+    if (initialMode) setDrawerMode(initialMode);
+  }, [initialMode]);
 
   // Agent state
   const [nlText, setNlText] = useState(NL_EXAMPLE);
@@ -784,7 +790,7 @@ function AgentRuleDrawer({
                 </button>
                 <button onClick={() => setDrawerMode('manual')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors border-l border-gray-200 ${drawerMode === 'manual' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  <Code2 className="w-3.5 h-3.5" />手动 DSL
+                  <Code2 className="w-3.5 h-3.5" />规则文本编辑器
                 </button>
               </div>
               <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
@@ -968,7 +974,7 @@ function AgentRuleDrawer({
                 <Wand2 className="w-4 h-4 text-violet-600 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-violet-800">图形化规则构建</p>
-                  <p className="text-xs text-violet-600 mt-0.5">通过拖拽和配置即可定义规则，无需编写代码。完成后可一键转为 DSL 精修。</p>
+                  <p className="text-xs text-violet-600 mt-0.5">通过拖拽和配置即可定义规则，无需编写代码。完成后可一键转为规则文本编辑器精修。</p>
                 </div>
               </div>
 
@@ -988,7 +994,7 @@ function AgentRuleDrawer({
                     <label className="text-xs text-gray-500 mb-1 block">类型</label>
                     <select value={draft.category} onChange={e => updateMeta({ category: e.target.value as any })}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400 bg-white">
-                      {['实体类', '属性类', '关系类', '关系发现'].map(c => <option key={c} value={c}>{c}</option>)}
+                      {RULE_CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div>
@@ -1139,10 +1145,10 @@ function AgentRuleDrawer({
               {/* Convert to DSL button */}
               <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
                 <Code2 className="w-4 h-4 text-gray-400" />
-                <span className="text-xs text-gray-500 flex-1">规则已可保存，也可切换到「手动 DSL」进行精修</span>
+                <span className="text-xs text-gray-500 flex-1">规则已可保存，也可切换到「规则文本编辑器」进行精修</span>
                 <button onClick={() => setDrawerMode('manual')}
                   className="text-xs px-3 py-1.5 border border-gray-300 text-gray-600 hover:bg-white rounded-lg transition-colors">
-                  切换到 DSL 精修 →
+                  切换到规则文本编辑器 →
                 </button>
               </div>
             </div>
@@ -1167,7 +1173,7 @@ function AgentRuleDrawer({
                   <label className="text-xs text-gray-500 mb-1 block">类型</label>
                   <select value={draft.category} onChange={e => updateMeta({ category: e.target.value as any })}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white">
-                    {['实体类', '属性类', '关系类', '关系发现'].map(c => <option key={c} value={c}>{c}</option>)}
+                    {RULE_CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
@@ -1381,7 +1387,21 @@ type LogicOp = 'AND' | 'OR';
 type TriggerType = 'entity_create' | 'entity_update' | 'relation_create' | 'manual';
 type ActionType = 'add_tag' | 'set_property' | 'create_relation' | 'send_alert' | 'mark_review';
 type RuleStatus = 'active' | 'inactive' | 'draft';
-type RuleCategory = '实体类' | '属性类' | '关系类' | '关系发现';
+export type RuleCategory = '实体类' | '属性类' | '关系类' | '关系发现' | '分类规则建模' | '属性值推断规则' | '数据质量约束定义';
+
+const RULE_CATEGORY_OPTIONS: RuleCategory[] = [
+  '实体类', '属性类', '关系类', '关系发现', '分类规则建模', '属性值推断规则', '数据质量约束定义',
+];
+
+function categoryBadgeClass(cat: RuleCategory): string {
+  switch (cat) {
+    case '关系发现': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    case '分类规则建模': return 'bg-amber-50 text-amber-700 border-amber-200';
+    case '属性值推断规则': return 'bg-purple-50 text-purple-700 border-purple-200';
+    case '数据质量约束定义': return 'bg-rose-50 text-rose-700 border-rose-200';
+    default: return 'bg-blue-50 text-blue-600 border-blue-200';
+  }
+}
 
 interface Condition {
   id: string;
@@ -1633,6 +1653,65 @@ const mockRules: Rule[] = [
     createdAt: '2026-06-05 13:00',
     updatedAt: '2026-06-06 09:20',
 
+  },
+  {
+    id: 'R006',
+    name: '论文学科领域分类',
+    description: '根据关键词与摘要特征，将论文实体自动分类至预定义学科领域。',
+    status: 'active',
+    category: '分类规则建模',
+    trigger: 'entity_create',
+    conditionGroup: {
+      id: uid(), logic: 'AND',
+      conditions: [
+        { id: uid(), field: 'entity_type', operator: 'equals', value: '论文' },
+      ],
+    },
+    actions: [
+      { id: uid(), type: 'set_property', params: { key: '学科领域', value: '自动推断' } },
+    ],
+    createdAt: '2026-07-10 11:00',
+    updatedAt: '2026-07-12 16:40',
+  },
+  {
+    id: 'R007',
+    name: '作者H指数属性推断',
+    description: '基于发表论文数量与被引频次，推断作者实体的 H 指数属性值。',
+    status: 'draft',
+    category: '属性值推断规则',
+    trigger: 'entity_update',
+    conditionGroup: {
+      id: uid(), logic: 'AND',
+      conditions: [
+        { id: uid(), field: 'entity_type', operator: 'equals', value: '人物' },
+        { id: uid(), field: 'property.publications', operator: 'gte', value: '5' },
+      ],
+    },
+    actions: [
+      { id: uid(), type: 'set_property', params: { key: 'h_index', value: 'computed' } },
+    ],
+    createdAt: '2026-07-15 09:30',
+    updatedAt: '2026-07-15 09:30',
+  },
+  {
+    id: 'R008',
+    name: '论文发表年份取值范围',
+    description: '约束论文实体的发表年份必须在合理区间内，防止脏数据写入。',
+    status: 'active',
+    category: '数据质量约束定义',
+    trigger: 'entity_create',
+    conditionGroup: {
+      id: uid(), logic: 'AND',
+      conditions: [
+        { id: uid(), field: 'entity_type', operator: 'equals', value: '论文' },
+        { id: uid(), field: 'property.year', operator: 'lt', value: '1990' },
+      ],
+    },
+    actions: [
+      { id: uid(), type: 'mark_review', params: { reason: '年份超出约束范围' } },
+    ],
+    createdAt: '2026-07-20 10:00',
+    updatedAt: '2026-07-20 10:00',
   },
 ];
 
@@ -2221,10 +2300,9 @@ function RuleEditor({
                   onChange={e => updateMeta({ category: e.target.value as RuleCategory })}
                   className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#2563eb]"
                 >
-                  <option value="实体类">实体类</option>
-                  <option value="属性类">属性类</option>
-                  <option value="关系类">关系类</option>
-                  <option value="关系发现">关系发现</option>
+                  {RULE_CATEGORY_OPTIONS.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -2506,10 +2584,19 @@ const SEVERITY_CONFIG = {
   low: { label: '提示', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', dot: 'bg-blue-400' },
 };
 
-export default function RuleManagement() {
+export type RuleEditorMode = 'visual' | 'manual';
+
+export default function RuleManagement({
+  initialEditorMode,
+  initialCategoryFilter,
+}: {
+  initialEditorMode?: RuleEditorMode;
+  initialCategoryFilter?: RuleCategory;
+}) {
   const [rules, setRules] = useState<Rule[]>(mockRules);
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [editingIsNew, setEditingIsNew] = useState(false);
+  const [drawerInitialMode, setDrawerInitialMode] = useState<'visual' | 'manual' | undefined>(undefined);
   const [versionHistoryRule, setVersionHistoryRule] = useState<Rule | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<RuleStatus | 'all'>('all');
@@ -2538,7 +2625,7 @@ export default function RuleManagement() {
       source: '决策树归纳', generatedAt: '2026-08-02 14:23',
       confidence: 0.82, support: 0.21, lift: 3.10, coverage: 258,
       exampleSubject: 'Attention Is All You Need (2017)', exampleRelation: 'citation_count=15423', exampleObject: 'tier→高影响力',
-      category: '属性推断',
+      category: '属性值推断规则',
     },
     {
       id: 'CR003', status: 'accepted' as 'pending' | 'accepted' | 'rejected',
@@ -2546,7 +2633,7 @@ export default function RuleManagement() {
       source: '频繁模式挖掘', generatedAt: '2026-08-01 09:47',
       confidence: 0.91, support: 0.18, lift: 4.22, coverage: 187,
       exampleSubject: 'CN202410099876A', exampleRelation: '发明人→李明（清华大学）', exampleObject: 'tag→产学研专利',
-      category: '属性推断',
+      category: '属性值推断规则',
     },
     {
       id: 'CR004', status: 'pending' as 'pending' | 'accepted' | 'rejected',
@@ -2562,7 +2649,7 @@ export default function RuleManagement() {
       source: '决策树归纳', generatedAt: '2026-07-31 11:22',
       confidence: 0.61, support: 0.44, lift: 1.12, coverage: 531,
       exampleSubject: '李国豪（63岁）', exampleRelation: 'age=63', exampleObject: 'career_stage→资深',
-      category: '属性推断',
+      category: '属性值推断规则',
     },
     {
       id: 'CR006', status: 'pending' as 'pending' | 'accepted' | 'rejected',
@@ -2680,12 +2767,12 @@ export default function RuleManagement() {
     setRules(prev => prev.filter(r => r.id !== id));
   };
 
-  const newRule = (): Rule => ({
+  const newRule = (category: RuleCategory = '实体类'): Rule => ({
     id: '__new__',
     name: '',
     description: '',
     status: 'draft',
-    category: '实体类',
+    category,
     trigger: 'entity_create',
     conditionGroup: newGroup('AND'),
     actions: [],
@@ -2693,6 +2780,21 @@ export default function RuleManagement() {
     updatedAt: '',
 
   });
+
+  useEffect(() => {
+    if (!initialEditorMode) return;
+    setActiveTab('rules');
+    setDrawerInitialMode(initialEditorMode);
+    const cat = initialCategoryFilter ?? '实体类';
+    setEditingRule(newRule(cat));
+    setEditingIsNew(true);
+  }, [initialEditorMode, initialCategoryFilter]);
+
+  useEffect(() => {
+    if (!initialCategoryFilter) return;
+    setActiveTab('rules');
+    setFilterCategory(initialCategoryFilter);
+  }, [initialCategoryFilter]);
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -2705,7 +2807,11 @@ export default function RuleManagement() {
           </div>
           {activeTab === 'rules' && (
             <button
-              onClick={() => { setEditingRule(newRule()); setEditingIsNew(true); }}
+              onClick={() => {
+                setDrawerInitialMode(undefined);
+                setEditingRule(newRule(filterCategory === 'all' ? '实体类' : filterCategory));
+                setEditingIsNew(true);
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm rounded-lg transition-colors"
             >
               <Bot className="w-4 h-4" />
@@ -2777,10 +2883,9 @@ export default function RuleManagement() {
             className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:border-[#2563eb]"
           >
             <option value="all">全部类型</option>
-            <option value="实体类">实体类</option>
-            <option value="属性类">属性类</option>
-            <option value="关系类">关系类</option>
-            <option value="关系发现">关系发现</option>
+            {RULE_CATEGORY_OPTIONS.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
           </select>
           <select
             value={filterStatus}
@@ -2827,11 +2932,7 @@ export default function RuleManagement() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm text-gray-900 font-medium">{rule.name}</span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded ${sc.text}`}>{sc.label}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                          rule.category === '关系发现'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-blue-50 text-blue-600 border-blue-200'
-                        }`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${categoryBadgeClass(rule.category)}`}>
                           {rule.category === '关系发现' && <Share2 className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5" />}
                           {rule.category}
                         </span>
@@ -3468,7 +3569,11 @@ export default function RuleManagement() {
         <AgentRuleDrawer
           rule={editingRule}
           isNew={editingIsNew}
-          onClose={() => setEditingRule(null)}
+          initialMode={drawerInitialMode}
+          onClose={() => {
+            setEditingRule(null);
+            setDrawerInitialMode(undefined);
+          }}
           onSave={handleSave}
         />
       )}

@@ -117,7 +117,7 @@ type ReviewType = 'seed-term' | 'hyponymy' | 'event-review' | 'entity-recognitio
 
 const REVIEW_TYPES: { id: ReviewType; label: string; icon: any }[] = [
   { id: 'seed-term',          label: '种子术语审核',   icon: Tag },
-  { id: 'hyponymy',           label: '上下位关系审核', icon: GitBranch },
+  { id: 'hyponymy',           label: '上下位关系管理', icon: GitBranch },
   { id: 'event-review',       label: '术语/事件优化',  icon: CalendarDays },
   { id: 'entity-recognition', label: '冲突管理',       icon: AlertTriangle },
 ];
@@ -229,7 +229,7 @@ export function SeedTermPanel() {
           const isExpanded = expandedId === term.id;
           const isSelected = selectedIds.has(term.id);
           return (
-            <div key={term.id} className={`bg-white border rounded-xl overflow-hidden transition-colors ${isSelected ? 'border-blue-300 bg-blue-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
+            <div key={term.id} className={`bg-white border rounded-xl overflow-hidden transition-colors flex-shrink-0 ${isSelected ? 'border-blue-300 bg-blue-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div onClick={() => toggleSelect(term.id)} className={`w-4 h-4 rounded border cursor-pointer flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300 hover:border-gray-500'}`}>
                   {isSelected && <Check className="w-3 h-3 text-white" />}
@@ -397,7 +397,7 @@ export function HyponymyPanel() {
           const isExpanded = expandedId === rel.id;
           const isSelected = selectedIds.has(rel.id);
           return (
-            <div key={rel.id} className={`bg-white border rounded-xl overflow-hidden transition-colors ${isSelected ? 'border-blue-300 bg-blue-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
+            <div key={rel.id} className={`bg-white border rounded-xl overflow-hidden transition-colors flex-shrink-0 ${isSelected ? 'border-blue-300 bg-blue-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
               <div className="flex items-center gap-3 px-4 py-3.5 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : rel.id)}>
                 <div onClick={e => { e.stopPropagation(); toggleSelect(rel.id); }}
                   className={`w-4 h-4 rounded border cursor-pointer flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300 hover:border-gray-500'}`}>
@@ -887,7 +887,7 @@ export function ConflictManagementPanel() {
             const isResolved = resolved.has(item.key);
             return (
               <div key={item.key} onClick={() => setSelectedKey(isSelected ? null : item.key)}
-                className={`flex items-center gap-3 bg-white border rounded-xl px-4 py-3.5 cursor-pointer transition-all
+                className={`flex items-center gap-3 bg-white border rounded-xl px-4 py-3.5 cursor-pointer transition-all flex-shrink-0
                   ${isSelected ? 'border-blue-400 shadow-sm bg-blue-50/30' : 'border-gray-200 hover:border-gray-300'}
                   ${isResolved ? 'opacity-50' : ''}`}>
                 {/* Priority dot */}
@@ -1125,7 +1125,7 @@ export function EventReviewPanel() {
               const isExpanded = expandedId === ev.id;
               const isSelected = selectedIds.has(ev.id);
               return (
-                <div key={ev.id} className={`bg-white border rounded-xl overflow-hidden ${isSelected ? 'border-blue-300' : 'border-gray-200 hover:border-gray-300'} transition-colors`}>
+                <div key={ev.id} className={`bg-white border rounded-xl overflow-hidden flex-shrink-0 ${isSelected ? 'border-blue-300' : 'border-gray-200 hover:border-gray-300'} transition-colors`}>
                   {/* Header row */}
                   <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : ev.id)}>
                     <div onClick={e => { e.stopPropagation(); toggleSelect(ev.id); }}

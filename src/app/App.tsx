@@ -29,6 +29,10 @@ import AcademicPoster from './components/AcademicPoster';
 import PatentProcessing from './components/PatentProcessing';
 import { ApiCallLogs } from './components/ApiCallLogs';
 import TermReview from './components/TermReview';
+import InteractiveReviewAdoption from './components/InteractiveReviewAdoption';
+import ConceptCooccurrenceIndex from './components/ConceptCooccurrenceIndex';
+import HypernymGenerationAudit from './components/HypernymGenerationAudit';
+import KnowledgeConsistencyValidation from './components/KnowledgeConsistencyValidation';
 import { AlgorithmApiManagement } from './components/AlgorithmApiManagement';
 import { PipelineApiManagement } from './components/PipelineApiManagement';
 import { PipelineServiceDetail } from './components/PipelineServiceDetail';
@@ -49,7 +53,19 @@ import PropertyManagement from './components/PropertyManagement';
 import HumanReview from './components/HumanReview';
 import { AuditFeaturePage } from './components/AuditFeaturePage';
 import type { AuditFeatureSelection } from './data/auditCatalogTypes';
-import { resolveAuditAlgorithmId, resolveAuditAlgorithmDemoTab, type AuditAlgorithmDemoTab } from './data/auditPageMap';
+import {
+  resolveAuditAlgorithmId,
+  resolveAuditAlgorithmDemoTab,
+  resolveAuditAlgorithmTab,
+  resolveGraphConstructionTab,
+  resolveRuleEditorMode,
+  resolveRuleCategoryFilter,
+  type AuditAlgorithmDemoTab,
+  type AuditAlgorithmTab,
+  type GraphConstructionTab,
+  type RuleEditorMode,
+  type RuleCategoryFilter,
+} from './data/auditPageMap';
 
 function Placeholder({ title, desc }: { title: string; desc: string }) {
   return (
@@ -74,6 +90,11 @@ export default function App() {
   const [selectedAuditFeature, setSelectedAuditFeature] = useState<AuditFeatureSelection | null>(null);
   const [dataSourceView, setDataSourceView] = useState<DSMode>('structured');
   const [algorithmDemoTab, setAlgorithmDemoTab] = useState<AuditAlgorithmDemoTab | null>(null);
+  const [algorithmInitialTab, setAlgorithmInitialTab] = useState<AuditAlgorithmTab | null>(null);
+  const [autoStartDepTest, setAutoStartDepTest] = useState(false);
+  const [graphConstructionTab, setGraphConstructionTab] = useState<GraphConstructionTab | null>(null);
+  const [ruleEditorMode, setRuleEditorMode] = useState<RuleEditorMode | null>(null);
+  const [ruleCategoryFilter, setRuleCategoryFilter] = useState<RuleCategoryFilter | null>(null);
 
   const resolveDataSourceView = (pagePath: string): DSMode => {
     if (pagePath.includes('外部词典导入')) return 'lexicon';
@@ -81,24 +102,51 @@ export default function App() {
     return 'structured';
   };
 
+  const clearAlgorithmExtras = () => {
+    setAlgorithmDemoTab(null);
+    setAlgorithmInitialTab(null);
+    setAutoStartDepTest(false);
+    setGraphConstructionTab(null);
+    setRuleEditorMode(null);
+    setRuleCategoryFilter(null);
+  };
+
   const handleNavigate = (page: string) => {
     if (page === 'kg-datasource') setDataSourceView('structured');
-    if (page !== 'algorithm-detail') setAlgorithmDemoTab(null);
+    if (page !== 'algorithm-detail') clearAlgorithmExtras();
     setCurrentPage(page);
   };
 
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
+    // 审计专用独立页优先（不与产品页共用）
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation') {
+      setCurrentPage(pageId);
+      return;
+    }
     const algorithmId = resolveAuditAlgorithmId(feature.pagePath);
     if (algorithmId) {
       setSelectedAlgorithmId(algorithmId);
       setAlgorithmDemoTab(resolveAuditAlgorithmDemoTab(feature.pagePath));
+      setAlgorithmInitialTab(resolveAuditAlgorithmTab(feature.pagePath));
+      setAutoStartDepTest(false);
       setCurrentPage('algorithm-detail');
       return;
     }
     if (pageId === 'kg-datasource') {
       setDataSourceView(resolveDataSourceView(feature.pagePath || ''));
       setCurrentPage('kg-datasource');
+      return;
+    }
+    if (pageId === 'graph-construction') {
+      setGraphConstructionTab(resolveGraphConstructionTab(feature.pagePath));
+      setCurrentPage('graph-construction');
+      return;
+    }
+    if (pageId === 'rule-management') {
+      setRuleEditorMode(resolveRuleEditorMode(feature.pagePath));
+      setRuleCategoryFilter(resolveRuleCategoryFilter(feature.pagePath));
+      setCurrentPage('rule-management');
       return;
     }
     if (pageId) {
@@ -121,12 +169,13 @@ export default function App() {
 
   const handleSelectAlgorithm = (algorithmId: string) => {
     setSelectedAlgorithmId(algorithmId);
-    setAlgorithmDemoTab(null);
+    clearAlgorithmExtras();
     setCurrentPage('algorithm-detail');
   };
 
   const handleBackToAlgorithmList = () => {
     setSelectedAlgorithmId(null);
+    clearAlgorithmExtras();
     setCurrentPage('category-detail');
   };
 
@@ -186,7 +235,13 @@ export default function App() {
       case 'property-management':
         return <PropertyManagement />;
       case 'rule-management':
-        return <RuleManagement />;
+        return (
+          <RuleManagement
+            key={`${ruleEditorMode ?? 'list'}-${ruleCategoryFilter ?? 'all'}`}
+            initialEditorMode={ruleEditorMode ?? undefined}
+            initialCategoryFilter={ruleCategoryFilter ?? undefined}
+          />
+        );
       case 'algorithm-list':
         return <AlgorithmCategories onSelectCategory={handleSelectCategory} />;
       case 'category-detail':
@@ -205,6 +260,8 @@ export default function App() {
             algorithmId={selectedAlgorithmId}
             onBack={handleBackToAlgorithmList}
             initialDemoTab={selectedAlgorithmId === 'candidate-term-generation' ? algorithmDemoTab ?? undefined : undefined}
+            initialTab={algorithmInitialTab ?? undefined}
+            autoStartDepTest={selectedAlgorithmId === 'dependency-graph' ? autoStartDepTest : false}
             onNavigateToService={(algId) => {
               setSelectedAlgorithmServiceId(algId);
               setCurrentPage('algorithm-service-detail');
@@ -247,6 +304,14 @@ export default function App() {
         return <ApiCallLogs />;
       case 'term-review':
         return <TermReview />;
+      case 'interactive-review-adoption':
+        return <InteractiveReviewAdoption />;
+      case 'concept-cooccurrence-index':
+        return <ConceptCooccurrenceIndex />;
+      case 'hypernym-generation-audit':
+        return <HypernymGenerationAudit />;
+      case 'knowledge-consistency-validation':
+        return <KnowledgeConsistencyValidation />;
       case 'human-review':
         return <HumanReview />;
       case 'kg-ontology':
@@ -256,7 +321,7 @@ export default function App() {
       case 'kg-datasource':
         return <DataSourceManagement viewMode={dataSourceView} />;
       case 'graph-construction':
-        return <GraphConstruction onNavigateTo={setCurrentPage} />;
+        return <GraphConstruction onNavigateTo={setCurrentPage} initialTab={graphConstructionTab ?? undefined} />;
       case 'graph-tasks':
         return <GraphTasks onNavigateTo={setCurrentPage} />;
       case 'kg-construction':
