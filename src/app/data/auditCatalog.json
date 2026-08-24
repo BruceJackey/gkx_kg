@@ -666,9 +666,9 @@
                           "name": "API集成接口",
                           "type": "feature",
                           "reqId": "19",
-                          "pagePath": "",
+                          "pagePath": "规则执行与推理引擎集成/API集成接口",
                           "featureDesc": "提供标准的RESTfulAPI，允许外部系统提交事实数据并获取推理结果。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用简易 API 演示页"
                         }
                       ]
                     },
@@ -682,18 +682,18 @@
                           "name": "推理过程可视化",
                           "type": "feature",
                           "reqId": "20",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/推理过程可视化",
                           "featureDesc": "以图形化方式展示是哪些事实触发了哪些规则，以及规则触发的先后顺序。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 规则列表 · 推理过程可视化"
                         },
                         {
                           "id": "fp-20-57",
                           "name": "推理结果溯源",
                           "type": "feature",
                           "reqId": "20",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/推理结果溯源",
                           "featureDesc": "对于每一个推理出的新事实，都能清晰地追溯到其所依赖的原始事实和推理规则。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 规则列表 · 推理结果溯源 · 原文"
                         }
                       ]
                     },
@@ -707,18 +707,18 @@
                           "name": "规则断点与单步执行",
                           "type": "feature",
                           "reqId": "21",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/规则断点与单步执行",
                           "featureDesc": "支持在规则的执行过程中设置断点，进行单步跟踪，查看中间变量和匹配状态。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 新增规则 · 断点与单步执行"
                         },
                         {
                           "id": "fp-21-59",
                           "name": "规则单元测试框架",
                           "type": "feature",
                           "reqId": "21",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/规则单元测试框架",
                           "featureDesc": "支持为单个或一组规则创建测试用例，通过输入预设事实来验证推理结果是否符合预期。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 新增规则 · 规则单元测试"
                         }
                       ]
                     }
@@ -739,18 +739,18 @@
                           "name": "事件触发词识别",
                           "type": "feature",
                           "reqId": "22",
-                          "pagePath": "",
+                          "pagePath": "算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件触发词识别",
                           "featureDesc": "自动识别文本中能够表示事件发生的动词或名词。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应实体抽取 · 术语/事件粗提取 · 在线演示"
                         },
                         {
                           "id": "fp-22-61",
                           "name": "事件论元抽取",
                           "type": "feature",
                           "reqId": "22",
-                          "pagePath": "",
+                          "pagePath": "算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件论元抽取",
                           "featureDesc": "围绕触发词，自动抽取出事件的参与者（主语）、承受者（宾语）以及发生的时间、地点。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应实体抽取 · 术语/事件粗提取 · 在线演示 · 论元框架"
                         }
                       ]
                     },
@@ -764,18 +764,18 @@
                           "name": "事件审核与修正工作台",
                           "type": "feature",
                           "reqId": "23",
-                          "pagePath": "知识图谱构造引擎/人工审核",
+                          "pagePath": "知识图谱构造引擎/人工审核/术语/事件优化/事件审核与修正工作台",
                           "featureDesc": "以列表或表单形式展示抽取的事件，用户可对各个论元进行修改、删除或补充。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应人工审核 · 术语/事件优化 · 事件审核与修正工作台"
                         },
                         {
                           "id": "fp-23-63",
                           "name": "事件合并与指代消解",
                           "type": "feature",
                           "reqId": "23",
-                          "pagePath": "知识图谱构造引擎/人工审核",
+                          "pagePath": "知识图谱构造引擎/人工审核/术语/事件优化/事件合并与指代消解",
                           "featureDesc": "提供工具帮助用户判断不同文本描述的事件是否为同一事件，并进行合并。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应人工审核 · 术语/事件优化 · 事件合并与指代消解"
                         }
                       ]
                     },
@@ -821,9 +821,9 @@
                           "name": "时间实体识别与标准化",
                           "type": "feature",
                           "reqId": "25",
-                          "pagePath": "",
+                          "pagePath": "时空建模/时序信息嵌入/时间实体识别与标准化",
                           "featureDesc": "从文本中抽取各类时间表述并统一转换为标准时间格式。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用简易演示页"
                         },
                         {
                           "id": "fp-25-67",
@@ -871,18 +871,18 @@
                           "name": "时序关系抽取",
                           "type": "feature",
                           "reqId": "27",
-                          "pagePath": "",
+                          "pagePath": "时空建模/时序关系依赖/时序关系抽取",
                           "featureDesc": "从文本中自动抽取“before”、“after”、“during”等明确的时序关系。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 输入文本 · 输出时序关系词"
                         },
                         {
                           "id": "fp-27-71",
                           "name": "时序依赖分析",
                           "type": "feature",
                           "reqId": "27",
-                          "pagePath": "",
+                          "pagePath": "时空建模/时序关系依赖/时序依赖分析",
                           "featureDesc": "通过分析大量事件的时间戳，挖掘出隐含的、概率性的时序依赖模式（如事件A发生后，事件B有很高概率在3天内发生）。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 输入事件序列 · 可退出依赖模式"
                         }
                       ]
                     },
@@ -896,9 +896,9 @@
                           "name": "时序推理规则引擎",
                           "type": "feature",
                           "reqId": "28",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/规则管理/时序推理规则引擎",
                           "featureDesc": "支持包含时间逻辑的推理规则。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则管理 · 时序推理规则筛选与新增"
                         },
                         {
                           "id": "fp-28-73",
@@ -928,36 +928,36 @@
                           "name": "核心要素抽取",
                           "type": "feature",
                           "reqId": "29",
-                          "pagePath": "",
+                          "pagePath": "文献知识建模/多维度解析引擎/核心要素抽取",
                           "featureDesc": "自动从文献中提取出研究对象、所用方法、主要结论、创新点等关键信息。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 上传文献 · 统一解析 · 核心要素区块"
                         },
                         {
                           "id": "fp-29-75",
                           "name": "实验步骤解析",
                           "type": "feature",
                           "reqId": "29",
-                          "pagePath": "",
+                          "pagePath": "文献知识建模/多维度解析引擎/实验步骤解析",
                           "featureDesc": "对文献中的实验章节进行解析，抽取出结构化的实验流程、材料和参数。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 上传文献 · 统一解析 · 实验步骤区块"
                         },
                         {
                           "id": "fp-29-76",
                           "name": "图表内容结构化",
                           "type": "feature",
                           "reqId": "29",
-                          "pagePath": "",
+                          "pagePath": "文献知识建模/多维度解析引擎/图表内容结构化",
                           "featureDesc": "利用图像识别和图表OCR技术，将文献中的数据图表还原为可编辑的结构化数据。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 上传文献 · 统一解析 · 图表结构化区块"
                         },
                         {
                           "id": "fp-29-77",
                           "name": "数理模型解析",
                           "type": "feature",
                           "reqId": "29",
-                          "pagePath": "",
+                          "pagePath": "文献知识建模/多维度解析引擎/数理模型解析",
                           "featureDesc": "识别文献中的数学公式，并将其转换为LaTeX等标准格式，并尝试关联公式中的变量与正文描述。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 上传文献 · 统一解析 · 数理模型区块"
                         }
                       ]
                     },

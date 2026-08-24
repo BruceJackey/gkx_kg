@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Play, Loader2, ChevronRight, Clock, TrendingUp, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -388,23 +388,45 @@ function DependencyTab() {
 
 // ─── Main Demo Component ──────────────────────────────────────────────────────
 
-export function TemporalRelationDependencyDemo() {
-  const [tab, setTab] = useState<'extraction' | 'dependency'>('extraction');
+export function TemporalRelationDependencyDemo({
+  initialTab = 'extraction',
+  standalone = false,
+}: {
+  initialTab?: 'extraction' | 'dependency';
+  standalone?: boolean;
+} = {}) {
+  const [tab, setTab] = useState<'extraction' | 'dependency'>(initialTab);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   return (
     <div className="space-y-5">
       {/* Tab switcher */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-        <button onClick={() => setTab('extraction')}
-          className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition-colors ${tab === 'extraction' ? 'bg-white text-blue-600 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}`}>
-          <Clock size={14} />
-          时序关系抽取
-        </button>
-        <button onClick={() => setTab('dependency')}
-          className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition-colors ${tab === 'dependency' ? 'bg-white text-orange-600 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}`}>
-          <TrendingUp size={14} />
-          时序依赖分析
-        </button>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          <button onClick={() => setTab('extraction')}
+            className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition-colors ${tab === 'extraction' ? 'bg-white text-blue-600 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}`}>
+            <Clock size={14} />
+            时序关系抽取
+          </button>
+          <button onClick={() => setTab('dependency')}
+            className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition-colors ${tab === 'dependency' ? 'bg-white text-orange-600 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}`}>
+            <TrendingUp size={14} />
+            时序依赖分析
+          </button>
+        </div>
+        {standalone && tab === 'dependency' && (
+          <button
+            type="button"
+            onClick={() => setTab('extraction')}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            <RefreshCw size={14} />
+            退出时序依赖模式
+          </button>
+        )}
       </div>
 
       {tab === 'extraction' && <ExtractionTab />}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Check, X, Search, Tag, Clock, CheckCircle2, XCircle,
   AlertCircle, BarChart3, GitBranch, Layers,
@@ -1032,11 +1032,15 @@ const mockMergeCandidates: MergeCandidate[] = [
     eventB: { ...mockEvents[3], id: 'E004b', sourceText: 'NeurIPS 2024收录了Chen Wei等关于LLM知识抽取的论文，系统评测表现优异。', args: [{ role: '主体', value: 'NeurIPS 2024' }, { role: '客体', value: 'LLM知识抽取论文' }, { role: '结果', value: '论文收录' }], status: 'pending' } },
 ];
 
-export function EventReviewPanel() {
+export function EventReviewPanel({ initialSubTab }: { initialSubTab?: 'workbench' | 'merge' } = {}) {
   const [events, setEvents] = useState<ExtractedEvent[]>(mockEvents);
   const [mergeCandidates, setMergeCandidates] = useState<MergeCandidate[]>(mockMergeCandidates);
-  const [subTab, setSubTab] = useState<'workbench' | 'merge'>('workbench');
+  const [subTab, setSubTab] = useState<'workbench' | 'merge'>(initialSubTab ?? 'workbench');
   const [expandedId, setExpandedId] = useState<string | null>('E001');
+
+  useEffect(() => {
+    if (initialSubTab) setSubTab(initialSubTab);
+  }, [initialSubTab]);
   const [editingArg, setEditingArg] = useState<{ eventId: string; argIndex: number } | null>(null);
   const [editArgValue, setEditArgValue] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | 'all'>('all');

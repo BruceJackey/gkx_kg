@@ -219,8 +219,18 @@ const TOP_TABS: { id: TopTab; label: string; icon: any }[] = [
   { id: 'conflict',     label: '冲突管理',       icon: AlertTriangle },
 ];
 
-export default function HumanReview() {
-  const [topTab, setTopTab] = useState<TopTab>('kg-review');
+export default function HumanReview({
+  initialTopTab,
+  initialEventSubTab,
+}: {
+  initialTopTab?: TopTab;
+  initialEventSubTab?: 'workbench' | 'merge';
+}) {
+  const [topTab, setTopTab] = useState<TopTab>(initialTopTab ?? 'kg-review');
+
+  useEffect(() => {
+    if (initialTopTab) setTopTab(initialTopTab);
+  }, [initialTopTab]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -248,7 +258,7 @@ export default function HumanReview() {
       <div className="flex-1 overflow-hidden flex flex-col min-h-0 p-6">
         {topTab === 'seed-term'    && <SeedTermPanel />}
         {topTab === 'hyponymy'     && <HyponymyPanel />}
-        {topTab === 'event-review' && <EventReviewPanel />}
+        {topTab === 'event-review' && <EventReviewPanel initialSubTab={initialEventSubTab} />}
         {topTab === 'conflict'     && <ConflictManagementPanel />}
         {topTab === 'kg-review'    && <KGReviewPanel />}
       </div>

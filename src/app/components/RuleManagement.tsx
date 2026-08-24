@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
+import { RULE_REASONING_DEMO_RULE_ID, type RuleListFocus } from '../data/auditPageMap';
 import {
   BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, Cell, ResponsiveContainer,
   ScatterChart, Scatter, ZAxis, CartesianGrid, ReferenceLine,
@@ -14,7 +14,7 @@ import {
   ChevronRight, AlertTriangle, CheckCircle2, Clock,
   ArrowDown, Layers, Share2, Bot, Code2, ChevronUp,
   FileJson, PlayCircle, SquareCheck, Eye, RotateCcw, History,
-  Wand2, MousePointerClick, Bug, Pause, SkipForward, Circle, FlaskConical, ListChecks, Play
+  Wand2, MousePointerClick, Bug, Pause, SkipForward, Circle, FlaskConical, ListChecks, Play, FileText
 } from 'lucide-react';
 
 // ─── DSL Syntax Highlighted Editor ───────────────────────────────────────────
@@ -673,20 +673,33 @@ function AgentRuleDrawer({
   rule,
   isNew,
   initialMode,
+  initialFocus,
   onClose,
   onSave,
 }: {
   rule: Rule;
   isNew: boolean;
   initialMode?: 'agent' | 'visual' | 'manual';
+  initialFocus?: 'debug' | 'unit-test';
   onClose: () => void;
   onSave: (r: Rule) => void;
 }) {
   const [drawerMode, setDrawerMode] = useState<'agent' | 'visual' | 'manual'>(initialMode ?? (isNew ? 'visual' : 'manual'));
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialMode) setDrawerMode(initialMode);
   }, [initialMode]);
+
+  useEffect(() => {
+    if (!initialFocus) return;
+    const targetId = initialFocus === 'debug' ? 'rule-drawer-debug' : 'rule-drawer-unit-test';
+    const timer = window.setTimeout(() => {
+      const el = scrollRef.current?.querySelector(`#${targetId}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [initialFocus, drawerMode]);
 
   // Agent state
   const [nlText, setNlText] = useState(NL_EXAMPLE);
@@ -801,7 +814,7 @@ function AgentRuleDrawer({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4">
 
           {/* ── Agent mode ── */}
           {drawerMode === 'agent' && (
@@ -946,11 +959,11 @@ function AgentRuleDrawer({
               ))}
 
               {stepCard(5, '断点与单步执行', !parseDone, (
-                <RuleDebugPanel />
+                <div id="rule-drawer-debug"><RuleDebugPanel /></div>
               ))}
 
               {stepCard(6, '规则单元测试', !parseDone, (
-                <RuleUnitTestPanel />
+                <div id="rule-drawer-unit-test"><RuleUnitTestPanel /></div>
               ))}
 
               {/* Step 7: Confirmation */}
@@ -1120,7 +1133,7 @@ function AgentRuleDrawer({
                 </div>
               </div>
 
-              <div className="border border-blue-200 rounded-xl overflow-hidden">
+              <div id="rule-drawer-debug" className="border border-blue-200 rounded-xl overflow-hidden">
                 <div className="bg-blue-50 px-4 py-2.5 border-b border-blue-100 flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">5</span>
                   <Bug className="w-3.5 h-3.5 text-blue-600" />
@@ -1131,7 +1144,7 @@ function AgentRuleDrawer({
                 </div>
               </div>
 
-              <div className="border border-violet-200 rounded-xl overflow-hidden">
+              <div id="rule-drawer-unit-test" className="border border-violet-200 rounded-xl overflow-hidden">
                 <div className="bg-violet-50 px-4 py-2.5 border-b border-violet-100 flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">6</span>
                   <FlaskConical className="w-3.5 h-3.5 text-violet-600" />
@@ -1315,11 +1328,11 @@ function AgentRuleDrawer({
               ))}
 
               {stepCard(3, '断点与单步执行', false, (
-                <RuleDebugPanel />
+                <div id="rule-drawer-debug"><RuleDebugPanel /></div>
               ))}
 
               {stepCard(4, '规则单元测试', false, (
-                <RuleUnitTestPanel />
+                <div id="rule-drawer-unit-test"><RuleUnitTestPanel /></div>
               ))}
 
               {stepCard(5, '人工确认', !manualSandboxDone, (
@@ -1387,10 +1400,10 @@ type LogicOp = 'AND' | 'OR';
 type TriggerType = 'entity_create' | 'entity_update' | 'relation_create' | 'manual';
 type ActionType = 'add_tag' | 'set_property' | 'create_relation' | 'send_alert' | 'mark_review';
 type RuleStatus = 'active' | 'inactive' | 'draft';
-export type RuleCategory = '实体类' | '属性类' | '关系类' | '关系发现' | '分类规则建模' | '属性值推断规则' | '数据质量约束定义';
+export type RuleCategory = '实体类' | '属性类' | '关系类' | '关系发现' | '分类规则建模' | '属性值推断规则' | '数据质量约束定义' | '时序推理规则';
 
 const RULE_CATEGORY_OPTIONS: RuleCategory[] = [
-  '实体类', '属性类', '关系类', '关系发现', '分类规则建模', '属性值推断规则', '数据质量约束定义',
+  '实体类', '属性类', '关系类', '关系发现', '分类规则建模', '属性值推断规则', '数据质量约束定义', '时序推理规则',
 ];
 
 function categoryBadgeClass(cat: RuleCategory): string {
@@ -1399,6 +1412,7 @@ function categoryBadgeClass(cat: RuleCategory): string {
     case '分类规则建模': return 'bg-amber-50 text-amber-700 border-amber-200';
     case '属性值推断规则': return 'bg-purple-50 text-purple-700 border-purple-200';
     case '数据质量约束定义': return 'bg-rose-50 text-rose-700 border-rose-200';
+    case '时序推理规则': return 'bg-cyan-50 text-cyan-700 border-cyan-200';
     default: return 'bg-blue-50 text-blue-600 border-blue-200';
   }
 }
@@ -1712,6 +1726,26 @@ const mockRules: Rule[] = [
     ],
     createdAt: '2026-07-20 10:00',
     updatedAt: '2026-07-20 10:00',
+  },
+  {
+    id: 'R009',
+    name: '事件先后时序推断',
+    description: '当事件 A 的结束时间早于事件 B 的开始时间，且存在时序依赖模式时，推断 A BEFORE B 关系。',
+    status: 'active',
+    category: '时序推理规则',
+    trigger: 'relation_create',
+    conditionGroup: {
+      id: uid(), logic: 'AND',
+      conditions: [
+        { id: uid(), field: 'event_a.end_time', operator: 'lt', value: 'event_b.start_time' },
+        { id: uid(), field: 'temporal.dependency_prob', operator: 'gte', value: '0.7' },
+      ],
+    },
+    actions: [
+      { id: uid(), type: 'create_relation', params: { relation: 'BEFORE', from: 'event_a', to: 'event_b' } },
+    ],
+    createdAt: '2026-08-01 14:00',
+    updatedAt: '2026-08-10 11:30',
   },
 ];
 
@@ -2543,6 +2577,8 @@ const mockReasoningSteps = [
     result: '为 [清华大学] 添加标签 "机构成员"',
     inferredFact: { entity: '清华大学', property: 'tag', value: '机构成员' },
     depends: [],
+    sourceText: '清华大学是教育部直属全国重点大学，在科研管理与政策执行方面隶属于教育部管辖。',
+    evidenceHighlight: '隶属于教育部',
   },
   {
     id: 'RS002', timestamp: '2026-07-04 09:12:11', ruleId: 'R001', ruleName: '人物实体质量检测',
@@ -2551,6 +2587,8 @@ const mockReasoningSteps = [
     result: '标记张伟为"待审核"，发送告警通知',
     inferredFact: { entity: '张伟', property: 'review_status', value: 'pending' },
     depends: [],
+    sourceText: '张伟，北京某研究所青年学者，在《人工智能学报》发表多篇论文，实体识别置信度偏低需人工复核。',
+    evidenceHighlight: '张伟',
   },
   {
     id: 'RS003', timestamp: '2026-07-04 09:13:45', ruleId: 'R002', ruleName: '组织关系自动打标',
@@ -2559,6 +2597,8 @@ const mockReasoningSteps = [
     result: '为 [北京人工智能研究院] 添加标签 "机构成员"',
     inferredFact: { entity: '北京人工智能研究院', property: 'tag', value: '机构成员' },
     depends: ['RS001'],
+    sourceText: '北京人工智能研究院作为国家新一代人工智能开放创新平台，其主管单位为科学技术部。',
+    evidenceHighlight: '主管单位为科学技术部',
   },
   {
     id: 'RS004', timestamp: '2026-07-04 09:15:22', ruleId: 'R005', ruleName: '项目成员同事关系推断',
@@ -2567,6 +2607,8 @@ const mockReasoningSteps = [
     result: '推断并创建关系：[李明] →同事→ [张伟]',
     inferredFact: { entity: '李明 ↔ 张伟', property: 'relation', value: '同事' },
     depends: [],
+    sourceText: '李明与张伟共同参与「新能源知识图谱」国家重点项目，担任项目核心成员，负责知识抽取与图谱构建模块。',
+    evidenceHighlight: '李明与张伟共同参与',
   },
   {
     id: 'RS005', timestamp: '2026-07-04 09:15:23', ruleId: 'R005', ruleName: '项目成员同事关系推断',
@@ -2575,6 +2617,8 @@ const mockReasoningSteps = [
     result: '推断并创建关系：[王芳] →同事→ [李明]，[王芳] →同事→ [张伟]',
     inferredFact: { entity: '王芳', property: 'relation', value: '同事×2' },
     depends: ['RS004'],
+    sourceText: '王芳作为项目组成员，与李明、张伟在同一项目组内协作完成新能源领域本体设计与术语规范工作。',
+    evidenceHighlight: '与李明、张伟在同一项目组',
   },
 ];
 
@@ -2586,17 +2630,24 @@ const SEVERITY_CONFIG = {
 
 export type RuleEditorMode = 'visual' | 'manual';
 
+export type RuleDrawerFocus = 'debug' | 'unit-test';
+
 export default function RuleManagement({
   initialEditorMode,
+  initialDrawerFocus,
+  initialListFocus,
   initialCategoryFilter,
 }: {
   initialEditorMode?: RuleEditorMode;
+  initialDrawerFocus?: RuleDrawerFocus;
+  initialListFocus?: RuleListFocus;
   initialCategoryFilter?: RuleCategory;
 }) {
   const [rules, setRules] = useState<Rule[]>(mockRules);
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [editingIsNew, setEditingIsNew] = useState(false);
   const [drawerInitialMode, setDrawerInitialMode] = useState<'visual' | 'manual' | undefined>(undefined);
+  const [drawerInitialFocus, setDrawerInitialFocus] = useState<RuleDrawerFocus | undefined>(undefined);
   const [versionHistoryRule, setVersionHistoryRule] = useState<Rule | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<RuleStatus | 'all'>('all');
@@ -2782,19 +2833,33 @@ export default function RuleManagement({
   });
 
   useEffect(() => {
-    if (!initialEditorMode) return;
+    if (!initialEditorMode && !initialDrawerFocus) return;
     setActiveTab('rules');
-    setDrawerInitialMode(initialEditorMode);
+    setDrawerInitialMode(initialEditorMode ?? 'visual');
+    setDrawerInitialFocus(initialDrawerFocus);
     const cat = initialCategoryFilter ?? '实体类';
     setEditingRule(newRule(cat));
     setEditingIsNew(true);
-  }, [initialEditorMode, initialCategoryFilter]);
+  }, [initialEditorMode, initialDrawerFocus, initialCategoryFilter]);
 
   useEffect(() => {
     if (!initialCategoryFilter) return;
     setActiveTab('rules');
     setFilterCategory(initialCategoryFilter);
   }, [initialCategoryFilter]);
+
+  useEffect(() => {
+    if (!initialListFocus) return;
+    setActiveTab('rules');
+    setExpandedChainRuleId(RULE_REASONING_DEMO_RULE_ID);
+    const targetId = initialListFocus === 'reasoning-trace'
+      ? 'rule-reasoning-trace-RS004'
+      : `rule-reasoning-chain-${RULE_REASONING_DEMO_RULE_ID}`;
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [initialListFocus]);
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -2984,37 +3049,61 @@ export default function RuleManagement({
                     </div>
                   </div>
 
-                  {/* Reasoning chain toggle */}
-                  <div className="border-t border-gray-100">
+                  {/* 推理过程可视化 */}
+                  <div id={`rule-reasoning-chain-${rule.id}`} className="border-t border-gray-100">
                     <button
                       onClick={() => setExpandedChainRuleId(chainOpen ? null : rule.id)}
                       className="w-full flex items-center gap-2 px-5 py-2 text-[11px] text-gray-400 hover:text-blue-600 hover:bg-blue-50/40 transition-colors"
                     >
                       <Network className="w-3 h-3" />
-                      推理链路（{chainSteps.length} 条记录）
+                      推理过程可视化（{chainSteps.length} 条记录）
                       <ChevronRight className={`w-3 h-3 ml-auto transition-transform ${chainOpen ? 'rotate-90' : ''}`} />
                     </button>
                     {chainOpen && (
-                      <div className="px-5 pb-4 flex flex-col gap-2">
+                      <div className="px-5 pb-4 flex flex-col gap-3">
                         {chainSteps.length === 0 ? (
                           <p className="text-[11px] text-gray-400 py-1">该规则暂无推理记录</p>
-                        ) : chainSteps.map((step, i) => (
-                          <div key={step.id} className="flex items-start gap-3 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5">
-                            <div className="w-5 h-5 rounded-full bg-blue-50 border border-blue-300 flex items-center justify-center text-[10px] font-bold text-blue-600 flex-shrink-0 mt-0.5">{i + 1}</div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-700 mb-0.5">{step.trigger}</p>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded">
-                                  {step.inferredFact.entity} · {step.inferredFact.property} = "{step.inferredFact.value}"
-                                </span>
-                                {step.depends.length > 0 && (
-                                  <span className="text-[10px] text-purple-500">依赖 {step.depends.join(', ')}</span>
-                                )}
+                        ) : chainSteps.map((step, i) => {
+                          const hl = step.evidenceHighlight ?? '';
+                          const src = step.sourceText ?? '';
+                          const idx = hl ? src.indexOf(hl) : -1;
+                          return (
+                          <div key={step.id} className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-3 space-y-2">
+                            <div className="flex items-start gap-3">
+                              <div className="w-5 h-5 rounded-full bg-blue-50 border border-blue-300 flex items-center justify-center text-[10px] font-bold text-blue-600 flex-shrink-0 mt-0.5">{i + 1}</div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-gray-700 mb-1">{step.trigger}</p>
+                                <p className="text-[11px] text-gray-500 mb-1.5">{step.result}</p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded">
+                                    {step.inferredFact.entity} · {step.inferredFact.property} = "{step.inferredFact.value}"
+                                  </span>
+                                  {step.depends.length > 0 && (
+                                    <span className="text-[10px] text-purple-500">依赖 {step.depends.join(', ')}</span>
+                                  )}
+                                </div>
                               </div>
+                              <span className="text-[10px] text-gray-400 flex-shrink-0 mt-0.5">{step.timestamp.split(' ')[1]}</span>
                             </div>
-                            <span className="text-[10px] text-gray-400 flex-shrink-0 mt-0.5">{step.timestamp.split(' ')[1]}</span>
+                            {src && (
+                              <div id={`rule-reasoning-trace-${step.id}`} className="ml-8 border-t border-gray-200 pt-2">
+                                <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                                  <FileText className="w-3 h-3" />推理结果溯源 · 原文
+                                </div>
+                                <div className="bg-white border border-amber-200 rounded-lg px-3 py-2 text-xs text-gray-700 leading-relaxed">
+                                  {idx === -1 ? src : (
+                                    <>
+                                      {src.slice(0, idx)}
+                                      <mark className="bg-yellow-200 text-yellow-900 rounded px-0.5 not-italic">{hl}</mark>
+                                      {src.slice(idx + hl.length)}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -3570,9 +3659,11 @@ export default function RuleManagement({
           rule={editingRule}
           isNew={editingIsNew}
           initialMode={drawerInitialMode}
+          initialFocus={drawerInitialFocus}
           onClose={() => {
             setEditingRule(null);
             setDrawerInitialMode(undefined);
+            setDrawerInitialFocus(undefined);
           }}
           onSave={handleSave}
         />

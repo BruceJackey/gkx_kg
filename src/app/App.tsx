@@ -33,6 +33,10 @@ import InteractiveReviewAdoption from './components/InteractiveReviewAdoption';
 import ConceptCooccurrenceIndex from './components/ConceptCooccurrenceIndex';
 import HypernymGenerationAudit from './components/HypernymGenerationAudit';
 import KnowledgeConsistencyValidation from './components/KnowledgeConsistencyValidation';
+import ApiIntegrationInference from './components/ApiIntegrationInference';
+import TimeEntityNormalization from './components/TimeEntityNormalization';
+import TemporalRelationAudit from './components/TemporalRelationAudit';
+import LiteratureMultidimensionalParse from './components/LiteratureMultidimensionalParse';
 import { AlgorithmApiManagement } from './components/AlgorithmApiManagement';
 import { PipelineApiManagement } from './components/PipelineApiManagement';
 import { PipelineServiceDetail } from './components/PipelineServiceDetail';
@@ -59,12 +63,24 @@ import {
   resolveAuditAlgorithmTab,
   resolveGraphConstructionTab,
   resolveRuleEditorMode,
+  resolveRuleDrawerFocus,
+  resolveRuleListFocus,
   resolveRuleCategoryFilter,
+  resolveHumanReviewTab,
+  resolveEventReviewSubTab,
+  resolveTemporalAuditMode,
+  resolveLiteratureParseFocus,
   type AuditAlgorithmDemoTab,
   type AuditAlgorithmTab,
   type GraphConstructionTab,
   type RuleEditorMode,
   type RuleCategoryFilter,
+  type RuleDrawerFocus,
+  type RuleListFocus,
+  type HumanReviewTab,
+  type EventReviewSubTab,
+  type TemporalAuditMode,
+  type LiteratureParseFocus,
 } from './data/auditPageMap';
 
 function Placeholder({ title, desc }: { title: string; desc: string }) {
@@ -94,7 +110,13 @@ export default function App() {
   const [autoStartDepTest, setAutoStartDepTest] = useState(false);
   const [graphConstructionTab, setGraphConstructionTab] = useState<GraphConstructionTab | null>(null);
   const [ruleEditorMode, setRuleEditorMode] = useState<RuleEditorMode | null>(null);
+  const [ruleDrawerFocus, setRuleDrawerFocus] = useState<RuleDrawerFocus | null>(null);
+  const [ruleListFocus, setRuleListFocus] = useState<RuleListFocus | null>(null);
   const [ruleCategoryFilter, setRuleCategoryFilter] = useState<RuleCategoryFilter | null>(null);
+  const [humanReviewTab, setHumanReviewTab] = useState<HumanReviewTab | null>(null);
+  const [eventReviewSubTab, setEventReviewSubTab] = useState<EventReviewSubTab | null>(null);
+  const [temporalAuditMode, setTemporalAuditMode] = useState<TemporalAuditMode | null>(null);
+  const [literatureParseFocus, setLiteratureParseFocus] = useState<LiteratureParseFocus | null>(null);
 
   const resolveDataSourceView = (pagePath: string): DSMode => {
     if (pagePath.includes('外部词典导入')) return 'lexicon';
@@ -108,7 +130,13 @@ export default function App() {
     setAutoStartDepTest(false);
     setGraphConstructionTab(null);
     setRuleEditorMode(null);
+    setRuleDrawerFocus(null);
+    setRuleListFocus(null);
     setRuleCategoryFilter(null);
+    setHumanReviewTab(null);
+    setEventReviewSubTab(null);
+    setTemporalAuditMode(null);
+    setLiteratureParseFocus(null);
   };
 
   const handleNavigate = (page: string) => {
@@ -120,7 +148,13 @@ export default function App() {
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
     // 审计专用独立页优先（不与产品页共用）
-    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation') {
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse') {
+      if (pageId === 'temporal-relation-audit') {
+        setTemporalAuditMode(resolveTemporalAuditMode(feature.pagePath) ?? 'extraction');
+      }
+      if (pageId === 'literature-multidim-parse') {
+        setLiteratureParseFocus(resolveLiteratureParseFocus(feature.pagePath));
+      }
       setCurrentPage(pageId);
       return;
     }
@@ -145,8 +179,16 @@ export default function App() {
     }
     if (pageId === 'rule-management') {
       setRuleEditorMode(resolveRuleEditorMode(feature.pagePath));
+      setRuleDrawerFocus(resolveRuleDrawerFocus(feature.pagePath));
+      setRuleListFocus(resolveRuleListFocus(feature.pagePath));
       setRuleCategoryFilter(resolveRuleCategoryFilter(feature.pagePath));
       setCurrentPage('rule-management');
+      return;
+    }
+    if (pageId === 'human-review') {
+      setHumanReviewTab(resolveHumanReviewTab(feature.pagePath));
+      setEventReviewSubTab(resolveEventReviewSubTab(feature.pagePath));
+      setCurrentPage('human-review');
       return;
     }
     if (pageId) {
@@ -237,8 +279,10 @@ export default function App() {
       case 'rule-management':
         return (
           <RuleManagement
-            key={`${ruleEditorMode ?? 'list'}-${ruleCategoryFilter ?? 'all'}`}
+            key={`${ruleEditorMode ?? 'list'}-${ruleDrawerFocus ?? 'none'}-${ruleListFocus ?? 'none'}-${ruleCategoryFilter ?? 'all'}`}
             initialEditorMode={ruleEditorMode ?? undefined}
+            initialDrawerFocus={ruleDrawerFocus ?? undefined}
+            initialListFocus={ruleListFocus ?? undefined}
             initialCategoryFilter={ruleCategoryFilter ?? undefined}
           />
         );
@@ -312,8 +356,32 @@ export default function App() {
         return <HypernymGenerationAudit />;
       case 'knowledge-consistency-validation':
         return <KnowledgeConsistencyValidation />;
+      case 'api-integration-inference':
+        return <ApiIntegrationInference />;
+      case 'time-entity-normalization':
+        return <TimeEntityNormalization />;
+      case 'temporal-relation-audit':
+        return (
+          <TemporalRelationAudit
+            key={temporalAuditMode ?? 'extraction'}
+            initialMode={temporalAuditMode ?? 'extraction'}
+          />
+        );
+      case 'literature-multidim-parse':
+        return (
+          <LiteratureMultidimensionalParse
+            key={literatureParseFocus ?? 'all'}
+            initialFocus={literatureParseFocus ?? undefined}
+          />
+        );
       case 'human-review':
-        return <HumanReview />;
+        return (
+          <HumanReview
+            key={`${humanReviewTab ?? 'default'}-${eventReviewSubTab ?? 'none'}`}
+            initialTopTab={humanReviewTab ?? undefined}
+            initialEventSubTab={eventReviewSubTab ?? undefined}
+          />
+        );
       case 'kg-ontology':
         return <OntologyManagement />;
       case 'kg-mapping':
