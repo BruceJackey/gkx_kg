@@ -119,12 +119,23 @@ const allMenuItems: MenuItem[] = [
   },
 ];
 
+import { AuditCatalogPanel } from './AuditCatalogPanel';
+import type { AuditFeatureSelection } from '../data/auditCatalogTypes';
+
 interface SidebarProps {
   currentPage: string;
   onNavigate: (page: string) => void;
+  selectedAuditFeatureId?: string;
+  onAuditFeatureSelect?: (feature: AuditFeatureSelection, pageId: string | null) => void;
 }
 
-export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+export function Sidebar({
+  currentPage,
+  onNavigate,
+  selectedAuditFeatureId,
+  onAuditFeatureSelect,
+}: SidebarProps) {
+  const [sidebarMode, setSidebarMode] = useState<'product' | 'catalog'>('product');
   const [expandedItems, setExpandedItems] = useState<string[]>(['kg-construction', 'data', 'algorithm', 'service-management', 'knowledge', 'app', 'system']);
 
   const menuItems = allMenuItems;
@@ -145,10 +156,37 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
 
   return (
     <div className="h-full w-64 bg-[#1a1d24] text-gray-300 flex flex-col">
-      <div className="h-16 flex items-center px-6 border-b border-gray-700">
-        <h1 className="font-semibold text-white text-lg">亿级科技知识图谱引擎</h1>
+      <div className="h-14 flex items-center px-4 border-b border-gray-700">
+        <h1 className="font-semibold text-white text-sm leading-tight">亿级科技知识图谱引擎</h1>
       </div>
 
+      <div className="flex border-b border-gray-700">
+        <button
+          type="button"
+          onClick={() => setSidebarMode('product')}
+          className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+            sidebarMode === 'product' ? 'text-white bg-gray-800' : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          产品
+        </button>
+        <button
+          type="button"
+          onClick={() => setSidebarMode('catalog')}
+          className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+            sidebarMode === 'catalog' ? 'text-white bg-gray-800' : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          目录
+        </button>
+      </div>
+
+      {sidebarMode === 'catalog' && onAuditFeatureSelect ? (
+        <AuditCatalogPanel
+          selectedFeatureId={selectedAuditFeatureId}
+          onSelectFeature={onAuditFeatureSelect}
+        />
+      ) : (
       <nav className="flex-1 overflow-y-auto py-4">
         {menuItems.map((item) => (
           <div key={item.id}>
@@ -194,7 +232,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           </div>
         ))}
       </nav>
-
+      )}
     </div>
   );
 }

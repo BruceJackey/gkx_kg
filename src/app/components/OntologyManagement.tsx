@@ -613,6 +613,141 @@ function PropRow({ prop, onChange, onDelete }: {
   );
 }
 
+function computeInheritedProps(entity: OntoEntity, entities: OntoEntity[], relations: OntoRelation[]): OntoProp[] {
+  const inheritedProps: OntoProp[] = [];
+  for (const rel of relations) {
+    if ((rel.name === 'IS_A' || rel.name === 'HAS_SUBCLASS') && rel.from === entity.enId) {
+      const parentEntity = entities.find(pe => pe.enId === rel.to);
+      if (parentEntity) {
+        for (const p of parentEntity.props) {
+          inheritedProps.push({
+            ...p,
+            id: `inh_${entity.id}_${p.id}`,
+            inherited: true,
+            inheritedFrom: parentEntity.name,
+          });
+        }
+      }
+    }
+  }
+  return inheritedProps;
+}
+
+function EntityPropertyPanel({
+  entity,
+  inheritedProps,
+  onUpdate,
+}: {
+  entity: OntoEntity;
+  inheritedProps?: OntoProp[];
+  onUpdate: (e: OntoEntity) => void;
+}) {
+  const addProp = () => {
+    const newProp: OntoProp = { id: 'p_' + Date.now(), name: '新属性', type: 'string', required: false, description: '', cardinality: '0..1' };
+    onUpdate({ ...entity, props: [...entity.props, newProp] });
+  };
+
+  const updateProp = (idx: number, p: OntoProp) => {
+    const props = [...entity.props];
+    props[idx] = p;
+    onUpdate({ ...entity, props });
+  };
+
+  const deleteProp = (idx: number) => {
+    onUpdate({ ...entity, props: entity.props.filter((_, i) => i !== idx) });
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      {inheritedProps && inheritedProps.length > 0 && (
+        <div className="border-b border-violet-100 bg-violet-50/60">
+          <div className="px-3 py-2 flex items-center gap-1.5">
+            <ChevronDown size={12} className="text-violet-400" />
+            <span className="text-[11px] font-semibold text-violet-700">继承属性</span>
+            <span className="relative group/tip inline-flex items-center">
+              <Info size={12} className="text-violet-400 cursor-help" />
+              <span className="pointer-events-none absolute left-0 top-full mt-1 z-20 hidden group-hover/tip:block w-56 px-2.5 py-1.5 text-[11px] leading-relaxed text-white bg-gray-800 rounded-lg shadow-lg">
+                来自父实体类，只读不可修改。子类会自动带上这些属性。
+              </span>
+            </span>
+            <span className="text-[10px] text-violet-400">来自父实体类 · 只读，不可修改</span>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-violet-100/60 border-y border-violet-100">
+              <tr>
+                <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-32">属性名称</th>
+                <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-28">类型</th>
+                <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-32">基数</th>
+                <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5">描述</th>
+                <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-12">必填</th>
+                <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-24">来源</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-violet-100">
+              {inheritedProps.map(p => (
+                <tr key={p.id} className="bg-violet-50/40 opacity-80">
+                  <td className="px-3 py-2 text-sm text-violet-800 font-medium">{p.name}</td>
+                  <td className="px-3 py-2">
+                    <span className="font-mono text-[11px] text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded">{p.type}</span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className="font-mono text-[11px] text-violet-600">{p.cardinality}</span>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-violet-600">{p.description}</td>
+                  <td className="px-3 py-2 text-center">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.required ? 'bg-violet-200 text-violet-700' : 'text-violet-300'}`}>
+                      {p.required ? '必填' : '—'}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className="text-[10px] bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full">{p.inheritedFrom}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div>
+        <div className="px-3 py-2 flex items-center gap-1.5 bg-gray-50/80 border-b border-gray-100">
+          <ChevronDown size={12} className="text-gray-400" />
+          <span className="text-[11px] font-semibold text-gray-700">自有属性</span>
+          <span className="relative group/tip inline-flex items-center">
+            <Info size={12} className="text-gray-400 cursor-help" />
+            <span className="pointer-events-none absolute left-0 top-full mt-1 z-20 hidden group-hover/tip:block w-56 px-2.5 py-1.5 text-[11px] leading-relaxed text-white bg-gray-800 rounded-lg shadow-lg">
+              本类型自定义的属性，可编辑、删除或新增，不会回写到父类。
+            </span>
+          </span>
+          <span className="text-[10px] text-gray-400">本类型自定义 · 可编辑</span>
+        </div>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="text-left text-xs font-medium text-gray-500 px-3 py-2 w-32">属性名称</th>
+              <th className="text-left text-xs font-medium text-gray-500 px-3 py-2 w-28">类型</th>
+              <th className="text-left text-xs font-medium text-gray-500 px-3 py-2 w-32">基数</th>
+              <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">描述</th>
+              <th className="text-left text-xs font-medium text-gray-500 px-3 py-2 w-12">必填</th>
+              <th className="px-3 py-2 w-8"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {entity.props.map((p, i) => (
+              <PropRow key={p.id} prop={p} onChange={np => updateProp(i, np)} onDelete={() => deleteProp(i)} />
+            ))}
+          </tbody>
+        </table>
+        <div className="px-3 py-2 border-t border-gray-100">
+          <button type="button" onClick={addProp} className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            <Plus size={12} /> 添加属性
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps }: {
   entity: OntoEntity;
   onUpdate: (e: OntoEntity) => void;
@@ -629,21 +764,6 @@ function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps }: 
   const handleSaveEdit = () => {
     onUpdate({ ...entity, name: editName, enId: editEnId, description: editDesc });
     setEditing(false);
-  };
-
-  const addProp = () => {
-    const newProp: OntoProp = { id: 'p_' + Date.now(), name: '新属性', type: 'string', required: false, description: '', cardinality: '0..1' };
-    onUpdate({ ...entity, props: [...entity.props, newProp] });
-  };
-
-  const updateProp = (idx: number, p: OntoProp) => {
-    const props = [...entity.props];
-    props[idx] = p;
-    onUpdate({ ...entity, props });
-  };
-
-  const deleteProp = (idx: number) => {
-    onUpdate({ ...entity, props: entity.props.filter((_, i) => i !== idx) });
   };
 
   return (
@@ -663,7 +783,7 @@ function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps }: 
           </div>
         ) : (
           <>
-            <button onClick={() => setExpanded(!expanded)} className="text-gray-400 hover:text-gray-600">
+            <button type="button" onClick={() => setExpanded(!expanded)} className="text-gray-400 hover:text-gray-600">
               {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </button>
             <div className="flex-1 min-w-0">
@@ -692,93 +812,7 @@ function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps }: 
       </div>
       {expanded && !editing && (
         <div className="border-t border-gray-100">
-          {/* 继承属性区域 */}
-          {inheritedProps && inheritedProps.length > 0 && (
-            <div className="border-b border-violet-100 bg-violet-50/60">
-              <div className="px-3 py-2 flex items-center gap-1.5">
-                <ChevronDown size={12} className="text-violet-400" />
-                <span className="text-[11px] font-semibold text-violet-700">继承属性</span>
-                <span className="relative group/tip inline-flex items-center">
-                  <Info size={12} className="text-violet-400 cursor-help" />
-                  <span className="pointer-events-none absolute left-0 top-full mt-1 z-20 hidden group-hover/tip:block w-56 px-2.5 py-1.5 text-[11px] leading-relaxed text-white bg-gray-800 rounded-lg shadow-lg">
-                    来自父实体类，只读不可修改。子类会自动带上这些属性。
-                  </span>
-                </span>
-                <span className="text-[10px] text-violet-400">来自父实体类 · 只读，不可修改</span>
-              </div>
-              <table className="w-full text-sm">
-                <thead className="bg-violet-100/60 border-y border-violet-100">
-                  <tr>
-                    <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-32">属性名称</th>
-                    <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-28">类型</th>
-                    <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-32">基数</th>
-                    <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5">描述</th>
-                    <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-12">必填</th>
-                    <th className="text-left text-[11px] font-medium text-violet-500 px-3 py-1.5 w-24">来源</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-violet-100">
-                  {inheritedProps.map(p => (
-                    <tr key={p.id} className="bg-violet-50/40 opacity-80">
-                      <td className="px-3 py-2 text-sm text-violet-800 font-medium">{p.name}</td>
-                      <td className="px-3 py-2">
-                        <span className="font-mono text-[11px] text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded">{p.type}</span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className="font-mono text-[11px] text-violet-600">{p.cardinality}</span>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-violet-600">{p.description}</td>
-                      <td className="px-3 py-2 text-center">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.required ? 'bg-violet-200 text-violet-700' : 'text-violet-300'}`}>
-                          {p.required ? '必填' : '—'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className="text-[10px] bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full">{p.inheritedFrom}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* 自有属性 */}
-          <div>
-            <div className="px-3 py-2 flex items-center gap-1.5 bg-gray-50/80">
-              <ChevronDown size={12} className="text-gray-400" />
-              <span className="text-[11px] font-semibold text-gray-700">自有属性</span>
-              <span className="relative group/tip inline-flex items-center">
-                <Info size={12} className="text-gray-400 cursor-help" />
-                <span className="pointer-events-none absolute left-0 top-full mt-1 z-20 hidden group-hover/tip:block w-56 px-2.5 py-1.5 text-[11px] leading-relaxed text-white bg-gray-800 rounded-lg shadow-lg">
-                  本类型自定义的属性，可编辑、删除或新增，不会回写到父类。
-                </span>
-              </span>
-              <span className="text-[10px] text-gray-400">本类型自定义 · 可编辑</span>
-            </div>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left text-xs font-medium text-gray-500 px-3 py-2 w-32">属性名称</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-3 py-2 w-28">类型</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-3 py-2 w-32">基数</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">描述</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-3 py-2 w-12">必填</th>
-                <th className="px-3 py-2 w-8"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {entity.props.map((p, i) => (
-                <PropRow key={p.id} prop={p} onChange={np => updateProp(i, np)} onDelete={() => deleteProp(i)} />
-              ))}
-            </tbody>
-          </table>
-          <div className="px-3 py-2 border-t border-gray-100">
-            <button onClick={addProp} className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
-              <Plus size={12} /> 添加属性
-            </button>
-          </div>
-          </div>
+          <EntityPropertyPanel entity={entity} inheritedProps={inheritedProps} onUpdate={onUpdate} />
         </div>
       )}
     </div>
@@ -974,6 +1008,104 @@ function downloadFile(content: string, filename: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
+const EXPORT_OPTIONS: Array<{
+  fmt: ExportFormat;
+  label: string;
+  desc: string;
+  ext: string;
+  mime: string;
+  Icon: typeof FileJson;
+  standard: boolean;
+}> = [
+  { fmt: 'owl-xml', label: 'OWL/XML', desc: 'W3C 标准本体格式，适用于 Protégé 等工具', ext: '.owl', mime: 'application/rdf+xml', Icon: FileCode2, standard: true },
+  { fmt: 'turtle', label: 'Turtle (RDF)', desc: 'RDF 三元组标准文本格式', ext: '.ttl', mime: 'text/turtle', Icon: FileText, standard: true },
+  { fmt: 'json-ld', label: 'JSON-LD', desc: '关联数据标准格式，便于 Web 集成', ext: '.jsonld', mime: 'application/ld+json', Icon: FileJson, standard: true },
+  { fmt: 'json', label: 'JSON（内部）', desc: '平台内部交换格式，含完整 schema 结构', ext: '.json', mime: 'application/json', Icon: FileJson, standard: false },
+];
+
+function exportOntologyContent(o: Ontology, fmt: ExportFormat): string {
+  switch (fmt) {
+    case 'json-ld': return generateJsonLd(o);
+    case 'owl-xml': return generateOwlXml(o);
+    case 'turtle': return generateTurtle(o);
+    default: return generateInternalJson(o);
+  }
+}
+
+function safeFileName(name: string): string {
+  return name.replace(/[/\\?%*:|"<>]/g, '_').trim() || 'ontology';
+}
+
+function OntologyExportPanel({ ontology }: { ontology: Ontology }) {
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [lastExported, setLastExported] = useState<string | null>(null);
+
+  const runExport = (fmt: ExportFormat) => {
+    const opt = EXPORT_OPTIONS.find(o => o.fmt === fmt)!;
+    setExporting(fmt);
+    setLastExported(null);
+    const content = exportOntologyContent(ontology, fmt);
+    downloadFile(content, `${safeFileName(ontology.name)}${opt.ext}`, opt.mime);
+    setTimeout(() => {
+      setExporting(null);
+      setLastExported(`${opt.label}（${opt.ext}）`);
+    }, 500);
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div>
+          <span className="text-sm font-semibold text-gray-800">本体导出</span>
+          <span className="ml-2 text-xs text-gray-400">导出为标准 OWL / RDF / JSON-LD 等格式，可在外部本体工具中打开</span>
+        </div>
+        <button
+          type="button"
+          disabled={exporting !== null}
+          onClick={() => runExport('owl-xml')}
+          className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg flex items-center gap-1.5 transition-colors flex-shrink-0"
+        >
+          {exporting === 'owl-xml' ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+          导出标准化本体（OWL）
+        </button>
+      </div>
+      <div className="p-4 grid grid-cols-2 gap-3">
+        {EXPORT_OPTIONS.map(({ fmt, label, desc, ext, Icon, standard }) => (
+          <button
+            key={fmt}
+            type="button"
+            disabled={exporting !== null}
+            onClick={() => runExport(fmt)}
+            className={`text-left p-4 rounded-xl border-2 transition-all disabled:opacity-50 ${
+              exporting === fmt ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/40'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                {exporting === fmt ? <Loader2 size={16} className="animate-spin text-emerald-600" /> : <Icon size={16} className="text-gray-500" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-sm font-medium text-gray-800">{label}</span>
+                  {standard && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">标准格式</span>}
+                  <span className="text-[10px] text-gray-400 font-mono ml-auto">{ext}</span>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+      {lastExported && (
+        <div className="px-5 py-2.5 bg-emerald-50 border-t border-emerald-100 text-xs text-emerald-800 flex items-center gap-1.5">
+          <Check size={13} className="text-emerald-600" />
+          已导出 {lastExported} · {ontology.name}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function OntologyManagement() {
@@ -1097,26 +1229,20 @@ export default function OntologyManagement() {
             onClick={() => setShowExportMenu(v => !v)}
             className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1.5"
           >
-            <Download size={14} /> 导出 <ChevronDown size={12} className={`transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+            <Download size={14} /> 本体导出 <ChevronDown size={12} className={`transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
           </button>
           {showExportMenu && (
-            <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-              {([
-                { fmt: 'json-ld' as ExportFormat, label: 'JSON-LD', ext: '.jsonld', mime: 'application/ld+json', Icon: FileJson },
-                { fmt: 'owl-xml' as ExportFormat, label: 'OWL/XML', ext: '.owl', mime: 'application/rdf+xml', Icon: FileCode2 },
-                { fmt: 'turtle' as ExportFormat, label: 'Turtle (RDF)', ext: '.ttl', mime: 'text/turtle', Icon: FileText },
-                { fmt: 'json' as ExportFormat, label: 'JSON (内部格式)', ext: '.json', mime: 'application/json', Icon: FileJson },
-              ] as const).map(({ fmt, label, ext, mime, Icon }) => (
+            <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+              <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-[11px] text-gray-500">标准本体格式</div>
+              {EXPORT_OPTIONS.map(({ fmt, label, ext, mime, Icon }) => (
                 <button
                   key={fmt}
                   disabled={exporting !== null}
                   onClick={() => {
                     setExporting(fmt);
-                    const content = fmt === 'json-ld' ? generateJsonLd(current)
-                      : fmt === 'owl-xml' ? generateOwlXml(current)
-                      : fmt === 'turtle' ? generateTurtle(current)
-                      : generateInternalJson(current);
-                    downloadFile(content, `${current.name}${ext}`, mime);
+                    const content = exportOntologyContent(current, fmt);
+                    const opt = EXPORT_OPTIONS.find(o => o.fmt === fmt)!;
+                    downloadFile(content, `${safeFileName(current.name)}${opt.ext}`, mime);
                     setTimeout(() => { setExporting(null); setShowExportMenu(false); }, 600);
                   }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
@@ -1137,8 +1263,11 @@ export default function OntologyManagement() {
       {/* Main */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* File Upload */}
-          <FileUploadPanel />
+          {/* Import & Export */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <FileUploadPanel />
+            <OntologyExportPanel ontology={current} />
+          </div>
 
           {/* Basic Info */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
@@ -1169,27 +1298,18 @@ export default function OntologyManagement() {
           {/* Entities */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold text-gray-800">实体类型</div>
+              <div className="text-sm font-semibold text-gray-800">概念管理及属性管理</div>
               <button onClick={addEntity} className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1.5">
                 <Plus size={14} /> 新增实体类型
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {current.entities.map((e, i) => {
-                // Compute inherited props: find all IS_A/HAS_SUBCLASS relations where this entity is the child (from === e.enId)
-                const inheritedProps: OntoProp[] = [];
-                for (const rel of current.relations) {
-                  if ((rel.name === 'IS_A' || rel.name === 'HAS_SUBCLASS') && rel.from === e.enId) {
-                    const parentEntity = current.entities.find(pe => pe.enId === rel.to);
-                    if (parentEntity) {
-                      for (const p of parentEntity.props) {
-                        inheritedProps.push({ ...p, id: `inh_${e.id}_${p.id}`, inherited: true, inheritedFrom: parentEntity.name });
-                      }
-                    }
-                  }
-                }
+                const inheritedProps = computeInheritedProps(e, current.entities, current.relations);
                 return (
-                  <EntityCard key={e.id} entity={e}
+                  <EntityCard
+                    key={e.id}
+                    entity={e}
                     onUpdate={ne => updateEntity(i, ne)}
                     onDelete={() => deleteEntity(i)}
                     onSparkles={() => setDrawerEntity(e)}

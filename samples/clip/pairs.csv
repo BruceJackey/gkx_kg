@@ -1,0 +1,5 @@
+id,image,caption,split,tags,source,lang,width,height,clip_score
+scipaper-train-0001,s3://kg-mm/scipaper-clip-v2/train/0001.png,"Figure 1: Transformer architecture showing multi-head attention with positional encoding.",train,architecture;attention,arXiv:2310.00001,en,1024,768,0.41
+scipaper-train-0002,s3://kg-mm/scipaper-clip-v2/train/0002.png,"Bar chart comparing language models on MMLU and HellaSwag with error bars.",train,benchmark;evaluation,arXiv:2310.00002,en,1280,720,0.38
+med-train-0001,s3://kg-mm/medimage-clip-v1/train/0001.png,"Chest X-ray showing bilateral pulmonary infiltrates consistent with COVID-19 pneumonia.",train,xray;covid,CheXpert:001,en,2048,2048,0.44
+patent-train-0003,s3://kg-mm/patentfig-clip-v1/train/0003.png,"一种知识图谱补全装置的结构框图，包括关系感知位置编码模块与多跳推理模块。",train,kgc;block-diagram,CN115862341A,zh,1400,900,0.32

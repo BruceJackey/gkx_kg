@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { ArrowLeft, Copy, Play, Settings, FileText, Eye, Database, Rocket, Download, TrendingUp, Calendar, Shuffle, GitBranch, Cpu, Network, Search, Check, X, Plus, Brain, CheckCircle, XCircle, Tag, Zap, Layers } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { ArrowLeft, Copy, Play, Settings, FileText, Eye, Database, Rocket, Download, TrendingUp, Calendar, Shuffle, GitBranch, Cpu, Network, Search, Check, X, Plus, Brain, CheckCircle, XCircle, Tag, Zap, Layers, BookOpen } from 'lucide-react';
 import { ScoringFunctionDemo } from './demos/ScoringFunctionDemo';
 import { SupervisedSimilarityDemo } from './demos/SupervisedSimilarityDemo';
 import { RepresentationSpaceDemo } from './demos/RepresentationSpaceDemo';
@@ -28,12 +28,13 @@ import { HypernymDemo } from './demos/HypernymDemo';
 import { RGATDemo } from './demos/RGATDemo';
 import { TermVectorDemo } from './demos/TermVectorDemo';
 import { DependencyTreeDemo } from './demos/DependencyTreeDemo';
-import { CrossLingualAlignmentDemo } from './demos/CrossLingualAlignmentDemo';
+import { CandidateTermGenerationDemo, type CandidateTermDemoTab } from './demos/CandidateTermGenerationDemo';
 
 interface AlgorithmDetailProps {
   algorithmId: string;
   onBack: () => void;
   onNavigateToService?: (algorithmId: string) => void;
+  initialDemoTab?: CandidateTermDemoTab;
 }
 
 const algorithmDetails: Record<string, any> = {
@@ -891,7 +892,7 @@ const algorithmDetails: Record<string, any> = {
         '标注预算有限、需以最少人工成本达到目标精度的项目',
         '领域语料规模庞大（百万句级）但标注资源稀缺的场景',
         '迭代式模型优化：已有初始模型，需持续以少量标注提升效果',
-        '冷启动阶段后的精标注阶段，与种子术语生成算法配合使用',
+        '冷启动阶段后的精标注阶段，与无监督算法发现配合使用',
       ],
       inputFormat: 'JSON格式，包含corpus_id（未标注语料库ID）、model_id（当前实体抽取模型ID）、budget（本轮标注句数上限）和可选的policy_checkpoint（RL策略检查点路径）',
       outputFormat: 'JSON格式，返回selected_sentences数组，每条包含sentence_id、text、predicted_entities（当前模型预测）、selection_score（选择价值分）和uncertainty（模型不确定度）字段',
@@ -968,8 +969,8 @@ const algorithmDetails: Record<string, any> = {
     ],
   },
   'seed-term-generation': {
-    name: '种子术语生成算法',
-    englishName: 'Seed Term Generation Algorithm',
+    name: '无监督算法发现',
+    englishName: 'Unsupervised Term Discovery',
     category: '实体抽取',
     type: '无监督/规则',
     algorithmType: 'rule-based',
@@ -979,14 +980,14 @@ const algorithmDetails: Record<string, any> = {
     owner: '刘九',
     createdAt: '2026-04-01 09:00:00',
     updatedAt: '2026-05-20 10:00:00',
-    id: 'ALG_SEED_TERM_001',
-    description: '种子术语生成作为概念抽取的起点，支持从海量、嘈杂的领域语料中，快速、准确地识别出一批核心的、高质量的种子术语。集成语料接入、外部词典导入、无监督算法发现与人工审核全流程能力。',
+    id: 'ALG_UNSUP_TERM_001',
+    description: '内置多种自动化关键词提取算法，从纯文本中发现潜在的种子术语。支持 TF-IDF、C-Value、PMI、TextRank 等多算法融合评分，无需标注数据即可冷启动领域术语发现。',
     intro: {
-      summary: '种子术语生成通过多源语料接入、无监督候选发现和人工审核三阶段流水线，高效产出领域核心术语集合，为后续概念图谱构建奠定基础。不依赖标注数据，可快速冷启动。',
+      summary: '无监督算法发现通过多种统计与图排序算法，从海量领域语料中自动挖掘潜在种子术语。不依赖标注数据，可与语料接入、外部词典导入及人工审核环节衔接，为概念图谱构建提供冷启动术语集合。',
       scenarios: [
         '新领域知识图谱冷启动，缺乏先验术语表',
         '海量领域语料中的术语自动发现',
-        '基于已有专家词表快速扩展术语覆盖',
+        '多算法融合提升候选术语覆盖率与准确率',
         '术语规范化与去重清洗',
       ],
       inputFormat: 'JSON格式，包含corpus（语料路径或文本列表）、optional_lexicon（外部词典路径）和config（算法参数）',
@@ -1006,20 +1007,20 @@ const algorithmDetails: Record<string, any> = {
     },
     features: [
       {
-        title: '语料库接入与管理',
-        description: '提供多种数据源接入方式（本地文件、知识库文档、API接入），支持 TXT、PDF、JSON 等格式，作为术语抽取的文本基础。',
+        title: 'TF-IDF 关键词提取',
+        description: '基于词频-逆文档频率统计，从语料中识别具有领域区分度的候选术语，适合快速筛选高频显著词。',
       },
       {
-        title: '外部词典导入',
-        description: '支持导入领域专家已有的高质量词汇表（CSV / Excel / TXT），实现种子术语的冷启动，避免从零开始的高成本标注。',
+        title: 'C-Value 复合术语发现',
+        description: '针对多词复合术语设计，通过子串统计与嵌套惩罚机制，提升长短语术语的召回质量。',
       },
       {
-        title: '无监督算法发现',
-        description: '内置 TF-IDF、C-Value、PMI、TextRank 等多种自动化关键词提取算法，从纯文本中发现潜在的种子术语，支持多算法融合评分。',
+        title: 'PMI 共现分析',
+        description: '利用点互信息衡量词对共现强度，发现与上下文紧密关联的潜在术语组合。',
       },
       {
-        title: '种子术语审核与管理',
-        description: '提供交互式审核界面，对生成的种子术语进行人工确认、拒绝、合并与编辑，支持批量操作和导出，确保术语质量。',
+        title: 'TextRank 图排序',
+        description: '将词汇构建为共现图并运行图排序，挖掘语义中心性高的候选术语，支持多算法融合评分输出。',
       },
     ],
   },
@@ -1626,10 +1627,66 @@ const algorithmDetails: Record<string, any> = {
       },
     ],
   },
+  'confidence-graph-term-ranking': {
+    name: '基于置信度图传播的术语排序',
+    englishName: 'Confidence Graph Propagation Term Ranking',
+    category: '知识推理',
+    type: '图算法/置信度传播',
+    algorithmType: 'rule-based',
+    trainable: false,
+    version: 'v1.0.0',
+    status: '已部署',
+    owner: '赵六',
+    createdAt: '2026-05-01 09:00:00',
+    updatedAt: '2026-08-24 10:00:00',
+    id: 'ALG_CONF_GRAPH_RANK_001',
+    description: '基于术语向量自动构建语义相似度图，将种子术语作为高置信度节点，在图上运行置信度传播算法，为候选术语打分并排序，用于概念抽取冷启动后的术语精排。',
+    intro: {
+      summary: '基于置信度图传播的术语排序以术语向量相似度构图，再以种子术语为先验高置信度源节点，通过图上传播为全图术语节点赋分并排序。算法不依赖大量标注，适合在无监督发现或词典导入之后，对大规模候选术语进行可信度精排。',
+      scenarios: [
+        '概念抽取冷启动后，对候选术语进行图传播精排',
+        '结合种子术语与术语向量，提升高价值术语召回质量',
+        '在大规模候选列表中按传播置信度输出 Top-K 术语',
+        '为后续人工审核或入库提供可解释的排序依据',
+      ],
+      inputFormat: 'JSON格式，包含 term_vectors（术语及向量）、seed_terms（种子术语列表）、similarity_threshold（构图相似度阈值）和 propagation_steps（传播迭代次数）字段',
+      outputFormat: 'JSON格式，返回 ranked_terms 数组，每条包含 term、confidence、rank、neighbor_seeds（贡献最大的种子邻居）和 status 字段',
+      performance: {
+        f1: '—',
+        precision: 'Top-50 精确率: 88-93%',
+        recall: '种子覆盖召回: 90-95%',
+        speed: '~50万节点/分钟（稀疏图）',
+      },
+      notes: [
+        '种子术语质量直接影响传播结果，建议覆盖领域核心概念',
+        '相似度阈值建议 0.65–0.85，过高会导致图过于稀疏',
+        '传播步数一般取 2–5，过大可能引入噪声邻居',
+        '输出置信度可直接用于阈值过滤或下游审核队列排序',
+      ],
+    },
+    features: [
+      {
+        title: '语义相似度图构建',
+        description: '基于术语向量，自动构建一个以术语为节点、相似度为边权重的图。支持配置相似度度量（余弦/点积）、构图阈值与最大邻居数，过滤弱连接边，输出可复用的稀疏相似度图供传播算法使用。',
+      },
+      {
+        title: '置信度计算与排序',
+        description: '将种子术语作为高置信度节点，在语义相似度图上运行传播算法（如 Personalized PageRank / 标签传播变体），为所有候选术语节点打分，并按置信度降序输出排序列表，支持 Top-K 截断与阈值过滤。',
+      },
+    ],
+  },
 };
 
-export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService }: AlgorithmDetailProps) {
-  const [activeTab, setActiveTab] = useState<'intro' | 'demo' | 'models' | 'training' | 'deployment'>('intro');
+export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService, initialDemoTab }: AlgorithmDetailProps) {
+  const [activeTab, setActiveTab] = useState<'intro' | 'demo' | 'models' | 'training' | 'deployment'>(
+    algorithmId === 'candidate-term-generation' && initialDemoTab ? 'demo' : 'intro',
+  );
+
+  useEffect(() => {
+    if (algorithmId === 'candidate-term-generation' && initialDemoTab) {
+      setActiveTab('demo');
+    }
+  }, [algorithmId, initialDemoTab]);
   const [showTrainingModal, setShowTrainingModal] = useState(false);
   const [showDeployModal, setShowDeployModal] = useState(false);
 
@@ -1855,6 +1912,18 @@ export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService }
                 <Shuffle className="w-3.5 h-3.5" />触发词与论元抽取
               </button>
             )}
+            {algorithmId === 'candidate-term-generation' && (
+              <button
+                onClick={() => setActiveTab('demo')}
+                className={`py-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'demo'
+                    ? 'border-emerald-600 text-emerald-600 font-medium'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />测试接口
+              </button>
+            )}
             {algorithmId === 'rl-sentence-selector' && (
               <button
                 onClick={() => setActiveTab('demo')}
@@ -2067,6 +2136,9 @@ export function AlgorithmDetailPage({ algorithmId, onBack, onNavigateToService }
         {activeTab === 'demo' && algorithmId === 'relation-scoring' && <RelationScoringDemo />}
         {activeTab === 'demo' && algorithmId === 'adversarial-transfer' && <AdversarialTransferDemo />}
         {activeTab === 'demo' && algorithmId === 'term-event-rough' && <TermEventRoughDemo />}
+        {activeTab === 'demo' && algorithmId === 'candidate-term-generation' && (
+          <CandidateTermGenerationDemo initialTab={initialDemoTab} />
+        )}
         {activeTab === 'demo' && algorithmId === 'rl-sentence-selector' && <RLSentenceSelectorDemo />}
         {activeTab === 'demo' && algorithmId === 'event-recognition-engine' && <EventRecognitionEngineDemo />}
         {activeTab === 'demo' && algorithmId === 'stat-instance-generation' && <StatInstanceGenerationDemo />}

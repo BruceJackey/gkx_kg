@@ -1,0 +1,43 @@
+{
+  "task": "clip_pretrain",
+  "schema": "ImageTextPairSchema@v1.1",
+  "datasets": [
+    {
+      "id": "scipaper-clip-v2",
+      "name": "SciPaper-CLIP-v2",
+      "description": "Scientific paper figure-caption pairs for CLIP contrastive training",
+      "modalities": ["image", "text"],
+      "pair_count": 128640,
+      "files": {
+        "train": "scipaper-clip.train.jsonl",
+        "val": "scipaper-clip.val.jsonl"
+      },
+      "image_root": "s3://kg-mm/scipaper-clip-v2/",
+      "license": "CC BY-NC 4.0"
+    },
+    {
+      "id": "medimage-clip-v1",
+      "name": "MedImage-Caption",
+      "description": "De-identified radiology image-report pairs for medical CLIP",
+      "modalities": ["image", "text"],
+      "pair_count": 45230,
+      "files": {
+        "train": "medimage-clip.train.jsonl"
+      },
+      "image_root": "s3://kg-mm/medimage-clip-v1/",
+      "license": "PhysioNet Credentialed"
+    },
+    {
+      "id": "patentfig-clip-v1",
+      "name": "PatentFig-CLIP-v1",
+      "description": "Patent drawing-claim pairs for engineering-diagram CLIP",
+      "modalities": ["image", "text"],
+      "pair_count": 28640,
+      "files": {
+        "train": "patentfig-clip.train.jsonl"
+      },
+      "image_root": "s3://kg-mm/patentfig-clip-v1/",
+      "license": "internal-research"
+    }
+  ]
+}

@@ -38,6 +38,9 @@ interface ImageTextPair {
   tags: string[];
   source: string;
   addedAt: string;
+  split?: 'train' | 'val' | 'test';
+  lang?: string;
+  clipScore?: number;
 }
 
 interface RetrievalHit {
@@ -149,7 +152,7 @@ interface IndexConfig {
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
 const DOMAIN_OPTIONS = ['生物', '金融', '材料', '医疗', '气候', '通用科研', '计算机'];
-const TASK_OPTIONS = ['链接预测', '图文检索', '对比学习', '实体对齐', '关系抽取', '分类', '问答'];
+const TASK_OPTIONS = ['CLIP对比学习', '图文检索', '零样本分类', '对比学习', '实体对齐', '关系抽取', '分类', '问答'];
 
 const DEFAULT_EVALUATION: DatasetEvaluation = {
   graphDensity: 0.012,
@@ -216,12 +219,12 @@ const MOCK_DATASETS: MultimodalDataset[] = [
     status: 'active',
     starred: true,
     pairs: [
-      { id: 'p1', imageUrl: PLACEHOLDER_IMAGES[0], caption: 'Figure 1: Transformer architecture showing multi-head attention mechanism with positional encoding', tags: ['architecture', 'attention'], source: 'arXiv:2310.00001', addedAt: '2024-03-14' },
-      { id: 'p2', imageUrl: PLACEHOLDER_IMAGES[1], caption: 'Performance comparison of language models on benchmark datasets including MMLU and HellaSwag', tags: ['benchmark', 'evaluation'], source: 'arXiv:2310.00002', addedAt: '2024-03-14' },
-      { id: 'p3', imageUrl: PLACEHOLDER_IMAGES[2], caption: 'Protein structure visualization showing alpha helices and beta sheets in 3D space', tags: ['protein', 'structure'], source: 'PubMed:38000001', addedAt: '2024-03-13' },
-      { id: 'p4', imageUrl: PLACEHOLDER_IMAGES[3], caption: 'Neural network training loss curves across different learning rate schedules', tags: ['training', 'loss'], source: 'arXiv:2310.00003', addedAt: '2024-03-13' },
-      { id: 'p5', imageUrl: PLACEHOLDER_IMAGES[4], caption: 'Electron microscopy image of carbon nanotube cross-section at nanometer scale', tags: ['microscopy', 'material'], source: 'Nature:2024.001', addedAt: '2024-03-12' },
-      { id: 'p6', imageUrl: PLACEHOLDER_IMAGES[5], caption: 'Climate model output showing global temperature anomaly distribution from 1980 to 2023', tags: ['climate', 'visualization'], source: 'IPCC:2024', addedAt: '2024-03-12' },
+      { id: 'p1', imageUrl: PLACEHOLDER_IMAGES[0], caption: 'Figure 1: Transformer architecture showing multi-head attention mechanism with positional encoding', tags: ['architecture', 'attention'], source: 'arXiv:2310.00001', addedAt: '2024-03-14', split: 'train', lang: 'en', clipScore: 0.41 },
+      { id: 'p2', imageUrl: PLACEHOLDER_IMAGES[1], caption: 'Performance comparison of language models on benchmark datasets including MMLU and HellaSwag', tags: ['benchmark', 'evaluation'], source: 'arXiv:2310.00002', addedAt: '2024-03-14', split: 'train', lang: 'en', clipScore: 0.38 },
+      { id: 'p3', imageUrl: PLACEHOLDER_IMAGES[2], caption: 'Protein structure visualization showing alpha helices and beta sheets in 3D space', tags: ['protein', 'structure'], source: 'PubMed:38000001', addedAt: '2024-03-13', split: 'train', lang: 'en', clipScore: 0.36 },
+      { id: 'p4', imageUrl: PLACEHOLDER_IMAGES[3], caption: 'Neural network training loss curves across different learning rate schedules', tags: ['training', 'loss'], source: 'arXiv:2310.00003', addedAt: '2024-03-13', split: 'val', lang: 'en', clipScore: 0.33 },
+      { id: 'p5', imageUrl: PLACEHOLDER_IMAGES[4], caption: 'Electron microscopy image of carbon nanotube cross-section at nanometer scale', tags: ['microscopy', 'material'], source: 'Nature:2024.001', addedAt: '2024-03-12', split: 'train', lang: 'en', clipScore: 0.29 },
+      { id: 'p6', imageUrl: PLACEHOLDER_IMAGES[5], caption: 'Climate model output showing global temperature anomaly distribution from 1980 to 2023', tags: ['climate', 'visualization'], source: 'IPCC:2024', addedAt: '2024-03-12', split: 'test', lang: 'en', clipScore: 0.31 },
     ],
     commits: [
       { hash: 'a3f9c2d', message: 'Add 12k new image-text pairs from arXiv 2024 Q1', author: 'Zhang Wei', date: '2024-03-15 14:22', added: 12048, removed: 0, tag: 'v2.1.0' },
@@ -250,9 +253,9 @@ const MOCK_DATASETS: MultimodalDataset[] = [
     },
     taxonomy: {
       domains: ['通用科研', '计算机', '材料'],
-      tasks: ['图文检索', '对比学习', '链接预测'],
+      tasks: ['CLIP对比学习', '图文检索', '零样本分类'],
       modalities: ['image', 'text'],
-      extraTags: ['CLIP', '科学图表', '开放获取'],
+      extraTags: ['CLIP', 'ViT-B/32', '科学图表', '开放获取'],
     },
     evaluation: DEFAULT_EVALUATION,
   },
@@ -269,8 +272,10 @@ const MOCK_DATASETS: MultimodalDataset[] = [
     status: 'active',
     starred: false,
     pairs: [
-      { id: 'mp1', imageUrl: PLACEHOLDER_IMAGES[2], caption: 'Chest X-ray showing bilateral pulmonary infiltrates consistent with COVID-19 pneumonia', tags: ['xray', 'covid'], source: 'CheXpert:001', addedAt: '2024-03-11' },
-      { id: 'mp2', imageUrl: PLACEHOLDER_IMAGES[4], caption: 'Brain MRI axial view demonstrating right temporal lobe lesion with surrounding edema', tags: ['mri', 'brain'], source: 'MIMIC:002', addedAt: '2024-03-10' },
+      { id: 'mp1', imageUrl: PLACEHOLDER_IMAGES[2], caption: 'Chest X-ray showing bilateral pulmonary infiltrates consistent with COVID-19 pneumonia', tags: ['xray', 'covid'], source: 'CheXpert:001', addedAt: '2024-03-11', split: 'train', lang: 'en', clipScore: 0.44 },
+      { id: 'mp2', imageUrl: PLACEHOLDER_IMAGES[4], caption: 'Brain MRI axial view demonstrating right temporal lobe lesion with surrounding edema', tags: ['mri', 'brain'], source: 'MIMIC:002', addedAt: '2024-03-10', split: 'train', lang: 'en', clipScore: 0.40 },
+      { id: 'mp3', imageUrl: PLACEHOLDER_IMAGES[0], caption: 'Abdominal CT with contrast showing hepatic lesion in segment VI with delayed washout', tags: ['ct', 'liver'], source: 'MIMIC:014', addedAt: '2024-03-09', split: 'val', lang: 'en', clipScore: 0.37 },
+      { id: 'mp4', imageUrl: PLACEHOLDER_IMAGES[5], caption: 'Fundus photograph of the left eye with optic disc swelling suggestive of papilledema', tags: ['fundus', 'ophthalmology'], source: 'CheXpert:088', addedAt: '2024-03-08', split: 'test', lang: 'en', clipScore: 0.35 },
     ],
     commits: [
       { hash: 'f2d8e1a', message: 'Integrate MIMIC-CXR batch 7 reports', author: 'Chen Jing', date: '2024-03-12 09:30', added: 8200, removed: 0, tag: 'v1.3.2' },
@@ -291,9 +296,9 @@ const MOCK_DATASETS: MultimodalDataset[] = [
     },
     taxonomy: {
       domains: ['医疗', '生物'],
-      tasks: ['图文检索', '分类', '问答'],
+      tasks: ['CLIP对比学习', '图文检索', '分类'],
       modalities: ['image', 'text'],
-      extraTags: ['放射科', '去标识化', '临床报告'],
+      extraTags: ['CLIP', '放射科', '去标识化', '临床报告'],
     },
     evaluation: {
       ...DEFAULT_EVALUATION,
@@ -313,6 +318,61 @@ const MOCK_DATASETS: MultimodalDataset[] = [
         { id: 'mq2', severity: 'medium', category: '不一致', count: 240, detail: '影像模态标签与 DICOM 元数据冲突' },
         { id: 'mq3', severity: 'low', category: '重复', count: 120, detail: '同一检查号重复入库' },
       ],
+    },
+  },
+  {
+    id: 'ds3',
+    name: 'PatentFig-CLIP-v1',
+    description: '专利附图与权利要求图文对，用于 CLIP 在工程图纸 / 装置结构图上的对比学习',
+    modalities: ['image', 'text'],
+    pairCount: 28640,
+    size: '9.4 GB',
+    version: 'v1.0.0',
+    branch: 'main',
+    updatedAt: '2024-03-08 11:12',
+    status: 'active',
+    starred: false,
+    pairs: [
+      { id: 'pp1', imageUrl: PLACEHOLDER_IMAGES[5], caption: 'A multimodal encoder architecture that jointly encodes image, text and table inputs via a visual Transformer and cross-modal attention.', tags: ['encoder', 'architecture'], source: 'CN202310987654B', addedAt: '2024-03-07', split: 'train', lang: 'en', clipScore: 0.39 },
+      { id: 'pp2', imageUrl: PLACEHOLDER_IMAGES[0], caption: 'Patent drawing of a battery pack cooling plate with parallel coolant channels and a thermal interface layer.', tags: ['battery', 'cooling'], source: 'CN112345678A', addedAt: '2024-03-06', split: 'train', lang: 'en', clipScore: 0.34 },
+      { id: 'pp3', imageUrl: PLACEHOLDER_IMAGES[1], caption: '一种知识图谱补全装置的结构框图，包括关系感知位置编码模块与多跳推理模块。', tags: ['kgc', 'block-diagram'], source: 'CN115862341A', addedAt: '2024-03-05', split: 'val', lang: 'zh', clipScore: 0.32 },
+      { id: 'pp4', imageUrl: PLACEHOLDER_IMAGES[3], caption: 'Flowchart of an incremental knowledge graph update pipeline with delta computation and dynamic insertion.', tags: ['pipeline', 'kg'], source: 'CN202410112233A', addedAt: '2024-03-04', split: 'test', lang: 'en', clipScore: 0.30 },
+    ],
+    commits: [
+      { hash: 'h4c1d2e', message: 'Initial patent figure–claim pairs from CNIPA 2023 dump', author: 'Zhao Lei', date: '2024-03-08 11:12', added: 28640, removed: 0, tag: 'v1.0.0' },
+    ],
+    preprocessJobs: [
+      { id: 'pj1', name: '附图去水印', type: 'clean', status: 'done', progress: 100, config: '检测并裁剪页眉页脚、申请号水印' },
+      { id: 'pj2', name: '权利要求截断', type: 'clean', status: 'done', progress: 100, config: '保留独权 + 截断 > 77 tokens' },
+      { id: 'pj3', name: 'CLIP 相似度过滤', type: 'align', status: 'done', progress: 100, config: 'ViT-B/32 cosine > 0.22' },
+    ],
+    indexConfig: {
+      type: 'faiss', dim: 512, metric: 'cosine', built: true,
+      vectorCount: 28640, buildAt: '2024-03-08 12:40',
+    },
+    metadata: {
+      description: '专利附图与权利要求图文对，用于 CLIP 在工程图纸 / 装置结构图上的对比学习。',
+      source: 'CNIPA 公开专利附图 + 权利要求书',
+      creator: '知识产权数据组',
+      publishedAt: '2024-03-08',
+      license: '内部研究使用',
+      homepage: 'https://example.com/datasets/patentfig-clip-v1',
+    },
+    taxonomy: {
+      domains: ['计算机', '材料'],
+      tasks: ['CLIP对比学习', '图文检索'],
+      modalities: ['image', 'text'],
+      extraTags: ['CLIP', '专利附图', '中英双语'],
+    },
+    evaluation: {
+      ...DEFAULT_EVALUATION,
+      graphDensity: 0.007,
+      avgDegree: 3.1,
+      nodeCount: 3640,
+      edgeCount: 5620,
+      completenessScore: 84,
+      qualityScore: 80,
+      lastEvaluatedAt: '2024-03-08 13:00',
     },
   },
 ];
@@ -411,13 +471,19 @@ const CONFIGURED_DATA_SOURCES: ConfiguredDataSource[] = [
 
 const DEFAULT_IMAGE_TEXT_SCHEMA = {
   name: 'ImageTextPairSchema',
-  version: 'v1.0',
-  description: '多模态图文对默认 Schema，当前平台仅支持此结构，不可自定义修改。',
+  version: 'v1.1',
+  description: 'CLIP 图文对比训练默认 Schema。每行一条 image–caption 对，与 samples/clip 样例文件一致。',
   fields: [
-    { name: 'image', type: 'string | url', required: true, desc: '图像本地路径、对象存储 Key 或可访问 URL' },
-    { name: 'caption', type: 'string', required: true, desc: '与图像对应的文本描述' },
-    { name: 'tags', type: 'string[]', required: false, desc: '可选标签列表' },
-    { name: 'source', type: 'string', required: false, desc: '原始来源标识（论文 DOI、检查号等）' },
+    { name: 'id', type: 'string', required: true, desc: '图文对唯一 ID，建议 {dataset}-{split}-{seq}' },
+    { name: 'image', type: 'string | url', required: true, desc: '图像路径、对象存储 Key 或 URL（CLIP 视觉侧）' },
+    { name: 'caption', type: 'string', required: true, desc: '与图像对齐的文本（CLIP 文本侧，建议 ≤ 77 tokens）' },
+    { name: 'split', type: 'train | val | test', required: true, desc: '训练划分，CLIP 只用 train 计算 InfoNCE' },
+    { name: 'tags', type: 'string[]', required: false, desc: '可选标签，不进入对比损失' },
+    { name: 'source', type: 'string', required: false, desc: '来源标识（DOI、专利号、检查号）' },
+    { name: 'lang', type: 'en | zh', required: false, desc: '文本语言，默认 en' },
+    { name: 'width', type: 'int', required: false, desc: '图像宽度（像素）' },
+    { name: 'height', type: 'int', required: false, desc: '图像高度（像素）' },
+    { name: 'clip_score', type: 'float', required: false, desc: '预训练 CLIP 图文相似度，可用于过滤低质量对' },
   ] as SchemaField[],
 };
 
@@ -716,7 +782,7 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
                 <div>
                   <div className="text-sm font-medium text-amber-800">Schema 已锁定（平台默认）</div>
                   <div className="text-xs text-amber-700/80 mt-0.5">
-                    当前仅提供一种图文对 Schema，不可修改字段定义。导入数据需映射到该结构。
+                    当前仅提供一种 CLIP 图文对 Schema（v1.1），不可修改字段定义。导入 JSONL/CSV 需映射到该结构，样例见 samples/clip/。
                   </div>
                 </div>
               </div>
@@ -1045,7 +1111,7 @@ function NewDatasetDialog({ onClose, onCreate }: { onClose: () => void; onCreate
           <div>
             <div className="text-xs text-gray-500 mb-1.5">数据集描述</div>
             <textarea rows={3} className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-violet-400 resize-none"
-              placeholder="描述数据集的用途和特点…" value={desc} onChange={e => setDesc(e.target.value)} />
+              placeholder="例如：用于 CLIP ViT-B/32 图文对比训练的领域图文对…" value={desc} onChange={e => setDesc(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1425,10 +1491,14 @@ function OverviewPanel({ ds, onUpload }: { ds: MultimodalDataset; onUpload: () =
 
   return (
     <div className="space-y-4">
+      <div className="bg-violet-50 border border-violet-100 rounded-xl px-4 py-3 text-xs text-violet-800">
+        本数据集用于 <span className="font-semibold">CLIP 图文对比学习</span>（image encoder + text encoder + InfoNCE）。
+        下列为样例图文对；完整字段与 JSONL 样例见 <span className="font-mono">samples/clip/</span>。
+      </div>
       {/* Sample pairs */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3">
-          <div className="text-sm font-semibold text-gray-800 flex-1">图文对样本</div>
+          <div className="text-sm font-semibold text-gray-800 flex-1">CLIP 图文对样本</div>
           <div className="relative">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input className="border border-gray-200 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-violet-400 w-52"
@@ -1456,6 +1526,15 @@ function OverviewPanel({ ds, onUpload }: { ds: MultimodalDataset; onUpload: () =
                     <p className="text-sm text-gray-700 leading-snug line-clamp-2 mb-1.5">{pair.caption}</p>
                   )}
                   <div className="flex items-center gap-2 flex-wrap">
+                    {pair.split && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${
+                        pair.split === 'train' ? 'bg-emerald-50 text-emerald-700' : pair.split === 'val' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'
+                      }`}>{pair.split}</span>
+                    )}
+                    {pair.lang && <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{pair.lang}</span>}
+                    {typeof pair.clipScore === 'number' && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-violet-50 text-violet-600 rounded-md tabular-nums">CLIP {pair.clipScore.toFixed(2)}</span>
+                    )}
                     {pair.tags.map(t => (
                       <span key={t} className="text-xs px-1.5 py-0.5 bg-violet-50 text-violet-600 rounded-md">{t}</span>
                     ))}
@@ -2020,6 +2099,9 @@ export default function MultimodalDatasetManagement() {
             className="p-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors">
             <Plus size={14} />
           </button>
+        </div>
+        <div className="px-4 py-2 bg-violet-50/70 border-b border-violet-100 text-[11px] text-violet-800 leading-relaxed">
+          面向 <span className="font-semibold">CLIP 图文对比训练</span>。样例契约见仓库 <span className="font-mono">samples/clip/</span>，供后端对照接入。
         </div>
 
         <div className="px-3 py-3 border-b border-gray-100 space-y-2">

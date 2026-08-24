@@ -1,0 +1,18 @@
+{
+  "name": "ImageTextPairSchema",
+  "version": "v1.1",
+  "purpose": "CLIP contrastive pretraining (image-text pairs only)",
+  "loss": "symmetric InfoNCE / OpenCLIP",
+  "fields": [
+    { "name": "id", "type": "string", "required": true, "desc": "unique pair id, prefer {dataset}-{split}-{seq}" },
+    { "name": "image", "type": "string", "required": true, "desc": "object-store key, relative path, or URL" },
+    { "name": "caption", "type": "string", "required": true, "desc": "aligned text, CLIP text tower, <= 77 tokens recommended" },
+    { "name": "split", "type": "enum", "enum": ["train", "val", "test"], "required": true, "desc": "only train is used in contrastive loss" },
+    { "name": "tags", "type": "string[]", "required": false, "desc": "optional labels, not used in CLIP loss" },
+    { "name": "source", "type": "string", "required": false, "desc": "DOI / patent id / study id" },
+    { "name": "lang", "type": "string", "required": false, "default": "en", "desc": "caption language" },
+    { "name": "width", "type": "int", "required": false, "desc": "image width px" },
+    { "name": "height", "type": "int", "required": false, "desc": "image height px" },
+    { "name": "clip_score", "type": "float", "required": false, "desc": "pretrained CLIP cosine, filter noisy pairs" }
+  ]
+}

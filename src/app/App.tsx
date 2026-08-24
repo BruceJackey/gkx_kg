@@ -39,7 +39,7 @@ import EntityExtraction from './components/EntityExtraction';
 import KGConstructionEngine from './components/KGConstructionEngine';
 import ConflictManagementPage from './components/ConflictManagementPage';
 import OntologyManagement from './components/OntologyManagement';
-import DataSourceManagement from './components/DataSourceManagement';
+import DataSourceManagement, { type DSMode } from './components/DataSourceManagement';
 import MultimodalDatasetManagement from './components/MultimodalDatasetManagement';
 import MappingManagement from './components/MappingManagement';
 import GraphConstruction from './components/GraphConstruction';
@@ -47,6 +47,9 @@ import GraphTasks from './components/GraphTasks';
 import GraphFusion from './components/GraphFusion';
 import PropertyManagement from './components/PropertyManagement';
 import HumanReview from './components/HumanReview';
+import { AuditFeaturePage } from './components/AuditFeaturePage';
+import type { AuditFeatureSelection } from './data/auditCatalogTypes';
+import { resolveAuditAlgorithmId, resolveAuditAlgorithmDemoTab, type AuditAlgorithmDemoTab } from './data/auditPageMap';
 
 function Placeholder({ title, desc }: { title: string; desc: string }) {
   return (
@@ -68,6 +71,42 @@ export default function App() {
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [selectedAlgorithmServiceId, setSelectedAlgorithmServiceId] = useState<string | null>(null);
   const [selectedPipelineServiceId, setSelectedPipelineServiceId] = useState<string | null>(null);
+  const [selectedAuditFeature, setSelectedAuditFeature] = useState<AuditFeatureSelection | null>(null);
+  const [dataSourceView, setDataSourceView] = useState<DSMode>('structured');
+  const [algorithmDemoTab, setAlgorithmDemoTab] = useState<AuditAlgorithmDemoTab | null>(null);
+
+  const resolveDataSourceView = (pagePath: string): DSMode => {
+    if (pagePath.includes('外部词典导入')) return 'lexicon';
+    if (pagePath.includes('种子实例')) return 'seed';
+    return 'structured';
+  };
+
+  const handleNavigate = (page: string) => {
+    if (page === 'kg-datasource') setDataSourceView('structured');
+    if (page !== 'algorithm-detail') setAlgorithmDemoTab(null);
+    setCurrentPage(page);
+  };
+
+  const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
+    setSelectedAuditFeature(feature);
+    const algorithmId = resolveAuditAlgorithmId(feature.pagePath);
+    if (algorithmId) {
+      setSelectedAlgorithmId(algorithmId);
+      setAlgorithmDemoTab(resolveAuditAlgorithmDemoTab(feature.pagePath));
+      setCurrentPage('algorithm-detail');
+      return;
+    }
+    if (pageId === 'kg-datasource') {
+      setDataSourceView(resolveDataSourceView(feature.pagePath || ''));
+      setCurrentPage('kg-datasource');
+      return;
+    }
+    if (pageId) {
+      setCurrentPage(pageId);
+    } else {
+      setCurrentPage('audit-feature');
+    }
+  };
 
   const handleSelectCategory = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
@@ -82,6 +121,7 @@ export default function App() {
 
   const handleSelectAlgorithm = (algorithmId: string) => {
     setSelectedAlgorithmId(algorithmId);
+    setAlgorithmDemoTab(null);
     setCurrentPage('algorithm-detail');
   };
 
@@ -164,6 +204,7 @@ export default function App() {
           <AlgorithmDetailPage
             algorithmId={selectedAlgorithmId}
             onBack={handleBackToAlgorithmList}
+            initialDemoTab={selectedAlgorithmId === 'candidate-term-generation' ? algorithmDemoTab ?? undefined : undefined}
             onNavigateToService={(algId) => {
               setSelectedAlgorithmServiceId(algId);
               setCurrentPage('algorithm-service-detail');
@@ -213,7 +254,7 @@ export default function App() {
       case 'kg-mapping':
         return <MappingManagement />;
       case 'kg-datasource':
-        return <DataSourceManagement />;
+        return <DataSourceManagement viewMode={dataSourceView} />;
       case 'graph-construction':
         return <GraphConstruction onNavigateTo={setCurrentPage} />;
       case 'graph-tasks':
@@ -286,6 +327,12 @@ export default function App() {
         return <KnowledgeValidation />;
       case 'academic-poster':
         return <AcademicPoster />;
+      case 'audit-feature':
+        return selectedAuditFeature ? (
+          <AuditFeaturePage feature={selectedAuditFeature} />
+        ) : (
+          <Placeholder title="审计目录" desc="请从左侧「目录」中选择功能点" />
+        );
       default:
         return <DataDashboard />;
     }
@@ -295,10 +342,12 @@ export default function App() {
     <div className="size-full flex bg-gray-100">
       <Sidebar
         currentPage={currentPage}
-        onNavigate={setCurrentPage}
+        onNavigate={handleNavigate}
+        selectedAuditFeatureId={selectedAuditFeature?.id}
+        onAuditFeatureSelect={handleAuditFeatureSelect}
       />
-      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
-        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
+      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
+        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
           {renderPage()}
         </div>
       </main>
