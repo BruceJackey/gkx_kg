@@ -7,6 +7,7 @@ import {
   Edit2, Plus, Trash2, Merge, CalendarDays, Users, MapPin, Newspaper,
   MousePointer, Database, RefreshCw
 } from 'lucide-react';
+import { RecognitionResultManagementPanel } from './RecognitionResultManagement';
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
@@ -119,7 +120,7 @@ const REVIEW_TYPES: { id: ReviewType; label: string; icon: any }[] = [
   { id: 'seed-term',          label: '种子术语审核',   icon: Tag },
   { id: 'hyponymy',           label: '上下位关系管理', icon: GitBranch },
   { id: 'event-review',       label: '术语/事件优化',  icon: CalendarDays },
-  { id: 'entity-recognition', label: '冲突管理',       icon: AlertTriangle },
+  { id: 'entity-recognition', label: '识别结果管理',   icon: AlertTriangle },
 ];
 
 // ─── Seed Term Panel ──────────────────────────────────────────────────────────
@@ -1032,11 +1033,22 @@ const mockMergeCandidates: MergeCandidate[] = [
     eventB: { ...mockEvents[3], id: 'E004b', sourceText: 'NeurIPS 2024收录了Chen Wei等关于LLM知识抽取的论文，系统评测表现优异。', args: [{ role: '主体', value: 'NeurIPS 2024' }, { role: '客体', value: 'LLM知识抽取论文' }, { role: '结果', value: '论文收录' }], status: 'pending' } },
 ];
 
-export function EventReviewPanel({ initialSubTab }: { initialSubTab?: 'workbench' | 'merge' } = {}) {
+export function EventReviewPanel({
+  initialSubTab,
+  workbenchLabel = '事件审核与修正工作台',
+  hideMerge = false,
+  showIngest = false,
+}: {
+  initialSubTab?: 'workbench' | 'merge';
+  workbenchLabel?: string;
+  hideMerge?: boolean;
+  showIngest?: boolean;
+} = {}) {
   const [events, setEvents] = useState<ExtractedEvent[]>(mockEvents);
   const [mergeCandidates, setMergeCandidates] = useState<MergeCandidate[]>(mockMergeCandidates);
   const [subTab, setSubTab] = useState<'workbench' | 'merge'>(initialSubTab ?? 'workbench');
   const [expandedId, setExpandedId] = useState<string | null>('E001');
+  const [ingestMsg, setIngestMsg] = useState('');
 
   useEffect(() => {
     if (initialSubTab) setSubTab(initialSubTab);
@@ -1073,7 +1085,16 @@ export function EventReviewPanel({ initialSubTab }: { initialSubTab?: 'workbench
 
   const toggleSelect = (id: string) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+  const ingestToKb = () => {
+    const n = events.filter(e => e.status === 'accepted').length;
+    setIngestMsg(n === 0 ? '暂无已接受事件可入库' : `已将 ${n} 条确认事件一键导入知识库`);
+  };
+
   const ARG_ICON: Partial<Record<ArgRole, any>> = { '主体': Users, '客体': Newspaper, '时间': Clock, '地点': MapPin };
+
+  const subTabs = hideMerge
+    ? [{ id: 'workbench' as const, label: workbenchLabel }]
+    : [{ id: 'workbench' as const, label: workbenchLabel }, { id: 'merge' as const, label: '事件合并与指代消解' }];
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-hidden">
@@ -1092,15 +1113,32 @@ export function EventReviewPanel({ initialSubTab }: { initialSubTab?: 'workbench
         ))}
       </div>
 
-      {/* Sub-tabs */}
-      <div className="flex gap-1 flex-shrink-0 bg-gray-100 rounded-xl p-1 w-fit">
-        {[{ id: 'workbench', label: '事件审核与修正工作台' }, { id: 'merge', label: '事件合并与指代消解' }].map(t => (
-          <button key={t.id} onClick={() => setSubTab(t.id as any)}
-            className={`px-4 py-1.5 text-sm rounded-lg transition-colors font-medium ${subTab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            {t.label}
+      {/* Sub-tabs + ingest */}
+      <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          {subTabs.map(t => (
+            <button key={t.id} onClick={() => setSubTab(t.id)}
+              className={`px-4 py-1.5 text-sm rounded-lg transition-colors font-medium ${subTab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {showIngest && (
+          <button
+            type="button"
+            onClick={ingestToKb}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg ml-auto"
+          >
+            <Database className="w-3.5 h-3.5" />
+            一键导入知识库（已接受 {stats.accepted}）
           </button>
-        ))}
+        )}
       </div>
+      {ingestMsg && (
+        <div className="text-xs text-teal-700 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2 flex-shrink-0">
+          {ingestMsg}
+        </div>
+      )}
 
       {/* ── Workbench ── */}
       {subTab === 'workbench' && (
@@ -1308,7 +1346,7 @@ export default function TermReview() {
       {activeType === 'seed-term'    && <SeedTermPanel />}
       {activeType === 'hyponymy'     && <HyponymyPanel />}
       {activeType === 'event-review'       && <EventReviewPanel />}
-      {activeType === 'entity-recognition' && <ConflictManagementPanel />}
+      {activeType === 'entity-recognition' && <RecognitionResultManagementPanel />}
     </div>
   );
 }

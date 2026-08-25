@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Check, X, Edit2, GitMerge, Search, Tag, GitBranch, CalendarDays, AlertTriangle, CheckSquare, ScanLine, Workflow, ChevronDown, ChevronRight, BookMarked, ArrowRight, Sparkles, Filter, Users } from 'lucide-react';
-import { SeedTermPanel, HyponymyPanel, EventReviewPanel, ConflictManagementPanel } from './TermReview';
+import { SeedTermPanel, HyponymyPanel, EventReviewPanel } from './TermReview';
+import { RecognitionResultManagementPanel } from './RecognitionResultManagement';
 import {
   REVIEWER_OPTIONS,
   getLatestReviewTask,
@@ -212,19 +213,23 @@ const MOCK_RULE_CANDIDATES: MappingRuleCandidate[] = [
 type TopTab = 'kg-review' | 'seed-term' | 'hyponymy' | 'event-review' | 'conflict';
 
 const TOP_TABS: { id: TopTab; label: string; icon: any }[] = [
-  { id: 'kg-review',    label: '图谱候选审核',   icon: CheckSquare },
+  { id: 'kg-review',    label: '用户标注与纠错', icon: CheckSquare },
   { id: 'seed-term',    label: '种子术语审核',   icon: Tag },
   { id: 'hyponymy',     label: '上下位关系管理', icon: GitBranch },
   { id: 'event-review', label: '术语/事件优化',  icon: CalendarDays },
-  { id: 'conflict',     label: '冲突管理',       icon: AlertTriangle },
+  { id: 'conflict',     label: '识别结果管理',   icon: AlertTriangle },
 ];
 
 export default function HumanReview({
   initialTopTab,
   initialEventSubTab,
+  focusConsensus,
+  initialRecognitionFocus,
 }: {
   initialTopTab?: TopTab;
   initialEventSubTab?: 'workbench' | 'merge';
+  focusConsensus?: boolean;
+  initialRecognitionFocus?: 'highlight' | 'review' | 'linking';
 }) {
   const [topTab, setTopTab] = useState<TopTab>(initialTopTab ?? 'kg-review');
 
@@ -259,8 +264,8 @@ export default function HumanReview({
         {topTab === 'seed-term'    && <SeedTermPanel />}
         {topTab === 'hyponymy'     && <HyponymyPanel />}
         {topTab === 'event-review' && <EventReviewPanel initialSubTab={initialEventSubTab} />}
-        {topTab === 'conflict'     && <ConflictManagementPanel />}
-        {topTab === 'kg-review'    && <KGReviewPanel />}
+        {topTab === 'conflict'     && <RecognitionResultManagementPanel initialFocus={initialRecognitionFocus} />}
+        {topTab === 'kg-review'    && <KGReviewPanel focusConsensus={focusConsensus} />}
       </div>
     </div>
   );
@@ -620,7 +625,7 @@ function MappingRulesPanel() {
 
 // ─── KG Review Panel ──────────────────────────────────────────────────────────
 
-function KGReviewPanel() {
+function KGReviewPanel({ focusConsensus }: { focusConsensus?: boolean }) {
   const [innerTab, setInnerTab] = useState<'candidates' | 'mapping-rules'>('candidates');
   const [candidates, setCandidates] = useState<ReviewCandidate[]>(MOCK_CANDIDATES);
   const [currentUserId, setCurrentUserIdState] = useState(getCurrentReviewerId);
@@ -632,6 +637,15 @@ function KGReviewPanel() {
   const [filterConflict, setFilterConflict] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterSource, setFilterSource] = useState('');
+
+  useEffect(() => {
+    if (!focusConsensus) return;
+    setInnerTab('candidates');
+    const timer = window.setTimeout(() => {
+      document.getElementById('kg-review-consensus-col')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [focusConsensus]);
   const [editCandidate, setEditCandidate] = useState<ReviewCandidate | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editEntityType, setEditEntityType] = useState('');
@@ -908,7 +922,14 @@ function KGReviewPanel() {
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-3">
+        <div id="kg-review-credibility" className="bg-white border border-indigo-100 rounded-xl px-4 py-3 flex items-center gap-4 flex-wrap text-sm">
+          <span className="font-semibold text-indigo-700 flex-shrink-0">知识可信度分层</span>
+          <span className="text-gray-300">|</span>
+          <span className="text-gray-600">机器抽取可信度：<span className="font-semibold text-gray-900">70</span></span>
+          <span className="text-gray-600">单人标注可信度：<span className="font-semibold text-gray-900">80</span></span>
+          <span className="text-gray-600">多人共识可信度：<span className="font-semibold text-gray-900">90</span></span>
+        </div>
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -921,7 +942,7 @@ function KGReviewPanel() {
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">置信度</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">命中规则</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">冲突原因</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">审核员标记</th>
+                <th id="kg-review-consensus-col" className="text-left text-xs font-medium text-gray-500 px-4 py-3">跨用户共识算法</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">我的状态</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">操作</th>
               </tr>

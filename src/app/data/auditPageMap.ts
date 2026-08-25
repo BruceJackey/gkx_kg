@@ -14,13 +14,28 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '图谱构造引擎/图谱构造/基于规则映射的抽取策略': 'graph-construction',
   '图谱构造引擎/图谱构造/策略配置': 'graph-construction',
   '图谱构造引擎/图谱构造/基于统计学习的抽取策略': 'graph-construction',
+  '图谱构造引擎/图谱构造/策略配置/基于规则的识别': 'graph-construction',
+  '图谱构造引擎/图谱构造/策略配置/基于机器学习的识别': 'graph-construction',
+  '图谱构造引擎/图谱构造/策略配置/多策略融合识别': 'graph-construction',
+  '图谱构造引擎/图谱构造/策略配置/基于词典的识别': 'graph-construction',
+  '实体识别/基于规则的识别': 'graph-construction',
+  '实体识别/基于机器学习的识别': 'graph-construction',
+  '实体识别/多策略融合识别': 'graph-construction',
+  '实体识别/基于词典的识别': 'graph-construction',
   '图谱构造引擎/人工审核/种子术语审核': 'term-review',
   '知识图谱构造引擎/人工审核': 'human-review',
   '知识图谱构造引擎/人工审核/上下位关系审核': 'human-review',
   '知识图谱构造引擎/人工审核/识别管理': 'human-review',
+  '知识图谱构造引擎/人工审核/识别结果管理': 'human-review',
+  '知识图谱构造引擎/人工审核/识别结果管理/结果可视化与高亮': 'human-review',
+  '知识图谱构造引擎/人工审核/识别结果管理/人工审核与修正界面': 'human-review',
+  '知识图谱构造引擎/人工审核/识别结果管理/实体链接与消歧': 'human-review',
   '知识图谱构造引擎/人工审核/术语/事件优化': 'human-review',
   '知识图谱构造引擎/人工审核/术语/事件优化/事件审核与修正工作台': 'human-review',
   '知识图谱构造引擎/人工审核/术语/事件优化/事件合并与指代消解': 'human-review',
+  '知识图谱构造引擎/人工审核/用户标注与纠错': 'human-review',
+  '知识图谱构造引擎/人工审核/用户标注与纠错/跨用户共识算法': 'human-review',
+  '知识图谱构造引擎/人工审核/用户标注与纠错/知识可信度分层': 'human-review',
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取': 'algorithm-detail',
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件触发词识别': 'algorithm-detail',
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件论元抽取': 'algorithm-detail',
@@ -83,6 +98,22 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '文献知识建模/多维度解析引擎/实验步骤解析': 'literature-multidim-parse',
   '文献知识建模/多维度解析引擎/图表内容结构化': 'literature-multidim-parse',
   '文献知识建模/多维度解析引擎/数理模型解析': 'literature-multidim-parse',
+  '专利知识建模/技术要素解构框架/权利要求深度解析': 'patent-technical-parse',
+  '专利知识建模/技术要素解构框架/技术功效矩阵自动生成': 'patent-technical-parse',
+  '专利知识建模/技术要素解构框架/专业内容语义化标注': 'patent-technical-parse',
+  '专利知识建模/跨域知识融合/技术方案模块化拆解': 'patent-technical-parse',
+  '事件知识学习/事件识别引擎接口/局部学习标注器': 'local-learning-annotator',
+  '局部学习标注器': 'local-learning-annotator',
+  '事件知识学习/引擎接口与管理/事件识别API': 'local-learning-annotator',
+  '事件知识学习/引擎接口与管理/标注优化API': 'local-learning-annotator',
+  '事件识别API': 'local-learning-annotator',
+  '标注优化API': 'local-learning-annotator',
+  '事件知识学习/事件识别管理/事件标注项目管理': 'event-annotation-mgmt',
+  '事件知识学习/事件识别管理/模型训练与迭代': 'event-annotation-mgmt',
+  '事件知识学习/事件识别管理/审核与入库工作流': 'event-ingest-workflow',
+  '审核与入库工作流': 'event-ingest-workflow',
+  '事件标注项目管理': 'event-annotation-mgmt',
+  '模型训练与迭代': 'event-annotation-mgmt',
 };
 
 /** 审计页面路径 → 算法详情 ID（直达 algorithm-detail） */
@@ -113,6 +144,8 @@ export type AuditAlgorithmTab = 'intro' | 'demo' | 'models' | 'training' | 'depl
 
 export type GraphConstructionTab = 'data' | 'scope' | 'rules' | 'threshold';
 
+export type GraphStrategyFocus = 'rule' | 'dict' | 'ml' | 'fusion';
+
 export type RuleEditorMode = 'visual' | 'manual';
 
 export type RuleCategoryFilter = '分类规则建模' | '属性值推断规则' | '数据质量约束定义' | '时序推理规则';
@@ -121,9 +154,46 @@ export type HumanReviewTab = 'kg-review' | 'seed-term' | 'hyponymy' | 'event-rev
 
 export type EventReviewSubTab = 'workbench' | 'merge';
 
+export type RecognitionFocus = 'highlight' | 'review' | 'linking';
+
+/** 识别结果管理：审计目录聚焦子模块 */
+export function resolveRecognitionFocus(pagePath: string | undefined): RecognitionFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('结果可视化与高亮')) return 'highlight';
+  if (path.includes('人工审核与修正界面')) return 'review';
+  if (path.includes('实体链接与消歧')) return 'linking';
+  return null;
+}
+
 export type TemporalAuditMode = 'extraction' | 'dependency';
 
 export type LiteratureParseFocus = 'core' | 'experiment' | 'chart' | 'formula';
+
+export type PatentParseFocus = 'claims' | 'matrix' | 'annotation' | 'modules';
+
+export type LocalLearningTab = 'local' | 'event-api' | 'optimize-api';
+
+export type EventAnnotationMgmtTab = 'projects' | 'training';
+
+/** 事件标注管理页：审计目录跳转 Tab */
+export function resolveEventAnnotationMgmtTab(pagePath: string | undefined): EventAnnotationMgmtTab | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('模型训练与迭代')) return 'training';
+  if (path.includes('事件标注项目管理')) return 'projects';
+  return null;
+}
+
+/** 局部学习 / 事件 API 页：审计目录跳转 Tab */
+export function resolveLocalLearningTab(pagePath: string | undefined): LocalLearningTab | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('标注优化API') || path.includes('标注优化 API')) return 'optimize-api';
+  if (path.includes('事件识别API') || path.includes('事件识别 API')) return 'event-api';
+  if (path.includes('局部学习标注器')) return 'local';
+  return null;
+}
 
 /** 文献多维度解析：审计目录跳转到结果区块 */
 export function resolveLiteratureParseFocus(pagePath: string | undefined): LiteratureParseFocus | null {
@@ -133,6 +203,17 @@ export function resolveLiteratureParseFocus(pagePath: string | undefined): Liter
   if (path.includes('实验步骤解析')) return 'experiment';
   if (path.includes('图表内容结构化')) return 'chart';
   if (path.includes('数理模型解析')) return 'formula';
+  return null;
+}
+
+/** 专利技术要素解构：审计目录跳转到结果区块 */
+export function resolvePatentParseFocus(pagePath: string | undefined): PatentParseFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('权利要求深度解析')) return 'claims';
+  if (path.includes('技术功效矩阵')) return 'matrix';
+  if (path.includes('专业内容语义化标注')) return 'annotation';
+  if (path.includes('技术方案模块化拆解')) return 'modules';
   return null;
 }
 
@@ -154,8 +235,19 @@ export function resolveHumanReviewTab(pagePath: string | undefined): HumanReview
   }
   if (path.includes('上下位关系')) return 'hyponymy';
   if (path.includes('种子术语')) return 'seed-term';
-  if (path.includes('冲突管理') || path.includes('识别管理')) return 'conflict';
+  if (path.includes('冲突管理') || path.includes('识别管理') || path.includes('识别结果管理') || path.includes('结果可视化与高亮') || path.includes('人工审核与修正界面') || path.includes('实体链接与消歧')) {
+    return 'conflict';
+  }
+  if (path.includes('用户标注与纠错') || path.includes('跨用户共识算法') || path.includes('跨用户识别算法') || path.includes('知识可信度分层')) {
+    return 'kg-review';
+  }
   return null;
+}
+
+/** 用户标注与纠错：是否聚焦跨用户共识算法列 */
+export function resolveKgReviewConsensusFocus(pagePath: string | undefined): boolean {
+  const path = (pagePath ?? '').trim();
+  return path.includes('跨用户共识算法') || path.includes('跨用户识别算法');
 }
 
 /** 术语/事件优化：审计目录跳转到子 Tab */
@@ -247,7 +339,26 @@ export function resolveGraphConstructionTab(pagePath: string | undefined): Graph
   if (!path) return null;
   if (path.includes('抽取任务配置')) return 'data';
   if (path.includes('基于规则映射的抽取策略') || path.includes('规则配置')) return 'rules';
-  if (path.includes('基于统计学习的抽取策略') || path.includes('策略配置') || path.includes('阈值策略')) return 'threshold';
+  if (
+    path.includes('基于统计学习的抽取策略')
+    || path.includes('策略配置')
+    || path.includes('阈值策略')
+    || path.includes('基于规则的识别')
+    || path.includes('基于机器学习的识别')
+    || path.includes('多策略融合识别')
+    || path.includes('基于词典的识别')
+  ) return 'threshold';
+  return null;
+}
+
+/** 图谱构造 · 策略配置：聚焦具体策略行 */
+export function resolveGraphStrategyFocus(pagePath: string | undefined): GraphStrategyFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('多策略融合识别')) return 'fusion';
+  if (path.includes('基于规则的识别')) return 'rule';
+  if (path.includes('基于机器学习的识别')) return 'ml';
+  if (path.includes('基于词典的识别')) return 'dict';
   return null;
 }
 

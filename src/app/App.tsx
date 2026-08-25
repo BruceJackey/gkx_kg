@@ -37,6 +37,10 @@ import ApiIntegrationInference from './components/ApiIntegrationInference';
 import TimeEntityNormalization from './components/TimeEntityNormalization';
 import TemporalRelationAudit from './components/TemporalRelationAudit';
 import LiteratureMultidimensionalParse from './components/LiteratureMultidimensionalParse';
+import PatentTechnicalElementParse from './components/PatentTechnicalElementParse';
+import LocalLearningAnnotator from './components/LocalLearningAnnotator';
+import EventAnnotationManagement from './components/EventAnnotationManagement';
+import EventIngestWorkflow from './components/EventIngestWorkflow';
 import { AlgorithmApiManagement } from './components/AlgorithmApiManagement';
 import { PipelineApiManagement } from './components/PipelineApiManagement';
 import { PipelineServiceDetail } from './components/PipelineServiceDetail';
@@ -62,25 +66,36 @@ import {
   resolveAuditAlgorithmDemoTab,
   resolveAuditAlgorithmTab,
   resolveGraphConstructionTab,
+  resolveGraphStrategyFocus,
   resolveRuleEditorMode,
   resolveRuleDrawerFocus,
   resolveRuleListFocus,
   resolveRuleCategoryFilter,
   resolveHumanReviewTab,
   resolveEventReviewSubTab,
+  resolveKgReviewConsensusFocus,
+  resolveRecognitionFocus,
   resolveTemporalAuditMode,
   resolveLiteratureParseFocus,
+  resolvePatentParseFocus,
+  resolveLocalLearningTab,
+  resolveEventAnnotationMgmtTab,
   type AuditAlgorithmDemoTab,
   type AuditAlgorithmTab,
   type GraphConstructionTab,
+  type GraphStrategyFocus,
   type RuleEditorMode,
   type RuleCategoryFilter,
   type RuleDrawerFocus,
   type RuleListFocus,
   type HumanReviewTab,
   type EventReviewSubTab,
+  type RecognitionFocus,
   type TemporalAuditMode,
   type LiteratureParseFocus,
+  type PatentParseFocus,
+  type LocalLearningTab,
+  type EventAnnotationMgmtTab,
 } from './data/auditPageMap';
 
 function Placeholder({ title, desc }: { title: string; desc: string }) {
@@ -109,14 +124,20 @@ export default function App() {
   const [algorithmInitialTab, setAlgorithmInitialTab] = useState<AuditAlgorithmTab | null>(null);
   const [autoStartDepTest, setAutoStartDepTest] = useState(false);
   const [graphConstructionTab, setGraphConstructionTab] = useState<GraphConstructionTab | null>(null);
+  const [graphStrategyFocus, setGraphStrategyFocus] = useState<GraphStrategyFocus | null>(null);
   const [ruleEditorMode, setRuleEditorMode] = useState<RuleEditorMode | null>(null);
   const [ruleDrawerFocus, setRuleDrawerFocus] = useState<RuleDrawerFocus | null>(null);
   const [ruleListFocus, setRuleListFocus] = useState<RuleListFocus | null>(null);
   const [ruleCategoryFilter, setRuleCategoryFilter] = useState<RuleCategoryFilter | null>(null);
   const [humanReviewTab, setHumanReviewTab] = useState<HumanReviewTab | null>(null);
   const [eventReviewSubTab, setEventReviewSubTab] = useState<EventReviewSubTab | null>(null);
+  const [kgReviewConsensusFocus, setKgReviewConsensusFocus] = useState(false);
+  const [recognitionFocus, setRecognitionFocus] = useState<RecognitionFocus | null>(null);
   const [temporalAuditMode, setTemporalAuditMode] = useState<TemporalAuditMode | null>(null);
   const [literatureParseFocus, setLiteratureParseFocus] = useState<LiteratureParseFocus | null>(null);
+  const [patentParseFocus, setPatentParseFocus] = useState<PatentParseFocus | null>(null);
+  const [localLearningTab, setLocalLearningTab] = useState<LocalLearningTab | null>(null);
+  const [eventAnnotationMgmtTab, setEventAnnotationMgmtTab] = useState<EventAnnotationMgmtTab | null>(null);
 
   const resolveDataSourceView = (pagePath: string): DSMode => {
     if (pagePath.includes('外部词典导入')) return 'lexicon';
@@ -129,14 +150,20 @@ export default function App() {
     setAlgorithmInitialTab(null);
     setAutoStartDepTest(false);
     setGraphConstructionTab(null);
+    setGraphStrategyFocus(null);
     setRuleEditorMode(null);
     setRuleDrawerFocus(null);
     setRuleListFocus(null);
     setRuleCategoryFilter(null);
     setHumanReviewTab(null);
     setEventReviewSubTab(null);
+    setKgReviewConsensusFocus(false);
+    setRecognitionFocus(null);
     setTemporalAuditMode(null);
     setLiteratureParseFocus(null);
+    setPatentParseFocus(null);
+    setLocalLearningTab(null);
+    setEventAnnotationMgmtTab(null);
   };
 
   const handleNavigate = (page: string) => {
@@ -148,12 +175,21 @@ export default function App() {
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
     // 审计专用独立页优先（不与产品页共用）
-    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse') {
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow') {
       if (pageId === 'temporal-relation-audit') {
         setTemporalAuditMode(resolveTemporalAuditMode(feature.pagePath) ?? 'extraction');
       }
       if (pageId === 'literature-multidim-parse') {
         setLiteratureParseFocus(resolveLiteratureParseFocus(feature.pagePath));
+      }
+      if (pageId === 'patent-technical-parse') {
+        setPatentParseFocus(resolvePatentParseFocus(feature.pagePath));
+      }
+      if (pageId === 'local-learning-annotator') {
+        setLocalLearningTab(resolveLocalLearningTab(feature.pagePath) ?? 'local');
+      }
+      if (pageId === 'event-annotation-mgmt') {
+        setEventAnnotationMgmtTab(resolveEventAnnotationMgmtTab(feature.pagePath) ?? 'projects');
       }
       setCurrentPage(pageId);
       return;
@@ -174,6 +210,7 @@ export default function App() {
     }
     if (pageId === 'graph-construction') {
       setGraphConstructionTab(resolveGraphConstructionTab(feature.pagePath));
+      setGraphStrategyFocus(resolveGraphStrategyFocus(feature.pagePath));
       setCurrentPage('graph-construction');
       return;
     }
@@ -188,6 +225,8 @@ export default function App() {
     if (pageId === 'human-review') {
       setHumanReviewTab(resolveHumanReviewTab(feature.pagePath));
       setEventReviewSubTab(resolveEventReviewSubTab(feature.pagePath));
+      setKgReviewConsensusFocus(resolveKgReviewConsensusFocus(feature.pagePath));
+      setRecognitionFocus(resolveRecognitionFocus(feature.pagePath));
       setCurrentPage('human-review');
       return;
     }
@@ -374,12 +413,37 @@ export default function App() {
             initialFocus={literatureParseFocus ?? undefined}
           />
         );
+      case 'patent-technical-parse':
+        return (
+          <PatentTechnicalElementParse
+            key={patentParseFocus ?? 'all'}
+            initialFocus={patentParseFocus ?? undefined}
+          />
+        );
+      case 'local-learning-annotator':
+        return (
+          <LocalLearningAnnotator
+            key={localLearningTab ?? 'local'}
+            initialTab={localLearningTab ?? 'local'}
+          />
+        );
+      case 'event-annotation-mgmt':
+        return (
+          <EventAnnotationManagement
+            key={eventAnnotationMgmtTab ?? 'projects'}
+            initialTab={eventAnnotationMgmtTab ?? 'projects'}
+          />
+        );
+      case 'event-ingest-workflow':
+        return <EventIngestWorkflow />;
       case 'human-review':
         return (
           <HumanReview
-            key={`${humanReviewTab ?? 'default'}-${eventReviewSubTab ?? 'none'}`}
+            key={`${humanReviewTab ?? 'default'}-${eventReviewSubTab ?? 'none'}-${kgReviewConsensusFocus ? 'consensus' : 'plain'}-${recognitionFocus ?? 'none'}`}
             initialTopTab={humanReviewTab ?? undefined}
             initialEventSubTab={eventReviewSubTab ?? undefined}
+            focusConsensus={kgReviewConsensusFocus || undefined}
+            initialRecognitionFocus={recognitionFocus ?? undefined}
           />
         );
       case 'kg-ontology':
@@ -389,7 +453,14 @@ export default function App() {
       case 'kg-datasource':
         return <DataSourceManagement viewMode={dataSourceView} />;
       case 'graph-construction':
-        return <GraphConstruction onNavigateTo={setCurrentPage} initialTab={graphConstructionTab ?? undefined} />;
+        return (
+          <GraphConstruction
+            key={`${graphConstructionTab ?? 'default'}-${graphStrategyFocus ?? 'none'}`}
+            onNavigateTo={setCurrentPage}
+            initialTab={graphConstructionTab ?? undefined}
+            initialStrategyFocus={graphStrategyFocus ?? undefined}
+          />
+        );
       case 'graph-tasks':
         return <GraphTasks onNavigateTo={setCurrentPage} />;
       case 'kg-construction':

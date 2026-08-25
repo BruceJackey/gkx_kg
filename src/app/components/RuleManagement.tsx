@@ -1,3 +1,4 @@
+import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
 import { RULE_REASONING_DEMO_RULE_ID, type RuleListFocus } from '../data/auditPageMap';
 import {
   BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, Cell, ResponsiveContainer,

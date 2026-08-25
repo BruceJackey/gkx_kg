@@ -55,18 +55,36 @@ const TABS: { id: TabId; label: string; icon: ElementType }[] = [
 
 export type GraphConstructionTab = TabId;
 
+export type GraphStrategyFocus = 'rule' | 'dict' | 'ml' | 'fusion';
+
 export default function GraphConstruction({
   onNavigateTo,
   initialTab,
+  initialStrategyFocus,
 }: {
   onNavigateTo?: (page: string) => void;
   initialTab?: GraphConstructionTab;
+  initialStrategyFocus?: GraphStrategyFocus;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'data');
 
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    if (!initialStrategyFocus || activeTab !== 'threshold') return;
+    const idMap: Record<GraphStrategyFocus, string> = {
+      rule: 'gc-strategy-rule',
+      dict: 'gc-strategy-dict',
+      ml: 'gc-strategy-ml',
+      fusion: 'gc-strategy-fusion',
+    };
+    const timer = window.setTimeout(() => {
+      document.getElementById(idMap[initialStrategyFocus])?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [initialStrategyFocus, activeTab]);
 
   // 数据与本体
   const [selectedOntoId, setSelectedOntoId] = useState('o1');
@@ -784,10 +802,10 @@ export default function GraphConstruction({
           </div>
         </div>
 
-        {/* 多策略加权配置 */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
+        {/* 多策略融合识别 */}
+        <div id="gc-strategy-fusion" className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-sm font-semibold text-gray-800">多策略加权配置</div>
+            <div className="text-sm font-semibold text-gray-800">多策略融合识别</div>
             <div className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
               totalWeight === 100
                 ? 'bg-green-50 text-green-700 border-green-200'
@@ -801,17 +819,17 @@ export default function GraphConstruction({
           {/* Strategy rows */}
           <div className="space-y-4">
             {([
-              { key: 'rule' as const, label: '规则策略', en: 'Rule',  color: 'blue',   dot: 'bg-blue-500',   bar: 'bg-blue-400',   ring: 'focus:border-blue-400',   desc: '基于预定义规则匹配的置信度' },
-              { key: 'dict' as const, label: '词典策略', en: 'Dict',  color: 'violet', dot: 'bg-violet-500', bar: 'bg-violet-400', ring: 'focus:border-violet-400', desc: '基于词典/知识库查找的置信度' },
-              { key: 'ml'   as const, label: '机器学习', en: 'ML',    color: 'teal',   dot: 'bg-teal-500',   bar: 'bg-teal-400',   ring: 'focus:border-teal-400',   desc: '基于模型预测的置信度' },
-            ]).map(({ key, label, en, color, dot, bar, ring, desc }) => {
+              { key: 'rule' as const, label: '基于规则的识别', en: 'Rule',  color: 'blue',   dot: 'bg-blue-500',   bar: 'bg-blue-400',   ring: 'focus:border-blue-400',   desc: '基于预定义规则匹配的置信度', focusId: 'gc-strategy-rule' },
+              { key: 'dict' as const, label: '基于词典的识别', en: 'Dict',  color: 'violet', dot: 'bg-violet-500', bar: 'bg-violet-400', ring: 'focus:border-violet-400', desc: '基于词典/知识库查找的置信度', focusId: 'gc-strategy-dict' },
+              { key: 'ml'   as const, label: '基于机器学习的识别', en: 'ML',    color: 'teal',   dot: 'bg-teal-500',   bar: 'bg-teal-400',   ring: 'focus:border-teal-400',   desc: '基于模型预测的置信度', focusId: 'gc-strategy-ml' },
+            ]).map(({ key, label, en, color, dot, bar, ring, desc, focusId }) => {
               const w = weights[key];
               const pct = totalWeight > 0 ? Math.round(normalizedWeights[key] * 100) : 0;
               return (
-                <div key={key}>
+                <div key={key} id={focusId}>
                   <div className="flex items-center gap-3 mb-1.5">
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
-                    <span className="text-sm font-medium text-gray-800 w-20 flex-shrink-0">{label}</span>
+                    <span className="text-sm font-medium text-gray-800 w-36 flex-shrink-0">{label}</span>
                     <span className="text-[11px] text-gray-400 flex-1">{desc}</span>
                     {/* Stepper input */}
                     <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">

@@ -1005,27 +1005,27 @@
                           "name": "用户标注与纠错",
                           "type": "feature",
                           "reqId": "31",
-                          "pagePath": "",
+                          "pagePath": "知识图谱构造引擎/人工审核/用户标注与纠错",
                           "featureDesc": "提供便捷的界面，允许用户对机器抽取的知识单元进行纠正、补充或删除。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应人工审核 · 用户标注与纠错 Tab"
                         },
                         {
                           "id": "fp-31-82",
                           "name": "跨用户共识算法",
                           "type": "feature",
                           "reqId": "31",
-                          "pagePath": "",
+                          "pagePath": "知识图谱构造引擎/人工审核/用户标注与纠错/跨用户共识算法",
                           "featureDesc": "后台算法能够自动整合多人的标注结果，解决标注冲突，形成一个共识版本。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应人工审核 · 用户标注与纠错 · 跨用户共识算法列"
                         },
                         {
                           "id": "fp-31-83",
                           "name": "知识可信度分层",
                           "type": "feature",
                           "reqId": "31",
-                          "pagePath": "",
+                          "pagePath": "知识图谱构造引擎/人工审核/用户标注与纠错/知识可信度分层",
                           "featureDesc": "根据知识的来源（机器抽取、单人标注、多人共识），为其赋予不同的可信度等级。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应人工审核 · 用户标注与纠错 · 知识可信度分层"
                         }
                       ]
                     }
@@ -1046,27 +1046,27 @@
                           "name": "权利要求深度解析",
                           "type": "feature",
                           "reqId": "32",
-                          "pagePath": "",
+                          "pagePath": "专利知识建模/技术要素解构框架/权利要求深度解析",
                           "featureDesc": "利用NLP技术，将冗长复杂的权利要求语句，拆解为结构化的技术特征及其限定关系。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 上传专利 · 权利要求解析区块"
                         },
                         {
                           "id": "fp-32-85",
                           "name": "技术功效矩阵自动生成",
                           "type": "feature",
                           "reqId": "32",
-                          "pagePath": "",
+                          "pagePath": "专利知识建模/技术要素解构框架/技术功效矩阵自动生成",
                           "featureDesc": "自动分析专利的技术特征及其达到的技术效果，生成一个直观的“技术-功效”对应关系矩阵。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 上传专利 · 技术功效矩阵区块"
                         },
                         {
                           "id": "fp-32-86",
                           "name": "专业内容语义化标注",
                           "type": "feature",
                           "reqId": "32",
-                          "pagePath": "",
+                          "pagePath": "专利知识建模/技术要素解构框架/专业内容语义化标注",
                           "featureDesc": "支持对专利中特有的内容，如化学分子式、电路图，进行识别和语义化标注。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 上传专利 · 专业标注区块"
                         }
                       ]
                     },
@@ -1080,9 +1080,9 @@
                           "name": "技术方案模块化拆解",
                           "type": "feature",
                           "reqId": "33",
-                          "pagePath": "",
+                          "pagePath": "专利知识建模/跨域知识融合/技术方案模块化拆解",
                           "featureDesc": "将专利中描述的技术方案，拆解为标准化的、可复用的功能模块。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 技术要素解构页 · modules_text 结果框"
                         },
                         {
                           "id": "fp-33-88",
@@ -1119,36 +1119,36 @@
                           "name": "基于词典的识别",
                           "type": "feature",
                           "reqId": "34",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/图谱构造/策略配置/基于词典的识别",
                           "featureDesc": "支持加载用户自定义的领域词典，通过高效的字符串匹配算法快速识别实体。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱构造 · 策略配置 · 基于词典的识别"
                         },
                         {
                           "id": "fp-34-90",
                           "name": "基于规则的识别",
                           "type": "feature",
                           "reqId": "34",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/图谱构造/策略配置/基于规则的识别",
                           "featureDesc": "支持使用正则表达式或语法规则来识别具有明显模式的实体。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱构造 · 策略配置 · 基于规则的识别"
                         },
                         {
                           "id": "fp-34-91",
                           "name": "基于机器学习的识别",
                           "type": "feature",
                           "reqId": "34",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/图谱构造/策略配置/基于机器学习的识别",
                           "featureDesc": "提供预训练的深度学习模型，能够结合上下文语境智能识别实体。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱构造 · 策略配置 · 基于机器学习的识别"
                         },
                         {
                           "id": "fp-34-92",
                           "name": "多策略融合识别",
                           "type": "feature",
                           "reqId": "34",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/图谱构造/策略配置/多策略融合识别",
                           "featureDesc": "允许用户组合使用多种识别策略，并对不同策略的结果进行投票或加权，以提升召回率和准确率。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱构造 · 策略配置 · 多策略融合识别"
                         }
                       ]
                     },
@@ -1196,27 +1196,27 @@
                           "name": "结果可视化与高亮",
                           "type": "feature",
                           "reqId": "36",
-                          "pagePath": "",
+                          "pagePath": "知识图谱构造引擎/人工审核/识别结果管理/结果可视化与高亮",
                           "featureDesc": "在原文中高亮显示自动识别出的实体，并用不同颜色区分不同类别。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应人工审核 · 识别结果管理 · 原文高亮"
                         },
                         {
                           "id": "fp-36-97",
                           "name": "人工审核与修正界面",
                           "type": "feature",
                           "reqId": "36",
-                          "pagePath": "",
+                          "pagePath": "知识图谱构造引擎/人工审核/识别结果管理/人工审核与修正界面",
                           "featureDesc": "允许用户通过简单的点击和拖拽操作，来修正实体的边界、增删实体或修改其分类。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应人工审核 · 识别结果管理 · 审核修正"
                         },
                         {
                           "id": "fp-36-98",
                           "name": "实体链接与消歧",
                           "type": "feature",
                           "reqId": "36",
-                          "pagePath": "",
+                          "pagePath": "知识图谱构造引擎/人工审核/识别结果管理/实体链接与消歧",
                           "featureDesc": "对于识别出的实体，提供链接到知识库中唯一ID的功能，并辅助解决同名实体的歧义问题。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应人工审核 · 识别结果管理 · 链接消歧"
                         }
                       ]
                     }
@@ -1237,9 +1237,9 @@
                           "name": "局部学习标注器",
                           "type": "feature",
                           "reqId": "39",
-                          "pagePath": "",
+                          "pagePath": "事件知识学习/事件识别引擎接口/局部学习标注器",
                           "featureDesc": "支持在缺乏大量标注数据的情况下，通过局部学习快速构建一个可用的事件标注器。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 上传标注数据 + 事件文档 → 标注结果"
                         }
                       ]
                     },
@@ -1253,18 +1253,18 @@
                           "name": "事件识别API",
                           "type": "feature",
                           "reqId": "41",
-                          "pagePath": "",
+                          "pagePath": "事件知识学习/引擎接口与管理/事件识别API",
                           "featureDesc": "提供API接口，接收文本输入，返回结构化的事件抽取结果（JSON格式）。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应局部学习页 · 事件识别 API Tab"
                         },
                         {
                           "id": "fp-41-101",
                           "name": "标注优化API",
                           "type": "feature",
                           "reqId": "41",
-                          "pagePath": "",
+                          "pagePath": "事件知识学习/引擎接口与管理/标注优化API",
                           "featureDesc": "提供API接口，接收未标注数据，返回经句子选择器筛选出的、建议优先标注的句子列表。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应局部学习页 · 标注优化 API Tab"
                         }
                       ]
                     },
@@ -1278,27 +1278,27 @@
                           "name": "事件标注项目管理",
                           "type": "feature",
                           "reqId": "42",
-                          "pagePath": "",
+                          "pagePath": "事件知识学习/事件识别管理/事件标注项目管理",
                           "featureDesc": "支持创建和管理事件标注项目，分配标注任务，统计标注进度。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 事件标注项目管理 Tab"
                         },
                         {
                           "id": "fp-42-103",
                           "name": "模型训练与迭代",
                           "type": "feature",
                           "reqId": "42",
-                          "pagePath": "",
+                          "pagePath": "事件知识学习/事件识别管理/模型训练与迭代",
                           "featureDesc": "支持基于标注好的数据，一键启动模型训练、评估和版本迭代。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计目录专用 · 模型训练与迭代 Tab"
                         },
                         {
                           "id": "fp-42-104",
                           "name": "审核与入库工作流",
                           "type": "feature",
                           "reqId": "42",
-                          "pagePath": "",
+                          "pagePath": "事件知识学习/事件识别管理/审核与入库工作流",
                           "featureDesc": "提供对机器抽取的事件结果进行人工审核，并将确认无误的事件知识一键导入知识库的工作流。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "复用事件审核与修正工作台 · 改名 + 一键入库"
                         }
                       ]
                     }
