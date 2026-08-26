@@ -953,7 +953,19 @@ function EntityNode({ entity, pos, selected, onClick, onDragStart }: {
 
 // ─── Main OntologyEditor ──────────────────────────────────────────────────────
 
-export default function OntologyEditor({ initialMode = 'structure', lockMode = false }: { initialMode?: 'structure' | 'schema-match'; lockMode?: boolean }) {
+export default function OntologyEditor({
+  initialMode = 'structure',
+  lockMode = false,
+  initialRightPanelTab = 'detail',
+  initialShowDrawer = false,
+  initialDrawerTab = 'components',
+}: {
+  initialMode?: 'structure' | 'schema-match';
+  lockMode?: boolean;
+  initialRightPanelTab?: 'detail' | 'recommend' | 'review' | 'fusion';
+  initialShowDrawer?: boolean;
+  initialDrawerTab?: 'components' | 'templates';
+}) {
   const [entityTypes, setEntityTypes] = useState<EntityType[]>(initEntityTypes);
   const [relationTypes, setRelationTypes] = useState<RelationType[]>(initRelationTypes);
   const [positions, setPositions] = useState<NodePositions>(initPositions);
@@ -1042,10 +1054,12 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
   const [sourceOntology, setSourceOntology] = useState('科研知识图谱 v2.1');
   const [targetOntology, setTargetOntology] = useState('W3C SOSA Ontology');
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
-  const [showDrawer, setShowDrawer] = useState(false);
-  const [rightPanelTab, setRightPanelTab] = useState<'detail' | 'recommend' | 'review'>('detail');
+  const [showDrawer, setShowDrawer] = useState(initialShowDrawer);
+  const [rightPanelTab, setRightPanelTab] = useState<'detail' | 'recommend' | 'review' | 'fusion'>(initialRightPanelTab);
   const [isMatching, setIsMatching] = useState(false);
   const [matchDone, setMatchDone] = useState(true);
+  const [strategyWeights, setStrategyWeights] = useState({ text: 0.35, structure: 0.3, ml: 0.35 });
+  const [fusionThreshold, setFusionThreshold] = useState(0.65);
 
   const startMatching = () => { setIsMatching(true); setTimeout(() => { setIsMatching(false); setMatchDone(true); }, 1800); };
 
@@ -1072,6 +1086,31 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
     { target: 'AgentClass', score: 0.71, relation: '从属', algo: 'TextSim', accepted: null as boolean | null },
   ];
   const [recs, setRecs] = useState(RECOMMENDATIONS);
+
+  const FUSION_CANDIDATES = [
+    { src: '人物', tgt: 'Person', text: 0.92, structure: 0.88, ml: 0.95 },
+    { src: '组织', tgt: 'Organization', text: 0.85, structure: 0.91, ml: 0.87 },
+    { src: '技术', tgt: 'Technology', text: 0.78, structure: 0.72, ml: 0.81 },
+    { src: '事件', tgt: 'Event', text: 0.55, structure: 0.68, ml: 0.49 },
+    { src: '数据集', tgt: 'Dataset', text: 0.41, structure: 0.52, ml: 0.38 },
+  ];
+
+  const strategyWeightTotal = strategyWeights.text + strategyWeights.structure + strategyWeights.ml;
+  const normStrategyWeights = {
+    text: strategyWeights.text / strategyWeightTotal,
+    structure: strategyWeights.structure / strategyWeightTotal,
+    ml: strategyWeights.ml / strategyWeightTotal,
+  };
+  const fusionRanked = FUSION_CANDIDATES
+    .map((c) => {
+      const score =
+        c.text * normStrategyWeights.text +
+        c.structure * normStrategyWeights.structure +
+        c.ml * normStrategyWeights.ml;
+      const votes = [c.text, c.structure, c.ml].filter((s) => s >= fusionThreshold).length;
+      return { ...c, score, votes, decision: score >= fusionThreshold ? '匹配' as const : '不匹配' as const };
+    })
+    .sort((a, b) => b.score - a.score);
 
   // ── Fusion templates ──────────────────────────────────────────────────────
   interface FusionTemplate {
@@ -1112,7 +1151,7 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
   const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [matchDepth, setMatchDepth] = useState('仅当前节点');
-  const [drawerTab, setDrawerTab] = useState<'components' | 'templates'>('components');
+  const [drawerTab, setDrawerTab] = useState<'components' | 'templates'>(initialDrawerTab);
   const [applyingTemplateId, setApplyingTemplateId] = useState<string | null>(null);
 
   const handleSaveTemplate = () => {
@@ -1231,7 +1270,7 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
         )}
         <button onClick={() => setShowDrawer(v => !v)}
           className={`ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${showDrawer ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
-          <Workflow className="w-3.5 h-3.5" />流程组件
+          <Workflow className="w-3.5 h-3.5" />原子组件库
         </button>
       </div>
 
@@ -1318,7 +1357,7 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
             // Schema-match mode left panel: source ontology scope
             <>
               <div className="px-3 py-2.5 border-b border-gray-200 flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-700">源本体范围</span>
+                <span className="text-xs font-medium text-gray-700">本体子集选择<span className="font-normal text-gray-400">（标星的是核心概念定义）</span></span>
                 <span className="text-[10px] text-gray-400">{checkedEntities.size}/{entityTypes.length} 选中</span>
               </div>
               <div className="flex-1 overflow-y-auto py-1">
@@ -1511,14 +1550,14 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
         </div>
 
         {/* ── Right Detail Panel ── */}
-        <div className="w-64 flex-shrink-0 bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+        <div className="w-72 flex-shrink-0 bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
           {viewMode === 'schema-match' ? (
             // Schema-match mode: tabbed right panel
             <>
               <div className="flex border-b border-gray-200 flex-shrink-0">
-                {([['detail','详情'],['recommend','匹配推荐'],['review','关系审核']] as const).map(([tab, label]) => (
+                {([['detail', '详情'], ['recommend', '模糊关系'], ['review', '人工审核'], ['fusion', '多策略融合']] as const).map(([tab, label]) => (
                   <button key={tab} onClick={() => setRightPanelTab(tab)}
-                    className={`flex-1 py-2.5 text-[11px] font-medium transition-colors ${rightPanelTab === tab ? 'text-gray-900 border-b-2 border-[#2563eb]' : 'text-gray-400 hover:text-gray-600'}`}>
+                    className={`flex-1 py-2.5 px-0.5 text-[10px] font-medium transition-colors leading-tight ${rightPanelTab === tab ? 'text-gray-900 border-b-2 border-[#2563eb]' : 'text-gray-400 hover:text-gray-600'}`}>
                     {label}
                   </button>
                 ))}
@@ -1538,7 +1577,7 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
                 {rightPanelTab === 'recommend' && (
                   <div className="flex flex-col gap-3">
                     <div className="text-[10px] text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3 text-blue-400" />智能推荐匹配
+                      <Sparkles className="w-3 h-3 text-blue-400" />模糊关系构建
                       {selectedEntity && <span className="text-gray-500 normal-case">· {selectedEntity.label}</span>}
                     </div>
                     {recs.map((r, i) => (
@@ -1593,6 +1632,99 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
                     ))}
                   </div>
                 )}
+
+                {rightPanelTab === 'fusion' && (
+                  <div className="flex flex-col gap-3">
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sliders className="w-3 h-3 text-orange-400" />策略权重配置
+                    </div>
+                    <div className="border border-gray-200 rounded-lg p-3 space-y-3">
+                      {([
+                        ['text', '文本匹配', 'accent-blue-600', 'text-blue-700'],
+                        ['structure', '结构匹配', 'accent-purple-600', 'text-purple-700'],
+                        ['ml', '机器学习', 'accent-green-600', 'text-green-700'],
+                      ] as const).map(([key, label, accent, textCls]) => (
+                        <div key={key}>
+                          <div className="flex justify-between text-[11px] mb-1">
+                            <span className="text-gray-600">{label}</span>
+                            <span className={`font-semibold ${textCls}`}>
+                              {(normStrategyWeights[key] * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0.05}
+                            max={1}
+                            step={0.05}
+                            value={strategyWeights[key]}
+                            onChange={(e) =>
+                              setStrategyWeights((w) => ({ ...w, [key]: parseFloat(e.target.value) }))
+                            }
+                            className={`w-full h-1.5 ${accent}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-gray-500 whitespace-nowrap">判定阈值</span>
+                      <input
+                        type="range"
+                        min={0.3}
+                        max={0.9}
+                        step={0.05}
+                        value={fusionThreshold}
+                        onChange={(e) => setFusionThreshold(parseFloat(e.target.value))}
+                        className="flex-1 accent-orange-500 h-1.5"
+                      />
+                      <span className="text-[11px] font-semibold text-orange-600 w-8 text-right">
+                        {fusionThreshold.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wider">结果投票与排序</div>
+                    <div className="flex flex-col gap-2">
+                      {fusionRanked.map((c, i) => (
+                        <div key={`${c.src}-${c.tgt}`} className="border border-gray-200 rounded-lg p-2.5">
+                          <div className="flex items-center justify-between mb-1.5 gap-1">
+                            <div className="flex items-center gap-1 min-w-0">
+                              <span className="text-[10px] text-gray-400 w-3">{i + 1}</span>
+                              <span className="text-[11px] text-blue-600 font-medium truncate">{c.src}</span>
+                              <ArrowRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
+                              <span className="text-[11px] text-purple-600 font-medium truncate">{c.tgt}</span>
+                            </div>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                                c.decision === '匹配'
+                                  ? 'text-green-600 bg-green-50 border border-green-200'
+                                  : 'text-gray-500 bg-gray-50 border border-gray-200'
+                              }`}
+                            >
+                              {c.decision}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${c.score >= fusionThreshold ? 'bg-orange-500' : 'bg-gray-300'}`}
+                                style={{ width: `${c.score * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-semibold text-orange-600 w-8 text-right">
+                              {(c.score * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-gray-400">
+                            <span>
+                              文 {(c.text * 100).toFixed(0)} · 构 {(c.structure * 100).toFixed(0)} · 学 {(c.ml * 100).toFixed(0)}
+                            </span>
+                            <span>票数 {c.votes}/3</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -1615,7 +1747,7 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
           )}
         </div>
 
-        {/* ── 流程组件 Drawer ── */}
+        {/* ── 原子组件库 / 流程模板 Drawer ── */}
         {showDrawer && (
           <div className="absolute right-0 top-0 h-full w-72 bg-white border-l border-gray-200 shadow-lg rounded-r-lg flex flex-col z-10 overflow-hidden"
             style={{ right: '-1px' }}>
@@ -1626,7 +1758,7 @@ export default function OntologyEditor({ initialMode = 'structure', lockMode = f
             </div>
             {/* Drawer tabs */}
             <div className="flex border-b border-gray-200 flex-shrink-0">
-              {([['components', '流程组件'], ['templates', '融合模板']] as const).map(([k, l]) => (
+              {([['components', '原子组件库'], ['templates', '流程模板管理']] as const).map(([k, l]) => (
                 <button key={k} onClick={() => setDrawerTab(k)}
                   className={`flex-1 py-2 text-xs font-medium transition-colors ${drawerTab === k ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-600'}`}>
                   {l}

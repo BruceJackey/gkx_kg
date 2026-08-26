@@ -150,6 +150,70 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '图谱任务/自定义图谱上传': 'graph-tasks',
   '自定义图谱上传': 'graph-tasks',
   '用户自定义图谱空间/自定义图谱上传': 'graph-tasks',
+  '图谱融合/逻辑关系构建': 'graph-fusion',
+  '图谱融合/模糊关系构建': 'graph-fusion',
+  '图谱融合/关系可视化': 'graph-fusion',
+  '逻辑关系构建': 'graph-fusion',
+  '模糊关系构建': 'graph-fusion',
+  '关系可视化': 'graph-fusion',
+  '跨本体实体模糊关系与逻辑关系构建/逻辑关系构建': 'graph-fusion',
+  '跨本体实体模糊关系与逻辑关系构建/模糊关系构建': 'graph-fusion',
+  '跨本体实体模糊关系与逻辑关系构建/关系可视化': 'graph-fusion',
+  '图谱融合/智能匹配推荐': 'graph-fusion',
+  '图谱融合/人工审核与反馈': 'graph-fusion',
+  '智能匹配推荐': 'graph-fusion',
+  '人工审核与反馈': 'graph-fusion',
+  '本体匹配关系智能构建/智能匹配推荐': 'graph-fusion',
+  '本体匹配关系智能构建/人工审核与反馈': 'graph-fusion',
+  '图谱融合/本体子集选择': 'graph-fusion',
+  '图谱融合/核心概念定义': 'graph-fusion',
+  '图谱融合/可视化流程画布': 'graph-fusion',
+  '本体子集选择': 'graph-fusion',
+  '核心概念定义': 'graph-fusion',
+  '可视化流程画布': 'graph-fusion',
+  '本体匹配主体/本体子集选择': 'graph-fusion',
+  '本体匹配主体/核心概念定义': 'graph-fusion',
+  '本体匹配流程组件/可视化流程画布': 'graph-fusion',
+  '图谱融合/原子组件库': 'graph-fusion',
+  '图谱融合/流程模板管理': 'graph-fusion',
+  '原子组件库': 'graph-fusion',
+  '流程模板管理': 'graph-fusion',
+  '流程模版管理': 'graph-fusion',
+  '本体匹配流程组件/原子组件库': 'graph-fusion',
+  '本体匹配流程组件/流程模板管理': 'graph-fusion',
+  '本体匹配流程组件/流程模版管理': 'graph-fusion',
+  '图谱融合/策略权重配置': 'graph-fusion',
+  '图谱融合/结果投票与排序': 'graph-fusion',
+  '图谱融合/多策略融合匹配': 'graph-fusion',
+  '策略权重配置': 'graph-fusion',
+  '结果投票与排序': 'graph-fusion',
+  '多策略融合匹配': 'graph-fusion',
+  '多策略融合匹配/策略权重配置': 'graph-fusion',
+  '多策略融合匹配/结果投票与排序': 'graph-fusion',
+  '文本实体识别/命名实体识别': 'text-entity-recognition',
+  '文本实体识别/实体边界修正': 'text-entity-recognition',
+  '文本实体识别/命名体识别': 'text-entity-recognition',
+  '命名实体识别': 'text-entity-recognition',
+  '命名体识别': 'text-entity-recognition',
+  '实体边界修正': 'text-entity-recognition',
+  '实体链接判断/上下文语义分析': 'entity-link-judgment',
+  '实体链接判断/模型': 'entity-link-judgment',
+  '上下文语义分析': 'entity-link-judgment',
+  '文本实例匹配/字符串相似度匹配': 'text-instance-matching',
+  '文本实例匹配/文本向量相似度匹配': 'text-instance-matching',
+  '字符串相似度匹配': 'text-instance-matching',
+  '文本向量相似度匹配': 'text-instance-matching',
+  '结构实例匹配/邻居节点相似性分析': 'structure-instance-matching',
+  '结构实例匹配/关系路径模式匹配': 'structure-instance-matching',
+  '邻居节点相似性分析': 'structure-instance-matching',
+  '关系路径模式匹配': 'structure-instance-matching',
+  '机器学习实例匹配/特征工程': 'instance-feature-engineering',
+  '特征工程': 'instance-feature-engineering',
+  '候选实体生成/索引与召回': 'candidate-entity-generation',
+  '候选实体生成/候选实体排序': 'candidate-entity-generation',
+  '索引与召回': 'candidate-entity-generation',
+  '候选实体排序': 'candidate-entity-generation',
+  '候选实体生成': 'candidate-entity-generation',
   '属性抽取与结构化输出/属性信息精确抽取': 'attribute-precise-extract',
   '属性信息精确抽取': 'attribute-precise-extract',
   '多格式文献解析模块/PDF解析': 'multi-format-lit-parse',
@@ -306,6 +370,25 @@ export function resolveRecognitionFocus(pagePath: string | undefined): Recogniti
   if (path.includes('结果可视化与高亮')) return 'highlight';
   if (path.includes('人工审核与修正界面')) return 'review';
   if (path.includes('实体链接与消歧')) return 'linking';
+  return null;
+}
+
+/** 文本实体识别审计页聚焦 */
+export function resolveTextEntityRecognitionFocus(pagePath: string | undefined): RecognitionFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('实体边界修正')) return 'review';
+  if (path.includes('命名实体识别') || path.includes('命名体识别')) return 'highlight';
+  return null;
+}
+
+export type EntityLinkJudgmentFocus = 'context' | 'model';
+
+export function resolveEntityLinkJudgmentFocus(pagePath: string | undefined): EntityLinkJudgmentFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('上下文语义分析')) return 'context';
+  if (path.endsWith('/模型') || path.includes('实体链接判断/模型')) return 'model';
   return null;
 }
 
@@ -549,6 +632,7 @@ export function resolveEventReviewSubTab(pagePath: string | undefined): EventRev
 
 /** 页面路径前缀兜底（列 I 为空或未录入精确路径时） */
 const AUDIT_PAGE_PREFIX: Array<{ prefix: string; pageId: string }> = [
+  { prefix: '候选实体生成', pageId: 'candidate-entity-generation' },
   { prefix: '图谱构造引擎/数据源', pageId: 'kg-datasource' },
   { prefix: '图谱构造引擎/本体', pageId: 'kg-ontology' },
   { prefix: '知识图谱构造引擎/数据管理/本体', pageId: 'kg-ontology' },
@@ -727,6 +811,41 @@ export function resolveGraphTasksDashTab(pagePath: string | undefined): GraphTas
 export function resolveGraphConstructionAutoTask(pagePath: string | undefined): boolean {
   const path = (pagePath ?? '').trim();
   return path.includes('自动化任务生成');
+}
+
+/** 图谱融合：逻辑/模糊/可视化/智能推荐/人工审核/子集/核心概念/流程画布/原子组件/模板 */
+export type GraphFusionFocus =
+  | 'logic'
+  | 'fuzzy'
+  | 'viz'
+  | 'smart'
+  | 'review'
+  | 'subset'
+  | 'core'
+  | 'canvas'
+  | 'atoms'
+  | 'templates'
+  | 'fusion'
+  | 'fusion-weight'
+  | 'fusion-vote';
+
+export function resolveGraphFusionFocus(pagePath: string | undefined): GraphFusionFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('智能匹配推荐')) return 'smart';
+  if (path.includes('人工审核与反馈')) return 'review';
+  if (path.includes('本体子集选择')) return 'subset';
+  if (path.includes('核心概念定义')) return 'core';
+  if (path.includes('可视化流程画布')) return 'canvas';
+  if (path.includes('原子组件库')) return 'atoms';
+  if (path.includes('流程模板管理') || path.includes('流程模版管理')) return 'templates';
+  if (path.includes('策略权重配置')) return 'fusion-weight';
+  if (path.includes('结果投票与排序')) return 'fusion-vote';
+  if (path.includes('多策略融合')) return 'fusion';
+  if (path.includes('模糊关系')) return 'fuzzy';
+  if (path.includes('逻辑关系')) return 'logic';
+  if (path.includes('关系可视化')) return 'viz';
+  return null;
 }
 
 export function resolveAuditPageId(pagePath: string | undefined): string | null {

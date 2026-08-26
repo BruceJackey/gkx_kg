@@ -2087,27 +2087,27 @@
                           "name": "逻辑关系构建",
                           "type": "feature",
                           "reqId": "76",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/逻辑关系构建",
                           "featureDesc": "支持建立等价于、从属于、不相交于等精确的逻辑对应关系。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 人工审核与反馈（逻辑关系）"
                         },
                         {
                           "id": "fp-76-168",
                           "name": "模糊关系构建",
                           "type": "feature",
                           "reqId": "76",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/模糊关系构建",
                           "featureDesc": "支持基于词法、语义相似度建立模糊匹配关系，并给出相似度得分。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 模糊关系构建"
                         },
                         {
                           "id": "fp-76-169",
                           "name": "关系可视化",
                           "type": "feature",
                           "reqId": "76",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/关系可视化",
                           "featureDesc": "以图形化方式展示两个本体之间的对齐关系，方便用户理解和校验。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · Schema 匹配画布可视化"
                         }
                       ]
                     },
@@ -2130,18 +2130,18 @@
                           "name": "智能匹配推荐",
                           "type": "feature",
                           "reqId": "77",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/智能匹配推荐",
                           "featureDesc": "根据相似度计算结果，自动为用户推荐最可能的匹配对和关系类型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 模糊关系构建（智能推荐）"
                         },
                         {
                           "id": "fp-77-172",
                           "name": "人工审核与反馈",
                           "type": "feature",
                           "reqId": "77",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/人工审核与反馈",
                           "featureDesc": "提供一个交互界面，让用户对智能推荐的结果进行确认或否决，并通过反馈持续优化模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 人工审核与反馈"
                         }
                       ]
                     },
@@ -2155,18 +2155,18 @@
                           "name": "本体子集选择",
                           "type": "feature",
                           "reqId": "78",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/本体子集选择",
                           "featureDesc": "允许用户通过勾选本体树的特定分支，来指定参与对齐的类和属性范围。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 本体子集选择"
                         },
                         {
                           "id": "fp-78-174",
                           "name": "核心概念定义",
                           "type": "feature",
                           "reqId": "78",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/核心概念定义",
                           "featureDesc": "允许用户定义少数几个核心概念作为锚点，优先围绕这些锚点进行匹配。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 本体子集选择（标星为核心概念）"
                         }
                       ]
                     },
@@ -2180,27 +2180,27 @@
                           "name": "可视化流程画布",
                           "type": "feature",
                           "reqId": "79",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/可视化流程画布",
                           "featureDesc": "提供一个拖拽式的画布界面，用于设计匹配流程。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · Schema 匹配画布"
                         },
                         {
                           "id": "fp-79-176",
                           "name": "原子组件库",
                           "type": "feature",
                           "reqId": "79",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/原子组件库",
                           "featureDesc": "提供“加载本体”、“文本匹配”、“结构匹配”、“人工审核”等可复用的原子组件。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 原子组件库抽屉"
                         },
                         {
                           "id": "fp-79-177",
                           "name": "流程模板管理",
                           "type": "feature",
                           "reqId": "79",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/流程模板管理",
                           "featureDesc": "支持将设计好的流程保存为模板，便于后续任务复用。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 流程模板管理抽屉"
                         }
                       ]
                     }
@@ -2221,18 +2221,18 @@
                           "name": "字符串相似度匹配",
                           "type": "feature",
                           "reqId": "80",
-                          "pagePath": "",
+                          "pagePath": "文本实例匹配/字符串相似度匹配",
                           "featureDesc": "利用字符串相似度算法判断两个实例是否指向同一实体。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应文本实例匹配页 · 字符串相似度结果"
                         },
                         {
                           "id": "fp-80-179",
                           "name": "文本向量相似度匹配",
                           "type": "feature",
                           "reqId": "80",
-                          "pagePath": "",
+                          "pagePath": "文本实例匹配/文本向量相似度匹配",
                           "featureDesc": "利用文本向量的余弦相似度来判断语义上的相似性。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应文本实例匹配页 · 向量余弦相似度结果"
                         }
                       ]
                     },
@@ -2246,18 +2246,18 @@
                           "name": "邻居节点相似性分析",
                           "type": "feature",
                           "reqId": "81",
-                          "pagePath": "",
+                          "pagePath": "结构实例匹配/邻居节点相似性分析",
                           "featureDesc": "通过比较两个实例的邻居节点的重合度和相似性来进行匹配。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应结构实例匹配页 · 邻居相似性结果"
                         },
                         {
                           "id": "fp-81-181",
                           "name": "关系路径模式匹配",
                           "type": "feature",
                           "reqId": "81",
-                          "pagePath": "",
+                          "pagePath": "结构实例匹配/关系路径模式匹配",
                           "featureDesc": "通过分析连接两个实例的关系路径模式来判断其是否匹配。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应结构实例匹配页 · 路径模式匹配结果"
                         }
                       ]
                     },
@@ -2271,9 +2271,9 @@
                           "name": "特征工程",
                           "type": "feature",
                           "reqId": "82",
-                          "pagePath": "",
+                          "pagePath": "机器学习实例匹配/特征工程",
                           "featureDesc": "自动从实例对中提取文本、结构、数值等多种特征。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应特征工程页 · 文本/结构/数值特征输出"
                         },
                         {
                           "id": "fp-82-183",
@@ -2296,18 +2296,18 @@
                           "name": "策略权重配置",
                           "type": "feature",
                           "reqId": "83",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/策略权重配置",
                           "featureDesc": "允许用户为不同策略设置不同的权重。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 多策略融合 · 策略权重配置"
                         },
                         {
                           "id": "fp-83-185",
                           "name": "结果投票与排序",
                           "type": "feature",
                           "reqId": "83",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/结果投票与排序",
                           "featureDesc": "对不同策略的匹配结果进行综合投票或加权排序，给出最终的匹配决策。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 多策略融合 · 结果投票与排序"
                         }
                       ]
                     }
@@ -2328,18 +2328,18 @@
                           "name": "命名实体识别",
                           "type": "feature",
                           "reqId": "84",
-                          "pagePath": "",
+                          "pagePath": "文本实体识别/命名实体识别",
                           "featureDesc": "能够标注出文本中的人名、地名、机构名等实体边界。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应文本实体识别 · 命名体识别（高亮）"
                         },
                         {
                           "id": "fp-84-187",
                           "name": "实体边界修正",
                           "type": "feature",
                           "reqId": "84",
-                          "pagePath": "",
+                          "pagePath": "文本实体识别/实体边界修正",
                           "featureDesc": "提供界面允许用户对机器自动识别的实体边界进行人工修正。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应文本实体识别 · 命名体识别（修正）"
                         }
                       ]
                     },
@@ -2353,18 +2353,18 @@
                           "name": "索引与召回",
                           "type": "feature",
                           "reqId": "85",
-                          "pagePath": "",
+                          "pagePath": "候选实体生成/索引与召回",
                           "featureDesc": "基于高效的索引，根据实体提及快速从知识库中召回候选实体。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应候选实体生成 · 索引与召回"
                         },
                         {
                           "id": "fp-85-189",
                           "name": "候选实体排序",
                           "type": "feature",
                           "reqId": "85",
-                          "pagePath": "",
+                          "pagePath": "候选实体生成/候选实体排序",
                           "featureDesc": "根据先验概率或字面相似度对召回的候选实体进行初步排序。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应候选实体生成 · 候选实体排序"
                         }
                       ]
                     },
@@ -2378,18 +2378,18 @@
                           "name": "上下文语义分析",
                           "type": "feature",
                           "reqId": "86",
-                          "pagePath": "",
+                          "pagePath": "实体链接判断/上下文语义分析",
                           "featureDesc": "利用深度学习模型理解实体提及的上下文语境。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应实体链接判断 · 上下文语义分析"
                         },
                         {
                           "id": "fp-86-191",
                           "name": "模型",
                           "type": "feature",
                           "reqId": "86",
-                          "pagePath": "",
+                          "pagePath": "实体链接判断/模型",
                           "featureDesc": "内置基于词和实体联合表示的无监督概率模型、基于多任务学习的实体发现与链接联合优化模型、基于词和实体联合表示的实体链接模型，进行精准消歧。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应实体链接判断 · 内置消歧模型"
                         }
                       ]
                     },
