@@ -49,7 +49,7 @@ const allMenuItems: MenuItem[] = [
     children: [
       { id: 'kg-ontology', label: '本体管理', icon: Layers },
       { id: 'kg-datasource', label: '数据源管理', icon: Database },
-      { id: 'kg-mapping', label: '映射管理', icon: GitMerge },
+      { id: 'kg-mapping', label: '映射配置解析与保存', icon: GitMerge },
       { id: 'rule-management', label: '规则管理', icon: Shield },
       { id: 'graph-construction', label: '图谱构造', icon: PlayCircle },
       { id: 'graph-tasks', label: '图谱任务', icon: Activity },

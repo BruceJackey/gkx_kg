@@ -383,9 +383,12 @@ interface UploadedFile {
 }
 
 function getFileType(name: string): UploadedFile['type'] {
-  if (name.endsWith('.owl') || name.endsWith('.ttl') || name.endsWith('.jsonld')) return 'owl';
-  if (name.endsWith('.rdf') || name.endsWith('.xml')) return 'rdf';
-  if (name.endsWith('.rdfs')) return 'rdfs';
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.owl')) return 'owl';
+  if (lower.endsWith('.rdfs')) return 'rdfs';
+  if (lower.endsWith('.rdf') || lower.endsWith('.nt') || lower.endsWith('.nq')) return 'rdf';
+  if (lower.endsWith('.ttl') || lower.endsWith('.turtle')) return 'rdf';
+  if (lower.endsWith('.xml') || lower.endsWith('.jsonld')) return 'owl';
   return 'other';
 }
 
@@ -409,7 +412,7 @@ const FILE_TYPE_LABELS: Record<UploadedFile['type'], string> = {
   other: '其他',
 };
 
-function FileUploadPanel() {
+function FileUploadPanel({ highlightType }: { highlightType?: 'owl' | 'rdf' | 'rdfs' } = {}) {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -443,12 +446,18 @@ function FileUploadPanel() {
     setFiles(prev => prev.filter(f => f.id !== id));
   };
 
+  const typeHints: Array<{ key: 'rdf' | 'rdfs' | 'owl'; label: string; exts: string }> = [
+    { key: 'rdf', label: 'RDF', exts: '.rdf / .ttl / .nt' },
+    { key: 'rdfs', label: 'RDFS', exts: '.rdfs' },
+    { key: 'owl', label: 'OWL', exts: '.owl / .xml' },
+  ];
+
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    <div className={`bg-white border rounded-xl overflow-hidden ${highlightType ? 'border-blue-300 ring-1 ring-blue-100' : 'border-gray-200'}`}>
       <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
         <div>
           <span className="text-sm font-semibold text-gray-800">本体文件导入</span>
-          <span className="ml-2 text-xs text-gray-400">支持 OWL、RDF、RDFS 格式文件，导入后关联为图谱数据</span>
+          <span className="ml-2 text-xs text-gray-400">支持RDF、RDFS、OWL标准数据模型格式文件，导入后关联为图谱数据</span>
         </div>
         <button
           onClick={() => fileRef.current?.click()}
@@ -461,12 +470,25 @@ function FileUploadPanel() {
           type="file"
           className="hidden"
           multiple
-          accept=".owl,.rdf,.rdfs,.xml,.ttl,.jsonld,.json"
+          accept=".owl,.rdf,.rdfs,.xml,.ttl,.nt,.nq,.jsonld,.json"
           onChange={e => e.target.files && addFiles(e.target.files)}
         />
       </div>
 
-      {/* Drop zone */}
+      <div className="px-5 pt-3 flex flex-wrap gap-1.5">
+        {typeHints.map((t) => (
+          <span
+            key={t.key}
+            className={`text-[11px] px-2 py-0.5 rounded-full border ${
+              highlightType === t.key
+                ? 'bg-blue-100 text-blue-800 border-blue-300 font-medium'
+                : 'bg-gray-50 text-gray-500 border-gray-200'
+            }`}
+          >
+            {t.label} · {t.exts}
+          </span>
+        ))}
+      </div>
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
@@ -872,7 +894,7 @@ function ConceptPredictionDrawer({ entity, onClose }: { entity: OntoEntity; onCl
 
 // ─── Export format generators ─────────────────────────────────────────────────
 
-type ExportFormat = 'json-ld' | 'owl-xml' | 'turtle' | 'json';
+type ExportFormat = 'json-ld' | 'owl-xml' | 'turtle' | 'rdfs' | 'json';
 
 const TYPE_TO_XSD: Record<string, string> = {
   string: 'xsd:string', text: 'xsd:string', int: 'xsd:integer',
@@ -983,6 +1005,42 @@ function generateTurtle(o: Ontology): string {
   return lines.join('\n');
 }
 
+function generateRdfs(o: Ontology): string {
+  const base = `http://kg.yinji.tech/ontology/${o.id}#`;
+  const lines: string[] = [
+    `@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .`,
+    `@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .`,
+    `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .`,
+    `@prefix : <${base}> .`,
+    '',
+    `# RDFS vocabulary layer — ${o.name}`,
+    `# Classes & properties with hierarchical relations`,
+    '',
+  ];
+  for (const e of o.entities) {
+    lines.push(`:${e.enId} a rdfs:Class ;`);
+    lines.push(`    rdfs:label "${e.name}"@zh, "${e.enId}"@en ;`);
+    lines.push(`    rdfs:comment "${e.description || ''}"@zh .`);
+    lines.push('');
+    for (const p of e.props) {
+      lines.push(`:${e.enId}_${p.name} a rdf:Property ;`);
+      lines.push(`    rdfs:domain :${e.enId} ;`);
+      lines.push(`    rdfs:range ${TYPE_TO_XSD[p.type] || 'rdfs:Literal'} ;`);
+      lines.push(`    rdfs:label "${p.name}"@zh .`);
+      lines.push('');
+    }
+  }
+  for (const r of o.relations) {
+    lines.push(`:${r.name} a rdf:Property ;`);
+    lines.push(`    rdfs:domain :${r.from} ;`);
+    lines.push(`    rdfs:range :${r.to} ;`);
+    lines.push(`    rdfs:label "${r.chName}"@zh, "${r.name}"@en ;`);
+    lines.push(`    rdfs:comment "${r.description || ''}"@zh .`);
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
 function generateInternalJson(o: Ontology): string {
   return JSON.stringify({
     schema_version: '1.0',
@@ -1016,9 +1074,11 @@ const EXPORT_OPTIONS: Array<{
   mime: string;
   Icon: typeof FileJson;
   standard: boolean;
+  model?: 'rdf' | 'rdfs' | 'owl';
 }> = [
-  { fmt: 'owl-xml', label: 'OWL/XML', desc: 'W3C 标准本体格式，适用于 Protégé 等工具', ext: '.owl', mime: 'application/rdf+xml', Icon: FileCode2, standard: true },
-  { fmt: 'turtle', label: 'Turtle (RDF)', desc: 'RDF 三元组标准文本格式', ext: '.ttl', mime: 'text/turtle', Icon: FileText, standard: true },
+  { fmt: 'turtle', label: 'RDF / Turtle', desc: '主语-谓语-宾语三元组数据层表示', ext: '.ttl', mime: 'text/turtle', Icon: FileText, standard: true, model: 'rdf' },
+  { fmt: 'rdfs', label: 'RDFS 词汇', desc: '类与属性层级的词汇层定义', ext: '.rdfs', mime: 'text/turtle', Icon: FileCode2, standard: true, model: 'rdfs' },
+  { fmt: 'owl-xml', label: 'OWL/XML', desc: '复杂本体约束（不相交、等价、基数）', ext: '.owl', mime: 'application/rdf+xml', Icon: FileCode2, standard: true, model: 'owl' },
   { fmt: 'json-ld', label: 'JSON-LD', desc: '关联数据标准格式，便于 Web 集成', ext: '.jsonld', mime: 'application/ld+json', Icon: FileJson, standard: true },
   { fmt: 'json', label: 'JSON（内部）', desc: '平台内部交换格式，含完整 schema 结构', ext: '.json', mime: 'application/json', Icon: FileJson, standard: false },
 ];
@@ -1028,6 +1088,7 @@ function exportOntologyContent(o: Ontology, fmt: ExportFormat): string {
     case 'json-ld': return generateJsonLd(o);
     case 'owl-xml': return generateOwlXml(o);
     case 'turtle': return generateTurtle(o);
+    case 'rdfs': return generateRdfs(o);
     default: return generateInternalJson(o);
   }
 }
@@ -1036,7 +1097,7 @@ function safeFileName(name: string): string {
   return name.replace(/[/\\?%*:|"<>]/g, '_').trim() || 'ontology';
 }
 
-function OntologyExportPanel({ ontology }: { ontology: Ontology }) {
+function OntologyExportPanel({ ontology, highlightModel }: { ontology: Ontology; highlightModel?: 'rdf' | 'rdfs' | 'owl' }) {
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [lastExported, setLastExported] = useState<string | null>(null);
 
@@ -1053,31 +1114,33 @@ function OntologyExportPanel({ ontology }: { ontology: Ontology }) {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    <div className={`bg-white border rounded-xl overflow-hidden ${highlightModel ? 'border-emerald-300 ring-1 ring-emerald-100' : 'border-gray-200'}`}>
       <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
         <div>
           <span className="text-sm font-semibold text-gray-800">本体导出</span>
-          <span className="ml-2 text-xs text-gray-400">导出为标准 OWL / RDF / JSON-LD 等格式，可在外部本体工具中打开</span>
+          <span className="ml-2 text-xs text-gray-400">导出为标准 RDF / RDFS / OWL 等格式，可在外部本体工具中打开</span>
         </div>
         <button
           type="button"
           disabled={exporting !== null}
-          onClick={() => runExport('owl-xml')}
+          onClick={() => runExport(highlightModel === 'rdf' ? 'turtle' : highlightModel === 'rdfs' ? 'rdfs' : 'owl-xml')}
           className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg flex items-center gap-1.5 transition-colors flex-shrink-0"
         >
-          {exporting === 'owl-xml' ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
-          导出标准化本体（OWL）
+          {exporting ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+          导出{highlightModel === 'rdf' ? ' RDF' : highlightModel === 'rdfs' ? ' RDFS' : ' OWL'}
         </button>
       </div>
       <div className="p-4 grid grid-cols-2 gap-3">
-        {EXPORT_OPTIONS.map(({ fmt, label, desc, ext, Icon, standard }) => (
+        {EXPORT_OPTIONS.map(({ fmt, label, desc, ext, Icon, standard, model }) => (
           <button
             key={fmt}
             type="button"
             disabled={exporting !== null}
             onClick={() => runExport(fmt)}
             className={`text-left p-4 rounded-xl border-2 transition-all disabled:opacity-50 ${
-              exporting === fmt ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/40'
+              exporting === fmt || highlightModel === model
+                ? 'border-emerald-400 bg-emerald-50'
+                : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/40'
             }`}
           >
             <div className="flex items-start gap-3">
@@ -1108,7 +1171,7 @@ function OntologyExportPanel({ ontology }: { ontology: Ontology }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function OntologyManagement() {
+export default function OntologyManagement({ initialModelFocus }: { initialModelFocus?: 'rdf' | 'rdfs' | 'owl' } = {}) {
   const [ontologies, setOntologies] = useState<Ontology[]>(MOCK_ONTOLOGIES);
   const [selectedId, setSelectedId] = useState('o1');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -1122,6 +1185,14 @@ export default function OntologyManagement() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!initialModelFocus) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById('onto-io')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [initialModelFocus]);
 
   useEffect(() => {
     if (!showExportMenu) return;
@@ -1264,9 +1335,9 @@ export default function OntologyManagement() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Import & Export */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <FileUploadPanel />
-            <OntologyExportPanel ontology={current} />
+          <div id="onto-io" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <FileUploadPanel highlightType={initialModelFocus} />
+            <OntologyExportPanel ontology={current} highlightModel={initialModelFocus} />
           </div>
 
           {/* Basic Info */}

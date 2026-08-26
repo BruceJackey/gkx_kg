@@ -11,7 +11,7 @@ import {
 
 type DocType = '文献' | '专利' | '笔记';
 type DocFormat = 'PDF' | 'XML' | 'HTML' | 'TXT';
-type GenTab = 'poster' | 'audio';
+type GenTab = 'poster' | 'audio' | 'notes';
 
 interface KBDoc {
   id: string; type: DocType; format: DocFormat; title: string;
@@ -474,14 +474,22 @@ function AudioCardView({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function AcademicPoster() {
+export default function AcademicPoster({
+  initialTab = 'poster',
+}: {
+  initialTab?: GenTab;
+}) {
   // ── Left panel state ──
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<DocType | 'all'>('all');
   const [selectedDocId, setSelectedDocId] = useState<string | null>('d1');
 
   // ── Tab state ──
-  const [activeTab, setActiveTab] = useState<GenTab>('poster');
+  const [activeTab, setActiveTab] = useState<GenTab>(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   // ── Poster state ──
   const [selectedTemplate, setSelectedTemplate] = useState(POSTER_TEMPLATES[0].id);
@@ -492,6 +500,19 @@ export default function AcademicPoster() {
   const [audioCards, setAudioCards] = useState<AudioCard[]>([]);
   const [generatingAudioForIds, setGeneratingAudioForIds] = useState<Set<string>>(new Set());
   const progressTimers = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+
+  // ── Notes state ──
+  const [notesGenerating, setNotesGenerating] = useState(false);
+  const [notePoints, setNotePoints] = useState<Array<{ title: string; content: string }> | null>(
+    initialTab === 'notes'
+      ? [
+          { title: '研究问题', content: '如何在长距离依赖场景下提升知识图谱嵌入质量？' },
+          { title: '方法要点', content: 'TKGEmbed：多头自注意力聚合邻居 + 关系感知位置编码 + 对比损失联合训练。' },
+          { title: '关键结果', content: 'FB15k-237 / WN18RR 上 MRR、Hits@10 优于主流基线。' },
+          { title: '结论启示', content: '上下文聚合与关系类型区分对稀疏图补全尤为关键。' },
+        ]
+      : null,
+  );
 
   // Pre-generate audio cards for d1 and d7 on mount
   useEffect(() => {
@@ -576,6 +597,41 @@ export default function AcademicPoster() {
       setAudioCards(prev => [card, ...prev]);
       setGeneratingAudioForIds(prev => { const s = new Set(prev); s.delete(id); return s; });
     }, 2000);
+  }
+
+  function handleGenerateNotes() {
+    if (!selectedDoc) return;
+    setNotesGenerating(true);
+    setNotePoints(null);
+    setTimeout(() => {
+      setNotePoints([
+        {
+          title: '研究问题',
+          content:
+            selectedDoc.abstract?.slice(0, 80) ||
+            `围绕「${selectedDoc.title}」的核心科学问题与动机。`,
+        },
+        {
+          title: '方法要点',
+          content: (selectedDoc.methods ?? ['关键技术路线与模型设计']).slice(0, 3).join('；'),
+        },
+        {
+          title: '关键结果',
+          content:
+            selectedDoc.results?.map((r) => `${r.label} ${r.value}`).join('；') ||
+            '实验指标与主要定量结论。',
+        },
+        {
+          title: '结论与启示',
+          content: selectedDoc.conclusion || '提炼可迁移的结论与后续研究方向。',
+        },
+        {
+          title: '关键词',
+          content: (selectedDoc.keywords ?? selectedDoc.tags).join(' · '),
+        },
+      ]);
+      setNotesGenerating(false);
+    }, 1200);
   }
 
   function togglePlay(docId: string) {
@@ -667,6 +723,7 @@ export default function AcademicPoster() {
             {([
               { id: 'poster' as GenTab, label: '学术海报', icon: Image },
               { id: 'audio' as GenTab, label: '音频概览', icon: Mic },
+              { id: 'notes' as GenTab, label: '一键生成笔记', icon: StickyNote },
             ]).map(tab => {
               const Icon = tab.icon;
               return (
@@ -838,6 +895,77 @@ export default function AcademicPoster() {
                     <div className="text-center">
                       <p className="text-base font-medium text-gray-400">选择文献并点击"生成音频脚本"</p>
                       <p className="text-sm text-gray-300 mt-1">自动生成播客风格的文献音频概览</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Notes tab ────────────────────────────────────────────────── */}
+          {activeTab === 'notes' && (
+            <div className="flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-100 flex-shrink-0">
+                <div>
+                  <p className="text-sm text-gray-600">
+                    {selectedDoc ? (
+                      <span>
+                        已选：
+                        <span className="font-medium text-gray-900 line-clamp-1 max-w-md inline-block align-bottom">
+                          {selectedDoc.title}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">未选择文献</span>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    智能提取文献关键信息，自动生成研究要点笔记
+                  </p>
+                </div>
+                <button
+                  onClick={handleGenerateNotes}
+                  disabled={!selectedDoc || notesGenerating}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {notesGenerating ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> 生成中…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} /> 一键生成笔记
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                {notesGenerating && (
+                  <div className="flex flex-col items-center justify-center py-20 gap-3 text-emerald-600">
+                    <Loader2 size={28} className="animate-spin" />
+                    <p className="text-sm">正在提取关键要点…</p>
+                  </div>
+                )}
+                {!notesGenerating && notePoints && (
+                  <div className="max-w-2xl mx-auto space-y-3">
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-xs text-emerald-800">
+                      已基于「{selectedDoc?.title}」生成笔记要点，可复制到知识库笔记中继续编辑。
+                    </div>
+                    {notePoints.map((p) => (
+                      <div key={p.title} className="bg-white border border-gray-200 rounded-xl p-4">
+                        <p className="text-xs font-semibold text-emerald-700 mb-1.5">{p.title}</p>
+                        <p className="text-sm text-gray-800 leading-relaxed">{p.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!notesGenerating && !notePoints && (
+                  <div className="flex flex-col items-center justify-center h-full gap-4 text-gray-300 pt-16">
+                    <StickyNote size={48} />
+                    <div className="text-center">
+                      <p className="text-base font-medium text-gray-400">选择文献并点击「一键生成笔记」</p>
+                      <p className="text-sm text-gray-300 mt-1">自动提取研究问题、方法、结果与结论要点</p>
                     </div>
                   </div>
                 )}

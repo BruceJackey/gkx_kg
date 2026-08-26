@@ -55,16 +55,18 @@ const TABS: { id: TabId; label: string; icon: ElementType }[] = [
 
 export type GraphConstructionTab = TabId;
 
-export type GraphStrategyFocus = 'rule' | 'dict' | 'ml' | 'fusion';
+export type GraphStrategyFocus = 'rule' | 'dict' | 'ml' | 'fusion' | 'syntax';
 
 export default function GraphConstruction({
   onNavigateTo,
   initialTab,
   initialStrategyFocus,
+  focusAutoTask,
 }: {
   onNavigateTo?: (page: string) => void;
   initialTab?: GraphConstructionTab;
   initialStrategyFocus?: GraphStrategyFocus;
+  focusAutoTask?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'data');
 
@@ -79,12 +81,21 @@ export default function GraphConstruction({
       dict: 'gc-strategy-dict',
       ml: 'gc-strategy-ml',
       fusion: 'gc-strategy-fusion',
+      syntax: 'gc-strategy-syntax',
     };
     const timer = window.setTimeout(() => {
       document.getElementById(idMap[initialStrategyFocus])?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 200);
     return () => window.clearTimeout(timer);
   }, [initialStrategyFocus, activeTab]);
+
+  useEffect(() => {
+    if (!focusAutoTask) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById('gc-auto-task-gen')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [focusAutoTask]);
 
   // 数据与本体
   const [selectedOntoId, setSelectedOntoId] = useState('o1');
@@ -156,6 +167,9 @@ export default function GraphConstruction({
     { value: 'glm5.2', label: 'GLM-5.2', tag: '推荐', desc: '最新版本，抽取精度更高，支持长上下文' },
     { value: 'glm5.1', label: 'GLM-5.1', desc: '稳定版本，速度更快，适合大批量任务' },
   ];
+
+  // 句法增强表示模块
+  const [syntaxEnhanceEnabled, setSyntaxEnhanceEnabled] = useState(true);
 
   // 知识补全
   type CompletionModel = 'glm5.2' | 'glm5.1' | 'qwen2.5' | 'gpt4o';
@@ -668,6 +682,62 @@ export default function GraphConstruction({
           <p className="text-xs text-gray-400 mt-3">所选模型将用于实体、关系的全部抽取步骤</p>
         </div>
 
+        {/* 句法增强表示模块 */}
+        <div
+          id="gc-strategy-syntax"
+          className={`bg-white border rounded-xl p-5 ${
+            initialStrategyFocus === 'syntax' ? 'border-blue-300 ring-1 ring-blue-100' : 'border-gray-200'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <div className="text-sm font-semibold text-gray-800">句法增强表示模块</div>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${
+                  syntaxEnhanceEnabled
+                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                    : 'bg-gray-50 text-gray-500 border-gray-200'
+                }`}>
+                  {syntaxEnhanceEnabled ? '已启用' : '已关闭'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                在模型输入层利用句法分析树（如依存关系）增强实体与事件表示，帮助模型更好地捕捉结构信息。
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={syntaxEnhanceEnabled}
+              onClick={() => setSyntaxEnhanceEnabled(v => !v)}
+              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                syntaxEnhanceEnabled ? 'bg-indigo-600' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  syntaxEnhanceEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+          {syntaxEnhanceEnabled && (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {[
+                { label: '依存树编码', desc: '依存边注入实体表示' },
+                { label: '句法路径', desc: '实体对最短句法路径' },
+                { label: '结构注意力', desc: '句法引导注意力权重' },
+              ].map(item => (
+                <div key={item.label} className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-3 py-2">
+                  <div className="text-xs font-medium text-indigo-800">{item.label}</div>
+                  <div className="text-[11px] text-indigo-500 mt-0.5">{item.desc}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* 挖掘算法核心参数 */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-1">
@@ -897,7 +967,7 @@ export default function GraphConstruction({
               已选 {reviewerIds.length}/2
             </span>
           </div>
-          <p className="text-xs text-gray-400 mb-4">提交构造任务前须指定 1–2 名审核员；从下拉列表选择后添加。仅被分配者可在人工审核页看到本任务条目，并可查看彼此审核标记。</p>
+          <p className="text-xs text-gray-400 mb-4">自动化任务生成前须指定 1–2 名审核员；从下拉列表选择后添加。仅被分配者可在人工审核页看到本任务条目，并可查看彼此审核标记。</p>
 
           <div className="flex flex-wrap gap-2 min-h-[36px] mb-3">
             {reviewerIds.length === 0 && (
@@ -1060,7 +1130,7 @@ export default function GraphConstruction({
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">图谱构造</h1>
-            <p className="text-sm text-gray-500 mt-0.5">只负责配置抽取策略并提交任务；执行、进度、候选预览统一在图谱任务完成。</p>
+            <p className="text-sm text-gray-500 mt-0.5">只负责配置抽取策略并提交任务；执行、进度、实例生成预览统一在图谱任务完成。</p>
           </div>
           <button onClick={() => onNavigateTo?.('graph-tasks')}
             className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 mt-1 transition-colors">
@@ -1094,7 +1164,7 @@ export default function GraphConstruction({
           <div className="flex-1 min-w-0">
             <div className={`text-sm font-medium flex items-center gap-1.5 ${configValid ? 'text-green-700' : 'text-gray-400'}`}>
               {configValid
-                ? <><CheckCircle2 className="w-4 h-4" />配置完整，可以提交构造任务</>
+                ? <><CheckCircle2 className="w-4 h-4" />配置完整，可以自动化任务生成</>
                 : '配置不完整'}
             </div>
             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -1131,12 +1201,18 @@ export default function GraphConstruction({
             className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors flex-shrink-0">
             查看任务
           </button>
-          <button onClick={handleSubmit} disabled={!configValid || submitting}
+          <button
+            id="gc-auto-task-gen"
+            onClick={handleSubmit}
+            disabled={!configValid || submitting}
             title={!configValid ? configReason : undefined}
-            className="text-sm px-5 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2 font-medium flex-shrink-0">
+            className={`text-sm px-5 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2 font-medium flex-shrink-0 ${
+              focusAutoTask ? 'ring-2 ring-green-300 ring-offset-2' : ''
+            }`}
+          >
             {submitting
-              ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />提交中…</>
-              : <><Play className="w-4 h-4" />提交构造任务</>}
+              ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />生成中…</>
+              : <><Play className="w-4 h-4" />自动化任务生成</>}
           </button>
         </div>
       </div>

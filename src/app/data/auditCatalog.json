@@ -110,18 +110,18 @@
                           "name": "预训练模型选择",
                           "type": "feature",
                           "reqId": "3",
-                          "pagePath": "算法仓库/计算类算法",
+                          "pagePath": "算法管理/算法仓库/图嵌入/术语向量生成/预训练模型选择",
                           "featureDesc": "提供业界主流的预训练语言模型供用户选择。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应算法仓库 · 术语向量生成 · 预训练模型选择"
                         },
                         {
                           "id": "fp-3-9",
                           "name": "模型领域微调",
                           "type": "feature",
                           "reqId": "3",
-                          "pagePath": "算法仓库/计算类算法",
+                          "pagePath": "算法管理/算法仓库/图嵌入/术语向量生成/模型领域微调",
                           "featureDesc": "支持用户使用自有领域语料对所选的预训练模型进行微调，提升专业性。",
-                          "auditNote": "无调整"
+                          "auditNote": "对应算法仓库 · 术语向量生成 · 模型领域微调"
                         },
                         {
                           "id": "fp-3-10",
@@ -1337,9 +1337,9 @@
                           "name": "实例生成预览",
                           "type": "feature",
                           "reqId": "43",
-                          "pagePath": "",
+                          "pagePath": "图谱任务/实例生成预览",
                           "featureDesc": "在规则执行后，提供一个预览界面，展示所有通过规则发现的候选实例。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱任务 · 仪表盘 · 实例生成预览"
                         }
                       ]
                     },
@@ -1394,9 +1394,9 @@
                           "name": "句法增强表示模块",
                           "type": "feature",
                           "reqId": "45",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/图谱构造/策略配置/句法增强表示模块",
                           "featureDesc": "在模型输入层，利用句法分析树（如依存关系）来增强实体和事件的表示，帮助模型更好地捕捉结构信息。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱构造 · 策略配置 · 句法增强表示模块开关"
                         }
                       ]
                     }
@@ -1417,18 +1417,18 @@
                           "name": "单实体属性查询API",
                           "type": "feature",
                           "reqId": "49",
-                          "pagePath": "",
+                          "pagePath": "实例属性关系抽取/实体的属性提取接口/单实体属性查询API",
                           "featureDesc": "支持输入一个实体和一个文本片段，返回该实体在该文本中被描述的属性键值对。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计专用页 · API 参数说明 + 测试调用"
                         },
                         {
                           "id": "fp-49-113",
                           "name": "批量文档属性抽取API",
                           "type": "feature",
                           "reqId": "49",
-                          "pagePath": "",
+                          "pagePath": "实例属性关系抽取/实体的属性提取接口/批量文档属性抽取API",
                           "featureDesc": "支持输入一批文档，返回文档中所有实体及其被提及的属性信息。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计专用页 · API 参数说明 + 测试调用"
                         }
                       ]
                     },
@@ -1442,27 +1442,27 @@
                           "name": "候选属性审核界面",
                           "type": "feature",
                           "reqId": "50",
-                          "pagePath": "",
+                          "pagePath": "知识图谱构造引擎/人工审核/候选属性审核界面",
                           "featureDesc": "以“实体-属性-值-来源文本”的列表形式展示抽取结果，供人工审核。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应人工审核 · 用户标注与纠错 · 候选属性审核界面"
                         },
                         {
                           "id": "fp-50-115",
                           "name": "属性值标准化与清洗",
                           "type": "feature",
                           "reqId": "50",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/映射管理/属性值标准化与清洗",
                           "featureDesc": "提供工具对抽取的属性值进行归一化处理。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应映射管理 · 属性值标准化与清洗列"
                         },
                         {
                           "id": "fp-50-116",
                           "name": "一键入库",
                           "type": "feature",
                           "reqId": "50",
-                          "pagePath": "",
+                          "pagePath": "知识图谱构造引擎/人工审核/候选属性审核界面",
                           "featureDesc": "将审核确认的属性三元组一键写入知识库，与对应实体进行关联。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应人工审核 · 候选属性审核界面 · 操作（一键入库或拒绝）"
                         }
                       ]
                     }
@@ -1483,27 +1483,27 @@
                           "name": "种子实例输入",
                           "type": "feature",
                           "reqId": "59",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/数据源管理/种子实例输入",
                           "featureDesc": "提供一个简单的界面，允许用户为某个目标概念（如“人工智能公司”）手动录入或批量导入一批已知的种子实例（如“谷歌”、“微软”）。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应数据源管理 · 种子实例输入"
                         },
                         {
                           "id": "fp-59-118",
                           "name": "文本高亮标注",
                           "type": "feature",
                           "reqId": "59",
-                          "pagePath": "",
+                          "pagePath": "新实例发现/数据标注/文本高亮标注",
                           "featureDesc": "支持用户在给定的文本段落中，通过划词高亮的方式，直接标注出种子实例。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计专用页 · 划词高亮 → 输出种子实例"
                         },
                         {
                           "id": "fp-59-119",
                           "name": "种子集管理",
                           "type": "feature",
                           "reqId": "59",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/数据源管理/种子集管理",
                           "featureDesc": "提供对已标注的种子实例集合进行增、删、改、查的管理功能。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应数据源管理 · 种子实例输入 · 种子集管理"
                         }
                       ]
                     },
@@ -1660,27 +1660,27 @@
                           "name": "RDF模型",
                           "type": "feature",
                           "reqId": "64",
-                          "pagePath": "",
+                          "pagePath": "本体管理/标准数据模型/RDF模型",
                           "featureDesc": "支持将所有事实信息以<主语，谓语，宾语>的三元组（Triple）格式进行基础表示，构成知识图谱的数据层。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应本体管理 · RDF 导入导出"
                         },
                         {
                           "id": "fp-64-133",
                           "name": "RDFS模型扩展",
                           "type": "feature",
                           "reqId": "64",
-                          "pagePath": "",
+                          "pagePath": "本体管理/标准数据模型/RDFS模型扩展",
                           "featureDesc": "支持使用RDFSchema（RDFS）来定义词汇，如类和属性，并建立它们之间的层级关系，构建知识的词汇层。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应本体管理 · RDFS 导入导出"
                         },
                         {
                           "id": "fp-64-134",
                           "name": "OWL模型扩展",
                           "type": "feature",
                           "reqId": "64",
-                          "pagePath": "",
+                          "pagePath": "本体管理/标准数据模型/OWL模型扩展",
                           "featureDesc": "支持使用Web本体语言来定义更复杂、更精确的本体约束，如不相交类、等价属性、基数限制，构建知识的本体层。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应本体管理 · OWL 导入导出"
                         }
                       ]
                     },
@@ -1694,27 +1694,27 @@
                           "name": "可视化映射规则配置",
                           "type": "feature",
                           "reqId": "65",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/映射配置解析与保存/可视化映射规则配置",
                           "featureDesc": "提供一个图形化界面，用户通过拖拽连线的方式，将原始数据的字段映射到目标本体的属性上。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应映射配置解析与保存 · 可视化映射规则配置"
                         },
                         {
                           "id": "fp-65-136",
                           "name": "转换函数支持",
                           "type": "feature",
                           "reqId": "65",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/映射配置解析与保存/转换函数支持",
                           "featureDesc": "在映射过程中，支持用户应用内置或自定义的函数对数据进行清洗和转换。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "审计专用页 · 内置/自定义转换函数试运行"
                         },
                         {
                           "id": "fp-65-137",
                           "name": "映射配置解析与保存",
                           "type": "feature",
                           "reqId": "65",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/映射配置解析与保存",
                           "featureDesc": "将用户在可视化界面上创建的映射规则，解析并保存为可执行的配置文件。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应侧边栏 · 映射配置解析与保存"
                         }
                       ]
                     },
@@ -1728,36 +1728,36 @@
                           "name": "自动化任务生成",
                           "type": "feature",
                           "reqId": "66",
-                          "pagePath": "",
+                          "pagePath": "图谱构造引擎/图谱构造/自动化任务生成",
                           "featureDesc": "系统能够根据映射配置文件，自动生成一个完整的、可执行的数据结构化转换任务。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱构造 · 自动化任务生成按钮"
                         },
                         {
                           "id": "fp-66-139",
                           "name": "任务调度与执行",
                           "type": "feature",
                           "reqId": "66",
-                          "pagePath": "",
+                          "pagePath": "图谱任务",
                           "featureDesc": "支持任务的立即执行、定时执行或触发式执行，并将任务分发到计算集群。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱任务"
                         },
                         {
                           "id": "fp-66-140",
                           "name": "实时执行监控",
                           "type": "feature",
                           "reqId": "66",
-                          "pagePath": "",
+                          "pagePath": "图谱任务/实时执行监控",
                           "featureDesc": "提供一个仪表盘，实时展示任务的执行进度、处理速度、成功/失败记录数等关键性能指标。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱任务 · 仪表盘"
                         },
                         {
                           "id": "fp-66-141",
                           "name": "任务日志与告警",
                           "type": "feature",
                           "reqId": "66",
-                          "pagePath": "",
+                          "pagePath": "图谱任务/任务日志与告警",
                           "featureDesc": "详细记录任务执行过程中的日志信息，并在任务失败或出现异常时，通过邮件或系统通知进行告警。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱任务 · 仪表盘 · 任务日志与告警"
                         }
                       ]
                     },
@@ -1771,27 +1771,27 @@
                           "name": "属性信息精确抽取",
                           "type": "feature",
                           "reqId": "67",
-                          "pagePath": "",
+                          "pagePath": "属性抽取与结构化输出/属性信息精确抽取",
                           "featureDesc": "根据映射规则，从源数据中精确地提取出每个实体的属性值。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 属性信息精确抽取（选择已有图谱查看实体属性）"
                         },
                         {
                           "id": "fp-67-143",
                           "name": "RDF三元组生成",
                           "type": "feature",
                           "reqId": "67",
-                          "pagePath": "",
+                          "pagePath": "图谱任务/RDF三元组生成",
                           "featureDesc": "将抽取的“实体-属性-值”信息，转换为<主语，谓语，宾语>的标准RDF三元组格式。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱任务 · 结构化输出（RDF 三元组）"
                         },
                         {
                           "id": "fp-67-144",
                           "name": "多格式结构化输出",
                           "type": "feature",
                           "reqId": "67",
-                          "pagePath": "",
+                          "pagePath": "图谱任务/多格式结构化输出",
                           "featureDesc": "支持将生成的RDF三元组，以多种业界标准序列化格式进行输出和保存。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱任务 · 结构化输出（多格式）"
                         }
                       ]
                     }
@@ -1812,27 +1812,27 @@
                           "name": "PDF解析",
                           "type": "feature",
                           "reqId": "68",
-                          "pagePath": "",
+                          "pagePath": "多格式文献解析模块/PDF解析",
                           "featureDesc": "支持从PDF文件中提取文本、图片、表格和元数据。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 多格式文献解析模块 · PDF解析"
                         },
                         {
                           "id": "fp-68-146",
                           "name": "XML(JATS)解析",
                           "type": "feature",
                           "reqId": "68",
-                          "pagePath": "",
+                          "pagePath": "多格式文献解析模块/XML(JATS)解析",
                           "featureDesc": "支持解析标准的JATS-XML格式，获得更精确的文献结构信息。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 多格式文献解析模块 · XML(JATS)解析"
                         },
                         {
                           "id": "fp-68-147",
                           "name": "HTML解析",
                           "type": "feature",
                           "reqId": "68",
-                          "pagePath": "",
+                          "pagePath": "多格式文献解析模块/HTML解析",
                           "featureDesc": "支持解析在线的HTML格式文献。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 多格式文献解析模块 · HTML解析"
                         }
                       ]
                     },
@@ -1846,36 +1846,36 @@
                           "name": "图像识别与内容提取",
                           "type": "feature",
                           "reqId": "69",
-                          "pagePath": "",
+                          "pagePath": "多模态内容识别与转写/图像识别与内容提取",
                           "featureDesc": "识别图像类型，并提取图中的文字和数据。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 多模态内容识别与转写 · 图像识别"
                         },
                         {
                           "id": "fp-69-149",
                           "name": "表格结构还原",
                           "type": "feature",
                           "reqId": "69",
-                          "pagePath": "",
+                          "pagePath": "多模态内容识别与转写/表格结构还原",
                           "featureDesc": "将图片或PDF中的表格还原为可编辑的行列结构数据。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 多模态内容识别与转写 · 表格还原"
                         },
                         {
                           "id": "fp-69-150",
                           "name": "LaTeX公式转写",
                           "type": "feature",
                           "reqId": "69",
-                          "pagePath": "",
+                          "pagePath": "多模态内容识别与转写/LaTeX公式转写",
                           "featureDesc": "将公式图片或Mathtype对象转写为标准的LaTeX代码。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 多模态内容识别与转写 · LaTeX转写"
                         },
                         {
                           "id": "fp-69-151",
                           "name": "图注/文中索引识别",
                           "type": "feature",
                           "reqId": "69",
-                          "pagePath": "",
+                          "pagePath": "多模态内容识别与转写/图注文中索引识别",
                           "featureDesc": "识别并关联图表标题、注释以及正文中对图表的引用。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 多模态内容识别与转写 · 图注索引"
                         }
                       ]
                     },
@@ -1889,18 +1889,18 @@
                           "name": "段落级摘要生成",
                           "type": "feature",
                           "reqId": "70",
-                          "pagePath": "",
+                          "pagePath": "大语言模型语义提炼/段落级摘要生成",
                           "featureDesc": "为文献的每个重要段落生成一句话核心摘要。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 大语言模型语义提炼 · 段落摘要"
                         },
                         {
                           "id": "fp-70-153",
                           "name": "关系语义提炼",
                           "type": "feature",
                           "reqId": "70",
-                          "pagePath": "",
+                          "pagePath": "大语言模型语义提炼/关系语义提炼",
                           "featureDesc": "从长句或段落中提炼出核心的实体关系三元组。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 大语言模型语义提炼 · 关系三元组"
                         }
                       ]
                     },
@@ -1914,18 +1914,18 @@
                           "name": "抽取流程标准化",
                           "type": "feature",
                           "reqId": "71",
-                          "pagePath": "",
+                          "pagePath": "科研核心元组抽取/抽取流程标准化",
                           "featureDesc": "定义并固化一套标准的抽取流程，确保结果的一致性。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 科研核心元组抽取 · 流程标准化"
                         },
                         {
                           "id": "fp-71-155",
                           "name": "方法-材料-性能-机制抽取",
                           "type": "feature",
                           "reqId": "71",
-                          "pagePath": "",
+                          "pagePath": "科研核心元组抽取/方法-材料-性能-机制抽取",
                           "featureDesc": "针对材料领域，精准抽取出“（使用）某种方法（作用于）某种材料（得到）某种性能（其内在）机制是...”这样的核心知识元组。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 科研核心元组抽取 · 四元组抽取"
                         }
                       ]
                     }
@@ -1980,27 +1980,27 @@
                           "name": "图谱查询API",
                           "type": "feature",
                           "reqId": "73",
-                          "pagePath": "",
+                          "pagePath": "标准化API服务/图谱查询API",
                           "featureDesc": "提供标准的图查询语言接口。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 标准化API服务 · 图谱查询"
                         },
                         {
                           "id": "fp-73-160",
                           "name": "路径检索API",
                           "type": "feature",
                           "reqId": "73",
-                          "pagePath": "",
+                          "pagePath": "标准化API服务/路径检索API",
                           "featureDesc": "提供用于发现两个实体间关联路径的API。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 标准化API服务 · 路径检索"
                         },
                         {
                           "id": "fp-73-161",
                           "name": "语义匹配API",
                           "type": "feature",
                           "reqId": "73",
-                          "pagePath": "",
+                          "pagePath": "标准化API服务/语义匹配API",
                           "featureDesc": "提供用于计算实体或文本相似度的API。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 标准化API服务 · 语义匹配"
                         }
                       ]
                     },
@@ -2014,18 +2014,18 @@
                           "name": "图谱类比搜索工具",
                           "type": "feature",
                           "reqId": "74",
-                          "pagePath": "",
+                          "pagePath": "上层智能应用工具/图谱类比搜索工具",
                           "featureDesc": "提供一个允许用户进行“A对于B，相当于C对于？”这类类比查询的工具。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 上层智能应用工具 · 类比搜索"
                         },
                         {
                           "id": "fp-74-163",
                           "name": "科研问题生成工具",
                           "type": "feature",
                           "reqId": "74",
-                          "pagePath": "",
+                          "pagePath": "上层智能应用工具/科研问题生成工具",
                           "featureDesc": "基于图谱中知识的空白或薄弱环节，自动生成有研究价值的科研问题。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应审计页 · 上层智能应用工具 · 问题生成"
                         }
                       ]
                     },
@@ -2039,9 +2039,9 @@
                           "name": "自定义图谱上传",
                           "type": "feature",
                           "reqId": "75",
-                          "pagePath": "",
+                          "pagePath": "图谱任务/自定义图谱上传",
                           "featureDesc": "支持用户上传自己的三元组数据，创建私有知识图谱。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱任务 · 自定义图谱上传"
                         },
                         {
                           "id": "fp-75-165",
@@ -4461,36 +4461,34 @@
                   "type": "level4",
                   "children": [
                     {
-                      "id": "l5-数据集构建",
-                      "name": "数据集构建",
+                      "id": "l5-学术海报音频概览自动生成",
+                      "name": "学术海报、音频概览自动生成",
                       "type": "level5",
                       "children": [
                         {
-                          "id": "fp-159-361",
-                          "name": "数据导入与整合",
+                          "id": "fp-158-360a",
+                          "name": "学术海报、音频概览自动生成",
                           "type": "feature",
-                          "reqId": "159",
-                          "pagePath": "",
-                          "featureDesc": "支持从文件系统、数据库、API等多种来源导入文本、图像、表格等异构数据，并进行初步的对齐与整合。",
-                          "auditNote": "需补充页面路由"
-                        },
+                          "reqId": "158",
+                          "pagePath": "学术海报与音频概览生成/学术海报音频概览自动生成",
+                          "featureDesc": "支持自动生成学术海报和音频概览，便于快速展示和分享研究成果。",
+                          "auditNote": "对应知识资产 · 学术海报与音频"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-一键生成笔记",
+                      "name": "一键生成笔记",
+                      "type": "level5",
+                      "children": [
                         {
-                          "id": "fp-159-362",
-                          "name": "可视化构建向导",
+                          "id": "fp-158-360b",
+                          "name": "一键生成笔记",
                           "type": "feature",
-                          "reqId": "159",
-                          "pagePath": "",
-                          "featureDesc": "提供一个分步式的向导界面，引导用户完成从数据指定、Schema定义到数据集生成的全过程。",
-                          "auditNote": "需补充页面路由"
-                        },
-                        {
-                          "id": "fp-159-363",
-                          "name": "数据集版本管理",
-                          "type": "feature",
-                          "reqId": "159",
-                          "pagePath": "",
-                          "featureDesc": "为数据集提供版本控制功能，支持记录变更历史、版本回溯和差异比对，确保研究的可复现性。",
-                          "auditNote": "需补充页面路由"
+                          "reqId": "158",
+                          "pagePath": "学术海报与音频概览生成/一键生成笔记",
+                          "featureDesc": "支持通过智能算法提取文献中的关键信息，自动生成关键要点。",
+                          "auditNote": "对应知识资产 · 学术海报与音频 · 一键生成笔记"
                         }
                       ]
                     }
@@ -4509,6 +4507,40 @@
                   "type": "level4",
                   "children": [
                     {
+                      "id": "l5-数据集构建",
+                      "name": "数据集构建",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-159-361",
+                          "name": "数据导入与整合",
+                          "type": "feature",
+                          "reqId": "159",
+                          "pagePath": "多模态知识图谱相关数据集/数据集构建/数据导入与整合",
+                          "featureDesc": "支持从文件系统、数据库、API等多种来源导入文本、图像、表格等异构数据，并进行初步的对齐与整合。",
+                          "auditNote": "对应多模态数据集 · 导入数据向导"
+                        },
+                        {
+                          "id": "fp-159-362",
+                          "name": "可视化构建向导",
+                          "type": "feature",
+                          "reqId": "159",
+                          "pagePath": "多模态知识图谱相关数据集/数据集构建/可视化构建向导",
+                          "featureDesc": "提供一个分步式的向导界面，引导用户完成从数据指定、Schema定义到数据集生成的全过程。",
+                          "auditNote": "对应多模态数据集 · 可视化构建向导"
+                        },
+                        {
+                          "id": "fp-159-363",
+                          "name": "数据集版本管理",
+                          "type": "feature",
+                          "reqId": "159",
+                          "pagePath": "多模态知识图谱相关数据集/数据集构建/数据集版本管理",
+                          "featureDesc": "为数据集提供版本控制功能，支持记录变更历史、版本回溯和差异比对，确保研究的可复现性。",
+                          "auditNote": "对应多模态数据集 · 版本管理"
+                        }
+                      ]
+                    },
+                    {
                       "id": "l5-数据集分类",
                       "name": "数据集分类",
                       "type": "level5",
@@ -4518,27 +4550,27 @@
                           "name": "多维度标签分类",
                           "type": "feature",
                           "reqId": "160",
-                          "pagePath": "",
+                          "pagePath": "多模态知识图谱相关数据集/数据集分类/多维度标签分类",
                           "featureDesc": "支持为数据集打上领域（如生物、金融）、任务类型（如链接预测）、数据模态等多个维度的标签。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 分类与元数据 · 多维度标签"
                         },
                         {
                           "id": "fp-160-365",
                           "name": "数据集元数据管理",
                           "type": "feature",
                           "reqId": "160",
-                          "pagePath": "",
+                          "pagePath": "多模态知识图谱相关数据集/数据集分类/数据集元数据管理",
                           "featureDesc": "提供一个表单，允许用户为数据集编辑和维护详细的元数据，如描述、来源、创建者、发布日期。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 分类与元数据 · 元数据表单"
                         },
                         {
                           "id": "fp-160-366",
                           "name": "分类目录与搜索",
                           "type": "feature",
                           "reqId": "160",
-                          "pagePath": "",
+                          "pagePath": "多模态知识图谱相关数据集/数据集分类/分类目录与搜索",
                           "featureDesc": "提供按分类目录浏览和按关键词搜索数据集的功能。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 左侧分类目录与搜索"
                         }
                       ]
                     },
@@ -4552,27 +4584,27 @@
                           "name": "统计特征自动评估",
                           "type": "feature",
                           "reqId": "161",
-                          "pagePath": "",
+                          "pagePath": "多模态知识图谱相关数据集/数据集评估/统计特征自动评估",
                           "featureDesc": "自动计算并展示数据集的宏观统计信息，如图谱密度、节点度分布、关系类型分布。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 数据集评估 · 统计特征"
                         },
                         {
                           "id": "fp-161-368",
                           "name": "数据质量与完整性报告",
                           "type": "feature",
                           "reqId": "161",
-                          "pagePath": "",
+                          "pagePath": "多模态知识图谱相关数据集/数据集评估/数据质量与完整性报告",
                           "featureDesc": "自动检测数据中的缺失值、不一致项，并生成一份可视化的数据质量报告。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 数据集评估 · 质量报告"
                         },
                         {
                           "id": "fp-161-369",
                           "name": "评估基准对比",
                           "type": "feature",
                           "reqId": "161",
-                          "pagePath": "",
+                          "pagePath": "多模态知识图谱相关数据集/数据集评估/评估基准对比",
                           "featureDesc": "支持将当前数据集的关键指标与领域内公开的基准数据集进行对比。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 数据集评估 · 基准对比"
                         }
                       ]
                     },
@@ -4586,27 +4618,27 @@
                           "name": "跨模态表示学习模型",
                           "type": "feature",
                           "reqId": "162",
-                          "pagePath": "",
+                          "pagePath": "多模态知识图谱相关数据集/多模态完备表示/跨模态表示学习模型",
                           "featureDesc": "内置多种先进的跨模态表示学习模型，能够联合学习文本、图像等模态的向量表示，将它们映射到统一的语义空间。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 数据概览 · CLIP 图文表示与检索"
                         },
                         {
                           "id": "fp-162-371",
                           "name": "统一语义空间映射",
                           "type": "feature",
                           "reqId": "162",
-                          "pagePath": "",
+                          "pagePath": "多模态知识图谱相关数据集/多模态完备表示/统一语义空间映射",
                           "featureDesc": "确保不同模态信息的向量表示在同一个高维空间中，使得语义上相近的内容在空间中的距离也相近。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 数据概览 · 图文统一语义检索"
                         },
                         {
                           "id": "fp-162-372",
                           "name": "表示模型管理与训练",
                           "type": "feature",
                           "reqId": "162",
-                          "pagePath": "",
+                          "pagePath": "多模态知识图谱相关数据集/多模态完备表示/表示模型管理与训练",
                           "featureDesc": "提供一个中央模型仓库，用于管理、训练、评估和版本化所有的跨模态表示学习模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 数据概览 · CLIP 训练契约与索引"
                         }
                       ]
                     }
@@ -4661,27 +4693,27 @@
                           "name": "数据版本控制",
                           "type": "feature",
                           "reqId": "164",
-                          "pagePath": "",
+                          "pagePath": "多模态数据集管理/数据版本控制",
                           "featureDesc": "集成Git等版本控制系统，对多模态数据集的每一次变更进行记录。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 数据集版本管理"
                         },
                         {
                           "id": "fp-164-377",
                           "name": "数据预处理与对齐工具",
                           "type": "feature",
                           "reqId": "164",
-                          "pagePath": "",
+                          "pagePath": "多模态数据集管理/数据预处理与对齐工具",
                           "featureDesc": "提供标准化的数据清洗、格式转换和跨模态数据对齐的预处理工具。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 预处理与对齐"
                         },
                         {
                           "id": "fp-164-378",
                           "name": "高效数据存储与索引",
                           "type": "feature",
                           "reqId": "164",
-                          "pagePath": "",
+                          "pagePath": "多模态数据集管理/高效数据存储与索引",
                           "featureDesc": "针对多模态数据的特点，提供优化的存储方案和多模态检索引擎。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态数据集 · 数据概览 · 图文检索索引"
                         }
                       ]
                     },

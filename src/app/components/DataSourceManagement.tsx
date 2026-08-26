@@ -234,6 +234,7 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
   // Seed instance state
   const [seedList, setSeedList] = useState<SeedInstance[]>(MOCK_SEEDS);
   const [selectedSeedId, setSelectedSeedId] = useState('seed1');
+  const [seedQuery, setSeedQuery] = useState('');
   const [importingId, setImportingId] = useState<string | null>(null);
   const [showOntologyPicker, setShowOntologyPicker] = useState(false);
 
@@ -285,6 +286,16 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
 
   const getSeedOntology = (seed: SeedInstance) => ONTOLOGY_REFS.find(o => o.id === seed.ontologyId);
   const getSeedEntity = (seed: SeedInstance) => getSeedOntology(seed)?.entities.find(e => e.id === seed.entityId);
+  const filteredSeeds = seedList.filter((s) => {
+    if (!seedQuery.trim()) return true;
+    const q = seedQuery.trim().toLowerCase();
+    const entity = getSeedEntity(s);
+    return (
+      s.name.toLowerCase().includes(q)
+      || s.description.toLowerCase().includes(q)
+      || (entity?.name ?? '').toLowerCase().includes(q)
+    );
+  });
 
   const addLexicon = () => {
     const id = 'lex_' + Date.now();
@@ -383,7 +394,7 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
           <button onClick={() => setMode('structured')} className={`text-sm px-4 py-1.5 rounded-full transition-colors ${mode === 'structured' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>结构化数据</button>
           <button onClick={() => setMode('unstructured')} className={`text-sm px-4 py-1.5 rounded-full transition-colors ${mode === 'unstructured' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>非结构化数据</button>
           <button onClick={() => setMode('seed')} className={`text-sm px-4 py-1.5 rounded-full transition-colors flex items-center gap-1 ${mode === 'seed' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            <Sprout size={13} /> 种子实例
+            <Sprout size={13} /> 种子实例输入
           </button>
           <button onClick={() => setMode('lexicon')} className={`text-sm px-4 py-1.5 rounded-full transition-colors flex items-center gap-1 ${mode === 'lexicon' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <BookOpen size={13} /> 外部词典导入
@@ -408,7 +419,7 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
       {/* Main */}
       <div className="flex gap-4 flex-1 min-h-0 overflow-hidden p-6">
         {/* Source list */}
-        <div className="w-64 flex-shrink-0 flex flex-col gap-2">
+        <div className="w-64 flex-shrink-0 flex flex-col gap-2 min-h-0 overflow-hidden">
           {mode === 'structured' ? (
             structuredList.map(s => (
               <div key={s.id} onClick={() => setSelectedStructId(s.id)}
@@ -438,25 +449,47 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
               </div>
             ))
           ) : mode === 'seed' ? (
-            seedList.map(seed => {
-              const entity = getSeedEntity(seed);
-              return (
-                <div key={seed.id} onClick={() => setSelectedSeedId(seed.id)}
-                  className={`bg-white border rounded-xl px-3 py-2.5 cursor-pointer flex items-center gap-2 transition-colors ${selectedSeedId === seed.id ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <Sprout size={14} className={seed.status === 'imported' ? 'text-emerald-500' : 'text-gray-400'} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-800 truncate">{seed.name}</div>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      {entity && <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{entity.name}</span>}
-                      {seed.status === 'imported' && <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-600">已入库</span>}
-                    </div>
-                  </div>
-                  <button onClick={e => { e.stopPropagation(); deleteSeed(seed.id); }} className="p-1 text-gray-300 hover:text-red-400 transition-colors">
-                    <Trash2 size={13} />
-                  </button>
+            <>
+              <div id="seed-set-mgmt" className="flex-shrink-0 space-y-2">
+                <div className="text-sm font-semibold text-emerald-800 flex items-center gap-1.5 px-0.5">
+                  <Sprout size={14} className="text-emerald-600" />
+                  种子集管理
                 </div>
-              );
-            })
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={seedQuery}
+                    onChange={(e) => setSeedQuery(e.target.value)}
+                    placeholder="查询种子实例…"
+                    className="w-full border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-emerald-400 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+                {filteredSeeds.length === 0 && (
+                  <div className="text-xs text-gray-400 text-center py-6">无匹配种子实例</div>
+                )}
+                {filteredSeeds.map(seed => {
+                  const entity = getSeedEntity(seed);
+                  return (
+                    <div key={seed.id} onClick={() => setSelectedSeedId(seed.id)}
+                      className={`bg-white border rounded-xl px-3 py-2.5 cursor-pointer flex items-center gap-2 transition-colors ${selectedSeedId === seed.id ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <Sprout size={14} className={seed.status === 'imported' ? 'text-emerald-500' : 'text-gray-400'} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-800 truncate">{seed.name}</div>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {entity && <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{entity.name}</span>}
+                          {seed.status === 'imported' && <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-600">已入库</span>}
+                        </div>
+                      </div>
+                      <button onClick={e => { e.stopPropagation(); deleteSeed(seed.id); }} className="p-1 text-gray-300 hover:text-red-400 transition-colors">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           ) : (
             lexiconList.map(lex => (
               <div key={lex.id} onClick={() => setSelectedLexiconId(lex.id)}
@@ -684,7 +717,7 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                      <Sprout size={15} className="text-emerald-500" /> 种子实例配置
+                      <Sprout size={15} className="text-emerald-500" /> 种子实例输入
                     </div>
                     {selectedSeed.status === 'imported' && (
                       <span className="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 flex items-center gap-1">

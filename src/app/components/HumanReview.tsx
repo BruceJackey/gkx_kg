@@ -793,7 +793,7 @@ function KGReviewPanel({ focusConsensus }: { focusConsensus?: boolean }) {
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 pt-3 flex gap-1">
         <button onClick={() => setInnerTab('candidates')}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${innerTab === 'candidates' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          <CheckSquare className="w-4 h-4" />候选数据
+          <CheckSquare className="w-4 h-4" />候选属性审核界面
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-0.5 ${innerTab === 'candidates' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
             {myVisible.filter(c => (c.peerReviews.find(p => p.userId === currentUserId)?.result ?? 'pending') === 'pending').length}
           </span>
@@ -944,7 +944,7 @@ function KGReviewPanel({ focusConsensus }: { focusConsensus?: boolean }) {
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">冲突原因</th>
                 <th id="kg-review-consensus-col" className="text-left text-xs font-medium text-gray-500 px-4 py-3">跨用户共识算法</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">我的状态</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">操作</th>
+                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">操作（一键入库或拒绝）</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

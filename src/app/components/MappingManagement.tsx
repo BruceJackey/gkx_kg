@@ -147,7 +147,7 @@ function EntityMappingCard({ mapping, onUpdate }: { mapping: EntityMapping; onUp
               <tr>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">本体属性</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">来源字段</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">转换规则</th>
+                <th id="mapping-attr-normalize" className="text-left text-xs font-medium text-gray-500 px-4 py-3">属性值标准化与清洗</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">默认值</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">必填</th>
                 <th className="px-4 py-3"></th>
@@ -586,7 +586,13 @@ function VisualMappingCanvas({ template, onUpdate }: { template: MappingTemplate
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function MappingManagement() {
+export default function MappingManagement({
+  focusNormalize,
+  initialViewMode,
+}: {
+  focusNormalize?: boolean;
+  initialViewMode?: 'list' | 'visual';
+} = {}) {
   const [templates, setTemplates] = useState<MappingTemplate[]>(MOCK_TEMPLATES);
   const [selectedId, setSelectedId] = useState('t1');
   const [activeTab, setActiveTab] = useState<'entity' | 'relation'>('entity');
@@ -594,7 +600,21 @@ export default function MappingManagement() {
   const [newName, setNewName] = useState('');
   const [newOntoId, setNewOntoId] = useState('o1');
   const [newDsId, setNewDsId] = useState('s1');
-  const [viewMode, setViewMode] = useState<'list' | 'visual'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'visual'>(initialViewMode ?? 'list');
+
+  useEffect(() => {
+    if (initialViewMode) setViewMode(initialViewMode);
+  }, [initialViewMode]);
+
+  useEffect(() => {
+    if (!focusNormalize) return;
+    setViewMode('list');
+    setActiveTab('entity');
+    const timer = window.setTimeout(() => {
+      document.getElementById('mapping-attr-normalize')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [focusNormalize]);
 
   const current = templates.find(t => t.id === selectedId) || templates[0];
   const currentDS = DATASOURCES.find(d => d.id === current?.datasourceId);
@@ -634,6 +654,10 @@ export default function MappingManagement() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* ── Toolbar ─────────────────────────────────────────────── */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3 flex-wrap">
+        <div className="mr-1">
+          <div className="text-sm font-semibold text-gray-900">映射配置解析与保存</div>
+          <div className="text-[11px] text-gray-400">解析可视化映射规则并保存为可执行配置</div>
+        </div>
         <input
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400 w-44"
           value={current?.name || ''}
@@ -666,12 +690,12 @@ export default function MappingManagement() {
             onClick={() => setViewMode('visual')}
             className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-all ${viewMode === 'visual' ? 'bg-white shadow-sm text-indigo-600 font-semibold' : 'text-gray-400 hover:text-gray-600'}`}
           >
-            <Workflow size={12} /> 可视化
+            <Workflow size={12} /> 可视化映射规则配置
           </button>
         </div>
 
-        <button className="text-sm px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shrink-0">
-          保存映射
+        <button id="mapping-config-save" className="text-sm px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shrink-0">
+          保存映射配置
         </button>
         <button onClick={() => setShowNewModal(true)}
           className="text-sm px-3 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1.5 shrink-0">

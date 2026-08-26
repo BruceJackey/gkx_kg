@@ -1,4 +1,4 @@
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import {
   Plus, GitBranch, GitCommit, Tag, Upload, Image, FileText, Search, Filter,
   MoreVertical, ChevronRight, CheckCircle, Clock, AlertCircle, RefreshCw,
@@ -11,7 +11,30 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Modality = 'image' | 'text';
-type DatasetTab = 'overview' | 'metadata' | 'evaluation' | 'preprocess';
+type DatasetTab = 'overview' | 'metadata' | 'evaluation' | 'preprocess' | 'version';
+
+type MultimodalDatasetFocus =
+  | 'import'
+  | 'wizard'
+  | 'version'
+  | 'metadata-tags'
+  | 'metadata-form'
+  | 'catalog'
+  | 'eval-stats'
+  | 'eval-quality'
+  | 'eval-benchmark'
+  | 'representation'
+  | 'preprocess'
+  | 'index';
+
+function resolveDatasetTab(f: MultimodalDatasetFocus | null): DatasetTab {
+  if (!f) return 'overview';
+  if (f === 'version') return 'version';
+  if (f === 'metadata-tags' || f === 'metadata-form') return 'metadata';
+  if (f === 'eval-stats' || f === 'eval-quality' || f === 'eval-benchmark') return 'evaluation';
+  if (f === 'preprocess') return 'preprocess';
+  return 'overview';
+}
 type UploadMode = 'pairs' | 'label';
 type DataOrigin = 'upload' | 'database' | 'api';
 type RetrievalMode = 'text2image' | 'image2text';
@@ -1468,7 +1491,15 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
   );
 }
 
-function OverviewPanel({ ds, onUpload }: { ds: MultimodalDataset; onUpload: () => void }) {
+function OverviewPanel({
+  ds,
+  onUpload,
+  highlightRetrieval,
+}: {
+  ds: MultimodalDataset;
+  onUpload: () => void;
+  highlightRetrieval?: boolean;
+}) {
   const [searchQ, setSearchQ] = useState('');
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
   const [pairs, setPairs] = useState(ds.pairs);
@@ -1491,9 +1522,14 @@ function OverviewPanel({ ds, onUpload }: { ds: MultimodalDataset; onUpload: () =
 
   return (
     <div className="space-y-4">
-      <div className="bg-violet-50 border border-violet-100 rounded-xl px-4 py-3 text-xs text-violet-800">
+      <div className={`bg-violet-50 border rounded-xl px-4 py-3 text-xs text-violet-800 ${highlightRetrieval ? 'border-violet-300 ring-2 ring-violet-200' : 'border-violet-100'}`}>
         本数据集用于 <span className="font-semibold">CLIP 图文对比学习</span>（image encoder + text encoder + InfoNCE）。
         下列为样例图文对；完整字段与 JSONL 样例见 <span className="font-mono">samples/clip/</span>。
+        {highlightRetrieval && (
+          <span className="block mt-1.5 text-violet-700 font-medium">
+            跨模态表示 · 统一语义空间：图像与文本映射到同一向量空间，支持以文搜图 / 以图搜文。
+          </span>
+        )}
       </div>
       {/* Sample pairs */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -1562,7 +1598,9 @@ function OverviewPanel({ ds, onUpload }: { ds: MultimodalDataset; onUpload: () =
           显示 {filtered.length} / {ds.pairCount.toLocaleString()} 条图文对
         </div>
       </div>
-      <RetrievalPanel ds={ds} />
+      <div className={highlightRetrieval ? 'ring-2 ring-violet-200 rounded-xl' : ''}>
+        <RetrievalPanel ds={ds} />
+      </div>
     </div>
   );
 }
@@ -1669,9 +1707,11 @@ function toggleInList(list: string[], value: string) {
 function MetadataPanel({
   ds,
   onSave,
+  highlight,
 }: {
   ds: MultimodalDataset;
   onSave: (patch: { metadata: DatasetMetadata; taxonomy: DatasetTaxonomy; description: string }) => void;
+  highlight?: 'tags' | 'form' | null;
 }) {
   const [metadata, setMetadata] = useState<DatasetMetadata>(ds.metadata);
   const [taxonomy, setTaxonomy] = useState<DatasetTaxonomy>(ds.taxonomy);
@@ -1702,7 +1742,7 @@ function MetadataPanel({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
+      <div className={`bg-white border rounded-xl p-5 ${highlight === 'tags' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}>
         <div className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Tag size={15} className="text-violet-500" /> 多维度标签分类
         </div>
@@ -1774,7 +1814,7 @@ function MetadataPanel({
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
+      <div className={`bg-white border rounded-xl p-5 ${highlight === 'form' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}>
         <div className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <ClipboardList size={15} className="text-violet-500" /> 数据集元数据
         </div>
@@ -1828,9 +1868,11 @@ function MetadataPanel({
 function EvaluationPanel({
   ds,
   onEvaluated,
+  highlight,
 }: {
   ds: MultimodalDataset;
   onEvaluated: (evaluation: DatasetEvaluation) => void;
+  highlight?: 'stats' | 'quality' | 'benchmark' | null;
 }) {
   const ev = ds.evaluation;
   const [running, setRunning] = useState(false);
@@ -1886,7 +1928,7 @@ function EvaluationPanel({
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className={`grid grid-cols-4 gap-3 ${highlight === 'stats' ? 'ring-2 ring-violet-200 rounded-xl p-1' : ''}`}>
         {[
           { label: '图谱密度', value: ev.graphDensity.toFixed(3) },
           { label: '平均节点度', value: ev.avgDegree.toFixed(1) },
@@ -1900,7 +1942,7 @@ function EvaluationPanel({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className={`grid grid-cols-2 gap-4 ${highlight === 'stats' ? 'ring-2 ring-violet-200 rounded-xl p-1' : ''}`}>
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="text-sm font-semibold text-gray-800 mb-1">统计特征 · 节点度分布</div>
           <div className="text-xs text-gray-400 mb-4">节点 {ev.nodeCount.toLocaleString()} · 边 {ev.edgeCount.toLocaleString()} · 最大度 {ev.maxDegree}</div>
@@ -1934,7 +1976,7 @@ function EvaluationPanel({
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
+      <div className={`bg-white border rounded-xl p-5 ${highlight === 'quality' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}>
         <div className="text-sm font-semibold text-gray-800 mb-4">数据质量与完整性报告</div>
         <div className="grid grid-cols-3 gap-3 mb-4">
           {[
@@ -1964,7 +2006,7 @@ function EvaluationPanel({
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className={`bg-white border rounded-xl overflow-hidden ${highlight === 'benchmark' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}>
         <div className="px-5 py-3 border-b border-gray-100">
           <div className="text-sm font-semibold text-gray-800">评估基准对比</div>
           <div className="text-xs text-gray-400 mt-0.5">与领域内公开基准数据集的关键指标对比</div>
@@ -2001,19 +2043,87 @@ function EvaluationPanel({
   );
 }
 
+function VersionHistoryPanel({ ds }: { ds: MultimodalDataset }) {
+  const [current, setCurrent] = useState(ds.version);
+  return (
+    <div className="space-y-4">
+      <div className="bg-violet-50 border border-violet-100 rounded-xl px-4 py-3 text-xs text-violet-800">
+        数据集版本管理：记录变更历史、支持版本标签回溯与差异比对，保障研究可复现性。
+        当前版本 <span className="font-semibold">{current}</span> · 分支 <span className="font-mono">{ds.branch}</span>
+      </div>
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+          <GitCommit size={14} className="text-violet-500" />
+          <span className="text-sm font-semibold text-gray-800">提交历史</span>
+          <span className="text-[11px] text-gray-400 ml-auto">{ds.commits.length} 条</span>
+        </div>
+        <div className="divide-y divide-gray-50">
+          {ds.commits.map((c) => (
+            <div key={c.hash} className="px-5 py-3 flex gap-3 hover:bg-gray-50/60">
+              <div className="w-1.5 rounded-full bg-violet-300 shrink-0 my-1" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                  <span className="text-sm font-medium text-gray-900">{c.message}</span>
+                  {c.tag && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100 flex items-center gap-0.5">
+                      <Tag size={9} /> {c.tag}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  <span className="font-mono">{c.hash}</span> · {c.author} · {c.date}
+                  {c.added > 0 && <span className="text-emerald-600 ml-2">+{c.added.toLocaleString()}</span>}
+                  {c.removed > 0 && <span className="text-rose-500 ml-1">-{c.removed.toLocaleString()}</span>}
+                </p>
+              </div>
+              {c.tag && (
+                <button
+                  type="button"
+                  onClick={() => setCurrent(c.tag!)}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg border shrink-0 ${
+                    current === c.tag
+                      ? 'bg-violet-600 text-white border-violet-600'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {current === c.tag ? '当前版本' : '回溯至此'}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function MultimodalDatasetManagement() {
+export default function MultimodalDatasetManagement({
+  initialFocus,
+  initialBuildFocus,
+}: {
+  initialFocus?: MultimodalDatasetFocus | null;
+  /** @deprecated 使用 initialFocus */
+  initialBuildFocus?: MultimodalDatasetFocus | null;
+}) {
+  const focus = initialFocus ?? initialBuildFocus ?? null;
+
   const [datasets, setDatasets] = useState<MultimodalDataset[]>(MOCK_DATASETS);
   const [selectedId, setSelectedId] = useState('ds1');
-  const [activeTab, setActiveTab] = useState<DatasetTab>('overview');
+  const [activeTab, setActiveTab] = useState<DatasetTab>(resolveDatasetTab(focus));
   const [showNewDataset, setShowNewDataset] = useState(false);
-  const [showUpload, setShowUpload] = useState(false);
+  const [showUpload, setShowUpload] = useState(focus === 'import' || focus === 'wizard');
   const [catalogQuery, setCatalogQuery] = useState('');
   const [filterDomain, setFilterDomain] = useState<string>('全部');
   const [filterTask, setFilterTask] = useState<string>('全部');
   const [filterModality, setFilterModality] = useState<Modality | '全部'>('全部');
 
+  useEffect(() => {
+    if (!focus) return;
+    setActiveTab(resolveDatasetTab(focus));
+    setShowUpload(focus === 'import' || focus === 'wizard');
+  }, [focus]);
   const selected = datasets.find(d => d.id === selectedId) || datasets[0];
 
   const filteredDatasets = datasets.filter(ds => {
@@ -2084,6 +2194,7 @@ export default function MultimodalDatasetManagement() {
     { id: 'metadata', label: '分类与元数据', icon: ClipboardList },
     { id: 'evaluation', label: '数据集评估', icon: Gauge },
     { id: 'preprocess', label: '预处理与对齐', icon: Cpu },
+    { id: 'version', label: '数据集版本管理', icon: GitBranch },
   ];
 
   return (
@@ -2092,7 +2203,7 @@ export default function MultimodalDatasetManagement() {
       {showUpload && <UploadDialog onClose={() => setShowUpload(false)} />}
 
       {/* Left sidebar: catalog + search */}
-      <div className="w-72 flex-shrink-0 border-r border-gray-200 bg-white flex flex-col">
+      <div className={`w-72 flex-shrink-0 border-r bg-white flex flex-col ${focus === 'catalog' ? 'border-violet-300 ring-2 ring-inset ring-violet-200' : 'border-gray-200'}`}>
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <div className="text-sm font-semibold text-gray-700">多模态数据集</div>
           <button onClick={() => setShowNewDataset(true)}
@@ -2189,10 +2300,10 @@ export default function MultimodalDatasetManagement() {
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-base font-semibold text-gray-900">{selected.name}</h2>
                     <StatusBadge status={selected.status} />
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex items-center gap-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex items-center gap-1 ${focus === 'version' ? 'ring-2 ring-violet-300' : ''}`}>
                       <GitBranch size={10} /> {selected.branch}
                     </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-600">{selected.version}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 ${focus === 'version' ? 'ring-2 ring-violet-300' : ''}`}>{selected.version}</span>
                   </div>
                   <p className="text-xs text-gray-500 max-w-2xl">{selected.description}</p>
                   <div className="mt-2">
@@ -2231,11 +2342,20 @@ export default function MultimodalDatasetManagement() {
 
             {/* Tab content */}
             <div className="flex-1 overflow-y-auto p-6">
-              {activeTab === 'overview' && <OverviewPanel ds={selected} onUpload={() => setShowUpload(true)} />}
+              {activeTab === 'overview' && (
+                <OverviewPanel
+                  ds={selected}
+                  onUpload={() => setShowUpload(true)}
+                  highlightRetrieval={focus === 'representation' || focus === 'index'}
+                />
+              )}
               {activeTab === 'metadata' && (
                 <MetadataPanel
                   key={selected.id}
                   ds={selected}
+                  highlight={
+                    focus === 'metadata-tags' ? 'tags' : focus === 'metadata-form' ? 'form' : null
+                  }
                   onSave={({ metadata, taxonomy, description }) =>
                     updateDataset(selected.id, {
                       metadata,
@@ -2250,10 +2370,20 @@ export default function MultimodalDatasetManagement() {
                 <EvaluationPanel
                   key={selected.id}
                   ds={selected}
+                  highlight={
+                    focus === 'eval-stats'
+                      ? 'stats'
+                      : focus === 'eval-quality'
+                        ? 'quality'
+                        : focus === 'eval-benchmark'
+                          ? 'benchmark'
+                          : null
+                  }
                   onEvaluated={evaluation => updateDataset(selected.id, { evaluation })}
                 />
               )}
               {activeTab === 'preprocess' && <PreprocessPanel ds={selected} />}
+              {activeTab === 'version' && <VersionHistoryPanel ds={selected} />}
             </div>
           </>
         ) : (

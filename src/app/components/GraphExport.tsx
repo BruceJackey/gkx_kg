@@ -29,6 +29,8 @@ interface GraphExportProps {
   relationCount: number;
   targetSpace: string;
   onClose: () => void;
+  /** 审计目录聚焦：RDF 三元组 / 多格式输出 */
+  highlightMode?: 'rdf' | 'formats';
 }
 
 // ─── Format metadata ──────────────────────────────────────────────────────────
@@ -428,7 +430,7 @@ function estimateTime(totalTriples: number): string {
 // ─── Main export panel ────────────────────────────────────────────────────────
 
 export function RdfExportPanel({
-  graphId, graphName, entityCount, relationCount, targetSpace, onClose,
+  graphId, graphName, entityCount, relationCount, targetSpace, onClose, highlightMode,
 }: GraphExportProps) {
   const totalTriples = Math.round(entityCount * 4.7 + relationCount);
 
@@ -526,7 +528,13 @@ export function RdfExportPanel({
         <FileCode2 className="w-4 h-4 text-gray-400" />
         <span className="text-sm font-semibold text-gray-900">{graphName}</span>
         <span className="text-xs text-gray-400">·</span>
-        <span className="text-xs text-gray-500">RDF 结构化输出</span>
+        <span className={`text-xs ${highlightMode ? 'font-semibold text-indigo-600' : 'text-gray-500'}`}>
+          {highlightMode === 'rdf'
+            ? 'RDF 三元组生成'
+            : highlightMode === 'formats'
+              ? '多格式结构化输出'
+              : 'RDF 结构化输出'}
+        </span>
         <div className="flex items-center gap-3 ml-auto">
           <div className="flex items-center gap-4 text-xs text-gray-500">
             <span><span className="font-semibold text-gray-800">{entityCount.toLocaleString()}</span> 实体</span>
@@ -548,8 +556,10 @@ export function RdfExportPanel({
           <div className="flex-1 overflow-y-auto">
 
             {/* Format selection */}
-            <div className="px-4 pt-4 pb-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400 mb-3">序列化格式</p>
+            <div className={`px-4 pt-4 pb-3 ${highlightMode === 'formats' ? 'ring-2 ring-indigo-200 ring-inset rounded-lg bg-indigo-50/30' : ''}`}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400 mb-3">
+                {highlightMode === 'formats' ? '多格式序列化输出' : '序列化格式'}
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 {FORMAT_ORDER.map(f => {
                   const m = FORMAT_META[f];
@@ -748,11 +758,11 @@ export function RdfExportPanel({
             {!exporting && !batchMode && !done && (
               <>
                 <button onClick={handleExport}
-                  className={`w-full py-2.5 text-sm rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${meta.accentBg} ${meta.accentText} border-2 ${meta.accentBorder} hover:opacity-90 active:scale-[0.98]`}>
-                  <Zap size={14} /> 导出 {meta.label} ({sizeEst})
+                  className={`w-full py-2.5 text-sm rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${meta.accentBg} ${meta.accentText} border-2 ${meta.accentBorder} hover:opacity-90 active:scale-[0.98]${highlightMode === 'rdf' ? ' ring-2 ring-indigo-300' : ''}`}>
+                  <Zap size={14} /> {highlightMode === 'rdf' ? `生成 RDF 三元组 · ${meta.label}` : `导出 ${meta.label}`} ({sizeEst})
                 </button>
                 <button onClick={handleBatchExport}
-                  className="w-full py-2 text-xs rounded-xl font-medium text-gray-500 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5">
+                  className={`w-full py-2 text-xs rounded-xl font-medium text-gray-500 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5${highlightMode === 'formats' ? ' ring-2 ring-indigo-300 border-indigo-200 bg-indigo-50 text-indigo-600 font-semibold' : ''}`}>
                   <Layers size={12} /> 批量导出全部 6 种格式
                 </button>
               </>

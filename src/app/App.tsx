@@ -39,6 +39,8 @@ import TemporalRelationAudit from './components/TemporalRelationAudit';
 import LiteratureMultidimensionalParse from './components/LiteratureMultidimensionalParse';
 import PatentTechnicalElementParse from './components/PatentTechnicalElementParse';
 import LocalLearningAnnotator from './components/LocalLearningAnnotator';
+import EntityAttributeExtractApi from './components/EntityAttributeExtractApi';
+import TextHighlightSeedAnnotator from './components/TextHighlightSeedAnnotator';
 import EventAnnotationManagement from './components/EventAnnotationManagement';
 import EventIngestWorkflow from './components/EventIngestWorkflow';
 import { AlgorithmApiManagement } from './components/AlgorithmApiManagement';
@@ -54,6 +56,14 @@ import OntologyManagement from './components/OntologyManagement';
 import DataSourceManagement, { type DSMode } from './components/DataSourceManagement';
 import MultimodalDatasetManagement from './components/MultimodalDatasetManagement';
 import MappingManagement from './components/MappingManagement';
+import MappingTransformFunction from './components/MappingTransformFunction';
+import AttributePreciseExtract from './components/AttributePreciseExtract';
+import MultiFormatLiteratureParse from './components/MultiFormatLiteratureParse';
+import MultimodalContentTranscribe from './components/MultimodalContentTranscribe';
+import LlmSemanticRefine from './components/LlmSemanticRefine';
+import SciCoreTupleExtract from './components/SciCoreTupleExtract';
+import StandardGraphApiServices from './components/StandardGraphApiServices';
+import UpperIntelligentTools from './components/UpperIntelligentTools';
 import GraphConstruction from './components/GraphConstruction';
 import GraphTasks from './components/GraphTasks';
 import GraphFusion from './components/GraphFusion';
@@ -80,6 +90,19 @@ import {
   resolvePatentParseFocus,
   resolveLocalLearningTab,
   resolveEventAnnotationMgmtTab,
+  resolveGraphTasksDashTab,
+  resolveGraphConstructionAutoTask,
+  resolveEntityAttrApiTab,
+  resolveOntologyModelFocus,
+  resolveMappingViewMode,
+  resolveMultiFormatLitTab,
+  resolveMultimodalTranscribeFocus,
+  resolveLlmSemanticFocus,
+  resolveSciCoreFocus,
+  resolveStandardApiTab,
+  resolveUpperToolTab,
+  resolveAcademicPosterTab,
+  resolveMultimodalDatasetFocus,
   type AuditAlgorithmDemoTab,
   type AuditAlgorithmTab,
   type GraphConstructionTab,
@@ -96,6 +119,18 @@ import {
   type PatentParseFocus,
   type LocalLearningTab,
   type EventAnnotationMgmtTab,
+  type GraphTasksDashTabFocus,
+  type EntityAttrApiTab,
+  type OntologyModelFocus,
+  type MappingViewMode,
+  type MultiFormatLitTab,
+  type MultimodalTranscribeFocus,
+  type LlmSemanticFocus,
+  type SciCoreFocus,
+  type StandardApiTab,
+  type UpperToolTab,
+  type AcademicPosterTab,
+  type MultimodalDatasetFocus,
 } from './data/auditPageMap';
 
 function Placeholder({ title, desc }: { title: string; desc: string }) {
@@ -125,6 +160,7 @@ export default function App() {
   const [autoStartDepTest, setAutoStartDepTest] = useState(false);
   const [graphConstructionTab, setGraphConstructionTab] = useState<GraphConstructionTab | null>(null);
   const [graphStrategyFocus, setGraphStrategyFocus] = useState<GraphStrategyFocus | null>(null);
+  const [graphConstructionAutoTask, setGraphConstructionAutoTask] = useState(false);
   const [ruleEditorMode, setRuleEditorMode] = useState<RuleEditorMode | null>(null);
   const [ruleDrawerFocus, setRuleDrawerFocus] = useState<RuleDrawerFocus | null>(null);
   const [ruleListFocus, setRuleListFocus] = useState<RuleListFocus | null>(null);
@@ -138,10 +174,23 @@ export default function App() {
   const [patentParseFocus, setPatentParseFocus] = useState<PatentParseFocus | null>(null);
   const [localLearningTab, setLocalLearningTab] = useState<LocalLearningTab | null>(null);
   const [eventAnnotationMgmtTab, setEventAnnotationMgmtTab] = useState<EventAnnotationMgmtTab | null>(null);
+  const [graphTasksDashTab, setGraphTasksDashTab] = useState<GraphTasksDashTabFocus | null>(null);
+  const [entityAttrApiTab, setEntityAttrApiTab] = useState<EntityAttrApiTab | null>(null);
+  const [mappingNormalizeFocus, setMappingNormalizeFocus] = useState(false);
+  const [ontologyModelFocus, setOntologyModelFocus] = useState<OntologyModelFocus | null>(null);
+  const [mappingViewMode, setMappingViewMode] = useState<MappingViewMode | null>(null);
+  const [multiFormatLitTab, setMultiFormatLitTab] = useState<MultiFormatLitTab | null>(null);
+  const [multimodalFocus, setMultimodalFocus] = useState<MultimodalTranscribeFocus | null>(null);
+  const [llmSemanticFocus, setLlmSemanticFocus] = useState<LlmSemanticFocus | null>(null);
+  const [sciCoreFocus, setSciCoreFocus] = useState<SciCoreFocus | null>(null);
+  const [standardApiTab, setStandardApiTab] = useState<StandardApiTab | null>(null);
+  const [upperToolTab, setUpperToolTab] = useState<UpperToolTab | null>(null);
+  const [academicPosterTab, setAcademicPosterTab] = useState<AcademicPosterTab | null>(null);
+  const [multimodalBuildFocus, setMultimodalBuildFocus] = useState<MultimodalDatasetFocus | null>(null);
 
   const resolveDataSourceView = (pagePath: string): DSMode => {
     if (pagePath.includes('外部词典导入')) return 'lexicon';
-    if (pagePath.includes('种子实例')) return 'seed';
+    if (pagePath.includes('种子实例') || pagePath.includes('种子集管理')) return 'seed';
     return 'structured';
   };
 
@@ -151,6 +200,7 @@ export default function App() {
     setAutoStartDepTest(false);
     setGraphConstructionTab(null);
     setGraphStrategyFocus(null);
+    setGraphConstructionAutoTask(false);
     setRuleEditorMode(null);
     setRuleDrawerFocus(null);
     setRuleListFocus(null);
@@ -164,6 +214,19 @@ export default function App() {
     setPatentParseFocus(null);
     setLocalLearningTab(null);
     setEventAnnotationMgmtTab(null);
+    setGraphTasksDashTab(null);
+    setEntityAttrApiTab(null);
+    setMappingNormalizeFocus(false);
+    setOntologyModelFocus(null);
+    setMappingViewMode(null);
+    setMultiFormatLitTab(null);
+    setMultimodalFocus(null);
+    setLlmSemanticFocus(null);
+    setSciCoreFocus(null);
+    setStandardApiTab(null);
+    setUpperToolTab(null);
+    setAcademicPosterTab(null);
+    setMultimodalBuildFocus(null);
   };
 
   const handleNavigate = (page: string) => {
@@ -175,7 +238,7 @@ export default function App() {
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
     // 审计专用独立页优先（不与产品页共用）
-    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow') {
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools') {
       if (pageId === 'temporal-relation-audit') {
         setTemporalAuditMode(resolveTemporalAuditMode(feature.pagePath) ?? 'extraction');
       }
@@ -190,6 +253,27 @@ export default function App() {
       }
       if (pageId === 'event-annotation-mgmt') {
         setEventAnnotationMgmtTab(resolveEventAnnotationMgmtTab(feature.pagePath) ?? 'projects');
+      }
+      if (pageId === 'entity-attr-api') {
+        setEntityAttrApiTab(resolveEntityAttrApiTab(feature.pagePath) ?? 'single');
+      }
+      if (pageId === 'multi-format-lit-parse') {
+        setMultiFormatLitTab(resolveMultiFormatLitTab(feature.pagePath) ?? 'pdf');
+      }
+      if (pageId === 'multimodal-content-transcribe') {
+        setMultimodalFocus(resolveMultimodalTranscribeFocus(feature.pagePath));
+      }
+      if (pageId === 'llm-semantic-refine') {
+        setLlmSemanticFocus(resolveLlmSemanticFocus(feature.pagePath));
+      }
+      if (pageId === 'sci-core-tuple-extract') {
+        setSciCoreFocus(resolveSciCoreFocus(feature.pagePath));
+      }
+      if (pageId === 'standard-graph-api') {
+        setStandardApiTab(resolveStandardApiTab(feature.pagePath) ?? 'query');
+      }
+      if (pageId === 'upper-intelligent-tools') {
+        setUpperToolTab(resolveUpperToolTab(feature.pagePath) ?? 'analogy');
       }
       setCurrentPage(pageId);
       return;
@@ -211,6 +295,7 @@ export default function App() {
     if (pageId === 'graph-construction') {
       setGraphConstructionTab(resolveGraphConstructionTab(feature.pagePath));
       setGraphStrategyFocus(resolveGraphStrategyFocus(feature.pagePath));
+      setGraphConstructionAutoTask(resolveGraphConstructionAutoTask(feature.pagePath));
       setCurrentPage('graph-construction');
       return;
     }
@@ -228,6 +313,32 @@ export default function App() {
       setKgReviewConsensusFocus(resolveKgReviewConsensusFocus(feature.pagePath));
       setRecognitionFocus(resolveRecognitionFocus(feature.pagePath));
       setCurrentPage('human-review');
+      return;
+    }
+    if (pageId === 'graph-tasks') {
+      setGraphTasksDashTab(resolveGraphTasksDashTab(feature.pagePath));
+      setCurrentPage('graph-tasks');
+      return;
+    }
+    if (pageId === 'academic-poster') {
+      setAcademicPosterTab(resolveAcademicPosterTab(feature.pagePath) ?? 'poster');
+      setCurrentPage('academic-poster');
+      return;
+    }
+    if (pageId === 'multimodal-dataset') {
+      setMultimodalBuildFocus(resolveMultimodalDatasetFocus(feature.pagePath));
+      setCurrentPage('multimodal-dataset');
+      return;
+    }
+    if (pageId === 'kg-mapping') {
+      setMappingNormalizeFocus((feature.pagePath ?? '').includes('属性值标准化与清洗'));
+      setMappingViewMode(resolveMappingViewMode(feature.pagePath) ?? 'list');
+      setCurrentPage('kg-mapping');
+      return;
+    }
+    if (pageId === 'kg-ontology') {
+      setOntologyModelFocus(resolveOntologyModelFocus(feature.pagePath));
+      setCurrentPage('kg-ontology');
       return;
     }
     if (pageId) {
@@ -356,7 +467,12 @@ export default function App() {
       case 'algorithm-dataset':
         return <DatasetCategories onSelectCategory={handleSelectDatasetCategory} />;
       case 'multimodal-dataset':
-        return <MultimodalDatasetManagement />;
+        return (
+          <MultimodalDatasetManagement
+            key={multimodalBuildFocus ?? 'default'}
+            initialFocus={multimodalBuildFocus}
+          />
+        );
       case 'dataset-category-detail':
         return selectedDatasetCategoryId ? (
           <DatasetCategoryDetail
@@ -427,6 +543,15 @@ export default function App() {
             initialTab={localLearningTab ?? 'local'}
           />
         );
+      case 'entity-attr-api':
+        return (
+          <EntityAttributeExtractApi
+            key={entityAttrApiTab ?? 'single'}
+            initialTab={entityAttrApiTab ?? 'single'}
+          />
+        );
+      case 'text-highlight-seed':
+        return <TextHighlightSeedAnnotator />;
       case 'event-annotation-mgmt':
         return (
           <EventAnnotationManagement
@@ -447,22 +572,104 @@ export default function App() {
           />
         );
       case 'kg-ontology':
-        return <OntologyManagement />;
+        return (
+          <OntologyManagement
+            key={ontologyModelFocus ?? 'default'}
+            initialModelFocus={ontologyModelFocus ?? undefined}
+          />
+        );
       case 'kg-mapping':
-        return <MappingManagement />;
+        return (
+          <MappingManagement
+            key={`${mappingViewMode ?? 'list'}-${mappingNormalizeFocus ? 'normalize' : 'plain'}`}
+            focusNormalize={mappingNormalizeFocus || undefined}
+            initialViewMode={mappingViewMode ?? undefined}
+          />
+        );
+      case 'mapping-transform-fn':
+        return <MappingTransformFunction />;
+      case 'attribute-precise-extract':
+        return <AttributePreciseExtract />;
+      case 'multi-format-lit-parse':
+        return (
+          <MultiFormatLiteratureParse
+            key={multiFormatLitTab ?? 'pdf'}
+            initialTab={multiFormatLitTab ?? 'pdf'}
+          />
+        );
+      case 'multimodal-content-transcribe':
+        return (
+          <MultimodalContentTranscribe
+            key={multimodalFocus ?? 'all'}
+            initialFocus={multimodalFocus}
+          />
+        );
+      case 'llm-semantic-refine':
+        return (
+          <LlmSemanticRefine
+            key={llmSemanticFocus ?? 'all'}
+            initialFocus={llmSemanticFocus}
+          />
+        );
+      case 'sci-core-tuple-extract':
+        return (
+          <SciCoreTupleExtract
+            key={sciCoreFocus ?? 'all'}
+            initialFocus={sciCoreFocus}
+          />
+        );
+      case 'standard-graph-api':
+        return (
+          <StandardGraphApiServices
+            key={standardApiTab ?? 'query'}
+            initialTab={standardApiTab ?? 'query'}
+          />
+        );
+      case 'upper-intelligent-tools':
+        return (
+          <UpperIntelligentTools
+            key={upperToolTab ?? 'analogy'}
+            initialTab={upperToolTab ?? 'analogy'}
+          />
+        );
       case 'kg-datasource':
-        return <DataSourceManagement viewMode={dataSourceView} />;
+        return <DataSourceManagement key={dataSourceView} viewMode={dataSourceView} />;
       case 'graph-construction':
         return (
           <GraphConstruction
-            key={`${graphConstructionTab ?? 'default'}-${graphStrategyFocus ?? 'none'}`}
+            key={`${graphConstructionTab ?? 'default'}-${graphStrategyFocus ?? 'none'}-${graphConstructionAutoTask ? 'auto' : 'plain'}`}
             onNavigateTo={setCurrentPage}
             initialTab={graphConstructionTab ?? undefined}
             initialStrategyFocus={graphStrategyFocus ?? undefined}
+            focusAutoTask={graphConstructionAutoTask || undefined}
           />
         );
       case 'graph-tasks':
-        return <GraphTasks onNavigateTo={setCurrentPage} />;
+        return (
+          <GraphTasks
+            key={graphTasksDashTab ?? 'default'}
+            onNavigateTo={setCurrentPage}
+            initialDashTab={
+              graphTasksDashTab === 'candidates'
+                ? 'candidates'
+                : graphTasksDashTab === 'monitor' || graphTasksDashTab === 'logs'
+                  ? 'monitor'
+                  : undefined
+            }
+            focusTaskLogs={graphTasksDashTab === 'logs' || undefined}
+            initialOpenExport={
+              graphTasksDashTab === 'export-rdf' || graphTasksDashTab === 'export-formats' || undefined
+            }
+            exportFocus={
+              graphTasksDashTab === 'export-rdf'
+                ? 'rdf'
+                : graphTasksDashTab === 'export-formats'
+                  ? 'formats'
+                  : undefined
+            }
+            initialOpenCustomUpload={graphTasksDashTab === 'custom-upload' || undefined}
+          />
+        );
       case 'kg-construction':
         return <KGConstructionEngine onBack={() => setCurrentPage('data-dashboard')} />;
       case 'text-semantic-extraction':
@@ -530,7 +737,12 @@ export default function App() {
       case 'knowledge-validation':
         return <KnowledgeValidation />;
       case 'academic-poster':
-        return <AcademicPoster />;
+        return (
+          <AcademicPoster
+            key={academicPosterTab ?? 'poster'}
+            initialTab={academicPosterTab ?? 'poster'}
+          />
+        );
       case 'audit-feature':
         return selectedAuditFeature ? (
           <AuditFeaturePage feature={selectedAuditFeature} />

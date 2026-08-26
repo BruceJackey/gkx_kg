@@ -235,14 +235,18 @@ function KpiCard({
 
 // ─── Run dashboard ────────────────────────────────────────────────────────────
 
+export type GraphTasksDashTab = 'monitor' | 'changeset' | 'candidates';
+
 function RunDashboard({
-  graph, run, onClose, onNavigateTo,
+  graph, run, onClose, onNavigateTo, initialDashTab, focusTaskLogs,
 }: {
   graph: GraphEntry; run: GraphRun;
   onClose: () => void;
   onNavigateTo?: (p: string) => void;
+  initialDashTab?: GraphTasksDashTab;
+  focusTaskLogs?: boolean;
 }) {
-  const [dashTab, setDashTab] = useState<'monitor' | 'changeset' | 'candidates'>('monitor');
+  const [dashTab, setDashTab] = useState<GraphTasksDashTab>(initialDashTab ?? 'monitor');
   const [candidateFilter, setCandidateFilter] = useState<'all' | '实体' | '关系' | '属性'>('all');
   const [liveSpeed, setLiveSpeed] = useState(143);
   const [throughputData, setThroughputData] = useState(
@@ -250,6 +254,15 @@ function RunDashboard({
       ? ACTIVE_THROUGHPUT_INIT
       : STATIC_THROUGHPUT
   );
+
+  useEffect(() => {
+    if (!focusTaskLogs) return;
+    setDashTab('monitor');
+    const timer = window.setTimeout(() => {
+      document.getElementById('task-logs-alerts')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [focusTaskLogs]);
 
   const isActive = ['extracting', 'merging', 'committing'].includes(run.status);
   const sc = RUN_STATUS_CONFIG[run.status];
@@ -300,7 +313,7 @@ function RunDashboard({
           {([
             ['monitor',   '仪表盘'],
             ['changeset', 'Changeset'],
-            ['candidates','候选预览'],
+            ['candidates','实例生成预览'],
           ] as const).map(([key, label]) => (
             <button key={key} onClick={() => setDashTab(key)}
               className={`px-3 py-1 text-xs rounded-md transition-all ${dashTab === key ? 'bg-blue-600 text-white font-medium' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -484,7 +497,7 @@ function RunDashboard({
             {/* Live log */}
             <div className="bg-white border border-gray-100 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">执行日志</span>
+                <span id="task-logs-alerts" className={`text-xs font-semibold uppercase tracking-wide ${focusTaskLogs ? 'text-amber-700' : 'text-gray-600'}`}>任务日志与告警</span>
                 {isActive && <span className="flex items-center gap-1 text-[10px] text-emerald-500"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />实时</span>}
               </div>
               <div className="bg-slate-950 rounded-lg p-3 font-mono text-[11px] text-gray-300 space-y-1 h-[138px] overflow-y-auto">
@@ -681,7 +694,7 @@ function PrivateGraphModal({ onClose, onBuild }: {
     const newEntry: GraphEntry = {
       id: `g-priv-${uid()}`,
       graphName: graphName.trim(),
-      ontologyName: '自定义 (私有上传)',
+      ontologyName: '自定义 (用户上传)',
       datasourceName: file?.name ?? '三元组文件',
       targetSpace: ts,
       entityCount: entityEst,
@@ -703,7 +716,7 @@ function PrivateGraphModal({ onClose, onBuild }: {
             <Lock size={15} className="text-indigo-600" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">新建私有图谱</h2>
+            <h2 className="text-sm font-semibold text-gray-900">自定义图谱上传</h2>
             <p className="text-[11px] text-gray-400 mt-0.5">直接上传三元组文件，跳过数据源配置快速构建图谱</p>
           </div>
           <button onClick={onClose} className="ml-auto p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
@@ -719,7 +732,7 @@ function PrivateGraphModal({ onClose, onBuild }: {
               <input
                 value={graphName}
                 onChange={e => setGraphName(e.target.value)}
-                placeholder="如：我的私有关系图谱"
+                placeholder="如：我的自定义关系图谱"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 bg-white"
               />
             </div>
@@ -834,7 +847,7 @@ function PrivateGraphModal({ onClose, onBuild }: {
           <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 flex gap-2.5">
             <AlertTriangle size={13} className="text-amber-500 mt-0.5 shrink-0" />
             <p className="text-[11px] text-amber-700 leading-relaxed">
-              私有图谱不依赖本体与数据源配置，直接基于三元组构建。实体识别与关系抽取将按文件内容原样导入，不经过冲突合并与人工审核流程。
+              自定义图谱不依赖本体与数据源配置，直接基于三元组构建。实体识别与关系抽取将按文件内容原样导入，不经过冲突合并与人工审核流程。
             </p>
           </div>
         </div>
@@ -849,7 +862,7 @@ function PrivateGraphModal({ onClose, onBuild }: {
             onClick={handleBuild}
             disabled={!canBuild}
             className="px-5 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 disabled:opacity-40 bg-indigo-600 hover:bg-indigo-700 text-white disabled:cursor-not-allowed">
-            <Lock size={13} /> 开始构建私有图谱
+            <Lock size={13} /> 开始构建自定义图谱
           </button>
         </div>
       </div>
@@ -1077,7 +1090,7 @@ function DeleteConfirmModal({ graph, onClose, onConfirm }: {
               <span className="text-[11px] text-gray-400 w-16 shrink-0">图谱名称</span>
               <span className="text-sm font-semibold text-gray-800">{graph.graphName}</span>
               {graph.isPrivate && (
-                <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-semibold">私有</span>
+                <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-semibold">自定义</span>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -1128,14 +1141,37 @@ function DeleteConfirmModal({ graph, onClose, onConfirm }: {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: string) => void }) {
+export default function GraphTasks({
+  onNavigateTo,
+  initialDashTab,
+  focusTaskLogs,
+  initialOpenExport,
+  exportFocus,
+  initialOpenCustomUpload,
+}: {
+  onNavigateTo?: (page: string) => void;
+  initialDashTab?: GraphTasksDashTab;
+  focusTaskLogs?: boolean;
+  /** 审计跳转：自动打开首个图谱的结构化输出面板 */
+  initialOpenExport?: boolean;
+  exportFocus?: 'rdf' | 'formats';
+  /** 审计跳转：自动打开自定义图谱上传弹窗 */
+  initialOpenCustomUpload?: boolean;
+}) {
   const [graphs, setGraphs] = useState<GraphEntry[]>(MOCK_GRAPHS);
   const [expandedGraphId, setExpandedGraphId] = useState<string | null>(null);
-  const [openRunId, setOpenRunId] = useState<{ graphId: string; runId: string } | null>(null);
-  const [exportOpenId, setExportOpenId] = useState<string | null>(null);
+  const [openRunId, setOpenRunId] = useState<{ graphId: string; runId: string } | null>(() => {
+    if (!initialDashTab && !focusTaskLogs) return null;
+    const g = MOCK_GRAPHS[0];
+    const run = g?.activeRun ?? g?.runs[0];
+    return g && run ? { graphId: g.id, runId: run.id } : null;
+  });
+  const [exportOpenId, setExportOpenId] = useState<string | null>(() =>
+    initialOpenExport && MOCK_GRAPHS[0] ? MOCK_GRAPHS[0].id : null,
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [scanStates, setScanStates] = useState<Record<string, 'idle' | 'scanning' | 'done'>>({});
-  const [showPrivateModal, setShowPrivateModal] = useState(false);
+  const [showPrivateModal, setShowPrivateModal] = useState(!!initialOpenCustomUpload);
   const [deleteTarget, setDeleteTarget] = useState<GraphEntry | null>(null);
   const [rollbackGraphId, setRollbackGraphId] = useState<string | null>(null);
   const [delayHours, setDelayHours] = useState<Record<string, number>>({});
@@ -1222,8 +1258,8 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setShowPrivateModal(true)}
-              className="text-sm px-3 py-1.5 border border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1.5">
-              <Lock size={13} /> 私有图谱
+              className={`text-sm px-3 py-1.5 border border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1.5${initialOpenCustomUpload ? ' ring-2 ring-indigo-200' : ''}`}>
+              <Lock size={13} /> 自定义图谱上传
             </button>
             <button onClick={() => onNavigateTo?.('graph-construction')}
               className="text-sm px-3 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
@@ -1277,7 +1313,7 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
                               <span className="font-medium text-gray-900 text-sm">{g.graphName}</span>
                               {g.isPrivate && (
                                 <span className="inline-flex items-center gap-0.5 text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-semibold shrink-0">
-                                  <Lock size={8} />私有
+                                  <Lock size={8} />自定义
                                 </span>
                               )}
                             </div>
@@ -1383,7 +1419,7 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
                               </button>
                             )}
                             <button onClick={() => setExportOpenId(exportOpenId === g.id ? null : g.id)}
-                              className={`text-xs px-2.5 py-1 border rounded-lg transition-colors flex items-center gap-0.5 ${exportOpenId === g.id ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                              className={`text-xs px-2.5 py-1 border rounded-lg transition-colors flex items-center gap-0.5 ${exportOpenId === g.id ? `bg-indigo-50 border-indigo-200 text-indigo-600${exportFocus ? ' ring-2 ring-indigo-200' : ''}` : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                               <FileCode2 className="w-3 h-3" />结构化输出
                             </button>
                             <button onClick={() => setExpandedGraphId(isExpanded ? null : g.id)}
@@ -1477,6 +1513,7 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
                   relationCount={eg.relationCount}
                   targetSpace={eg.targetSpace}
                   onClose={() => setExportOpenId(null)}
+                  highlightMode={exportFocus}
                 />
               ) : null;
             })()}
@@ -1484,10 +1521,13 @@ export default function GraphTasks({ onNavigateTo }: { onNavigateTo?: (page: str
             {/* Run dashboard */}
             {openEntry && openRun && (
               <RunDashboard
+                key={`${openRun.id}-${initialDashTab ?? 'monitor'}-${focusTaskLogs ? 'logs' : 'plain'}`}
                 graph={openEntry}
                 run={openRun}
                 onClose={() => setOpenRunId(null)}
                 onNavigateTo={onNavigateTo}
+                initialDashTab={initialDashTab === 'candidates' ? 'candidates' : 'monitor'}
+                focusTaskLogs={focusTaskLogs}
               />
             )}
       </div>
