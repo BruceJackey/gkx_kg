@@ -82,6 +82,26 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '算法管理/算法仓库/图嵌入/术语向量生成': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/术语向量生成/预训练模型选择': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/术语向量生成/模型领域微调': 'algorithm-detail',
+  '算法管理/算法仓库/图嵌入/表示空间/实数空间嵌入': 'algorithm-detail',
+  '算法管理/算法仓库/图嵌入/表示空间/复数空间嵌入': 'algorithm-detail',
+  '算法管理/算法仓库/图嵌入/表示空间/空间类型选择与配置': 'algorithm-detail',
+  '知识表示学习/表示空间/实数空间嵌入': 'algorithm-detail',
+  '知识表示学习/表示空间/复数空间嵌入': 'algorithm-detail',
+  '知识表示学习/表示空间/空间类型选择与配置': 'algorithm-detail',
+  '算法管理/算法仓库/知识推理/打分函数/基于距离的打分函数': 'algorithm-detail',
+  '算法管理/算法仓库/知识推理/打分函数/基于语义相似度的打分函数': 'algorithm-detail',
+  '算法管理/算法仓库/知识推理/打分函数/打分函数可视化解释': 'algorithm-detail',
+  '知识表示学习/打分函数/基于距离的打分函数': 'algorithm-detail',
+  '知识表示学习/打分函数/基于语义相似度的打分函数': 'algorithm-detail',
+  '知识表示学习/打分函数/打分函数可视化解释': 'algorithm-detail',
+  '算法管理/算法仓库/图嵌入/编码模型/平移距离模型库': 'algorithm-detail',
+  '算法管理/算法仓库/图嵌入/编码模型/张量/矩阵分解模型库': 'algorithm-detail',
+  '算法管理/算法仓库/图嵌入/编码模型/神经网络模型库': 'algorithm-detail',
+  '算法管理/算法仓库/图嵌入/编码模型/模型选择与超参数配置': 'algorithm-detail',
+  '知识表示学习/编码模型/平移距离模型库': 'algorithm-detail',
+  '知识表示学习/编码模型/张量/矩阵分解模型库': 'algorithm-detail',
+  '知识表示学习/编码模型/神经网络模型库': 'algorithm-detail',
+  '知识表示学习/编码模型/模型选择与超参数配置': 'algorithm-detail',
   '算法仓库/计算类算法': 'algorithm-list',
   '算法任务/部署任务': 'algorithm-tasks',
   '算法任务/训练任务/查看日志': 'algorithm-tasks',
@@ -150,6 +170,10 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '图谱任务/自定义图谱上传': 'graph-tasks',
   '自定义图谱上传': 'graph-tasks',
   '用户自定义图谱空间/自定义图谱上传': 'graph-tasks',
+  '图谱任务/增量更新': 'graph-tasks',
+  '知识存储/增量更新': 'graph-tasks',
+  '增量更新': 'graph-tasks',
+  '图谱增量更新': 'graph-tasks',
   '图谱融合/逻辑关系构建': 'graph-fusion',
   '图谱融合/模糊关系构建': 'graph-fusion',
   '图谱融合/关系可视化': 'graph-fusion',
@@ -190,6 +214,10 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '多策略融合匹配': 'graph-fusion',
   '多策略融合匹配/策略权重配置': 'graph-fusion',
   '多策略融合匹配/结果投票与排序': 'graph-fusion',
+  '图谱融合/三元组生成': 'graph-fusion',
+  '图谱融合/冲突检测': 'graph-fusion',
+  '三元组生成': 'graph-fusion',
+  '冲突检测': 'graph-fusion',
   '文本实体识别/命名实体识别': 'text-entity-recognition',
   '文本实体识别/实体边界修正': 'text-entity-recognition',
   '文本实体识别/命名体识别': 'text-entity-recognition',
@@ -199,6 +227,40 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '实体链接判断/上下文语义分析': 'entity-link-judgment',
   '实体链接判断/模型': 'entity-link-judgment',
   '上下文语义分析': 'entity-link-judgment',
+  '链接标注与映射生成/人工标注工作台': 'link-annotation-mapping',
+  '链接标注与映射生成/映射规则生成': 'link-annotation-mapping',
+  '人工标注工作台': 'link-annotation-mapping',
+  '映射规则生成': 'link-annotation-mapping',
+  '文档实体高亮与交互展示/实体高亮': 'literature-reader',
+  '文档实体高亮与交互展示/实体信息浮窗': 'literature-reader',
+  '知识库/文档阅读器/实体高亮': 'literature-reader',
+  '知识库/文档阅读器/实体信息浮窗': 'literature-reader',
+  '实体高亮': 'literature-reader',
+  '实体信息浮窗': 'literature-reader',
+  '跨语言实例匹配/跨语言词向量匹配': 'cross-lingual-instance-matching',
+  '跨语言实例匹配/翻译服务集成': 'cross-lingual-instance-matching',
+  '跨语言词向量匹配': 'cross-lingual-instance-matching',
+  '翻译服务集成': 'cross-lingual-instance-matching',
+  '查询驱动的实例匹配/查询意图翻译': 'cross-lingual-query-fusion',
+  '查询驱动的实例匹配/跨库结果融合': 'cross-lingual-query-fusion',
+  '查询意图翻译': 'cross-lingual-query-fusion',
+  '跨库结果融合': 'cross-lingual-query-fusion',
+  '跨语言属性对齐/属性名称翻译与匹配': 'cross-lingual-attribute-alignment',
+  '跨语言属性对齐/基于实例值的属性对齐': 'cross-lingual-attribute-alignment',
+  '属性名称翻译与匹配': 'cross-lingual-attribute-alignment',
+  '基于实例值的属性对齐': 'cross-lingual-attribute-alignment',
+  '跨语言知识库生成与对齐/批量对齐任务管理': 'cross-lingual-kb-alignment',
+  '跨语言知识库生成与对齐/对齐结果存储': 'cross-lingual-kb-alignment',
+  '批量对齐任务管理': 'cross-lingual-kb-alignment',
+  '对齐结果存储': 'cross-lingual-kb-alignment',
+  '数据语义链接/语义关联与消歧/批量实体链接': 'kg-mapping',
+  '语义关联与消歧/批量实体链接': 'kg-mapping',
+  '批量实体链接': 'kg-mapping',
+  '图谱构造引擎/映射配置解析与保存/批量实体链接': 'kg-mapping',
+  '实体匹配消歧/候选实体列表': 'entity-matching-disambiguation',
+  '实体匹配消歧/人工裁决界面': 'entity-matching-disambiguation',
+  '候选实体列表': 'entity-matching-disambiguation',
+  '人工裁决界面': 'entity-matching-disambiguation',
   '文本实例匹配/字符串相似度匹配': 'text-instance-matching',
   '文本实例匹配/文本向量相似度匹配': 'text-instance-matching',
   '字符串相似度匹配': 'text-instance-matching',
@@ -320,7 +382,64 @@ export const AUDIT_ALGORITHM_MAP: Record<string, string> = {
   '算法管理/算法仓库/图嵌入/术语向量生成': 'term-vector',
   '算法管理/算法仓库/图嵌入/术语向量生成/预训练模型选择': 'term-vector',
   '算法管理/算法仓库/图嵌入/术语向量生成/模型领域微调': 'term-vector',
+  '算法管理/算法仓库/图嵌入/表示空间/实数空间嵌入': 'representation-space',
+  '算法管理/算法仓库/图嵌入/表示空间/复数空间嵌入': 'representation-space',
+  '算法管理/算法仓库/图嵌入/表示空间/空间类型选择与配置': 'representation-space',
+  '知识表示学习/表示空间/实数空间嵌入': 'representation-space',
+  '知识表示学习/表示空间/复数空间嵌入': 'representation-space',
+  '知识表示学习/表示空间/空间类型选择与配置': 'representation-space',
+  '算法管理/算法仓库/知识推理/打分函数/基于距离的打分函数': 'scoring-function',
+  '算法管理/算法仓库/知识推理/打分函数/基于语义相似度的打分函数': 'scoring-function',
+  '算法管理/算法仓库/知识推理/打分函数/打分函数可视化解释': 'scoring-function',
+  '知识表示学习/打分函数/基于距离的打分函数': 'scoring-function',
+  '知识表示学习/打分函数/基于语义相似度的打分函数': 'scoring-function',
+  '知识表示学习/打分函数/打分函数可视化解释': 'scoring-function',
+  '算法管理/算法仓库/图嵌入/编码模型/平移距离模型库': 'encoding-model',
+  '算法管理/算法仓库/图嵌入/编码模型/张量/矩阵分解模型库': 'encoding-model',
+  '算法管理/算法仓库/图嵌入/编码模型/神经网络模型库': 'encoding-model',
+  '算法管理/算法仓库/图嵌入/编码模型/模型选择与超参数配置': 'encoding-model',
+  '知识表示学习/编码模型/平移距离模型库': 'encoding-model',
+  '知识表示学习/编码模型/张量/矩阵分解模型库': 'encoding-model',
+  '知识表示学习/编码模型/神经网络模型库': 'encoding-model',
+  '知识表示学习/编码模型/模型选择与超参数配置': 'encoding-model',
 };
+
+export type EncodingModelFocus = 'translation' | 'decomposition' | 'neural' | 'config';
+
+/** 编码模型算法：模型库分类聚焦或超参数配置（含发起训练） */
+export function resolveEncodingModelFocus(pagePath: string | undefined): EncodingModelFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('平移距离模型库')) return 'translation';
+  if (path.includes('张量/矩阵分解模型库') || path.includes('矩阵分解模型库')) return 'decomposition';
+  if (path.includes('神经网络模型库')) return 'neural';
+  if (path.includes('模型选择与超参数配置')) return 'config';
+  return null;
+}
+
+export type ScoringFunctionFocus = 'distance' | 'similarity' | 'visualize';
+
+/** 打分函数算法：审计目录聚焦距离 / 相似度 / 可视化解释 */
+export function resolveScoringFunctionFocus(pagePath: string | undefined): ScoringFunctionFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('基于距离的打分函数')) return 'distance';
+  if (path.includes('基于语义相似度的打分函数')) return 'similarity';
+  if (path.includes('打分函数可视化解释')) return 'visualize';
+  return null;
+}
+
+export type RepresentationSpaceFocus = 'real' | 'complex' | 'config';
+
+/** 表示空间算法：审计目录聚焦实数 / 复数 / 配置界面 */
+export function resolveRepresentationSpaceFocus(pagePath: string | undefined): RepresentationSpaceFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('实数空间嵌入')) return 'real';
+  if (path.includes('复数空间嵌入')) return 'complex';
+  if (path.includes('空间类型选择与配置')) return 'config';
+  return null;
+}
 
 export type AuditAlgorithmDemoTab = 'statistical' | 'rule-based' | 'dedup-merge';
 
@@ -349,7 +468,7 @@ export function resolveMappingViewMode(pagePath: string | undefined): MappingVie
   const path = (pagePath ?? '').trim();
   if (!path) return null;
   if (path.includes('可视化映射规则配置')) return 'visual';
-  if (path.includes('映射配置解析与保存') || path.includes('属性值标准化与清洗')) return 'list';
+  if (path.includes('批量实体链接') || path.includes('映射配置解析与保存') || path.includes('属性值标准化与清洗')) return 'list';
   return null;
 }
 
@@ -389,6 +508,78 @@ export function resolveEntityLinkJudgmentFocus(pagePath: string | undefined): En
   if (!path) return null;
   if (path.includes('上下文语义分析')) return 'context';
   if (path.endsWith('/模型') || path.includes('实体链接判断/模型')) return 'model';
+  return null;
+}
+
+export type LinkAnnotationFocus = 'workbench' | 'mapping';
+
+export function resolveLinkAnnotationFocus(pagePath: string | undefined): LinkAnnotationFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('映射规则生成')) return 'mapping';
+  if (path.includes('人工标注工作台')) return 'workbench';
+  return null;
+}
+
+export type LiteratureReaderFocus = 'highlight' | 'popup';
+
+export function resolveLiteratureReaderFocus(pagePath: string | undefined): LiteratureReaderFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('实体信息浮窗')) return 'popup';
+  if (path.includes('实体高亮')) return 'highlight';
+  return null;
+}
+
+export type CrossLingualFocus = 'vector' | 'translate';
+
+export function resolveCrossLingualFocus(pagePath: string | undefined): CrossLingualFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('翻译服务集成')) return 'translate';
+  if (path.includes('跨语言词向量匹配')) return 'vector';
+  return null;
+}
+
+export type CrossLingualQueryFocus = 'translate' | 'fusion';
+
+export function resolveCrossLingualQueryFocus(pagePath: string | undefined): CrossLingualQueryFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('跨库结果融合')) return 'fusion';
+  if (path.includes('查询意图翻译')) return 'translate';
+  return null;
+}
+
+export type CrossLingualAttributeFocus = 'name' | 'value';
+
+export function resolveCrossLingualAttributeFocus(pagePath: string | undefined): CrossLingualAttributeFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('基于实例值的属性对齐')) return 'value';
+  if (path.includes('属性名称翻译与匹配')) return 'name';
+  return null;
+}
+
+export type CrossLingualKbFocus = 'tasks' | 'storage';
+
+export function resolveCrossLingualKbFocus(pagePath: string | undefined): CrossLingualKbFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('对齐结果存储')) return 'storage';
+  if (path.includes('批量对齐任务管理')) return 'tasks';
+  return null;
+}
+
+export type EntityMatchingDisambiguationFocus = 'adjudicate' | 'candidates';
+
+export function resolveEntityMatchingDisambiguationFocus(
+  pagePath: string | undefined,
+): EntityMatchingDisambiguationFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('人工裁决界面')) return 'adjudicate';
+  if (path.includes('候选实体列表')) return 'candidates';
   return null;
 }
 
@@ -684,6 +875,29 @@ export function resolveAuditAlgorithmId(pagePath: string | undefined): string | 
   if (path.includes('术语向量生成')) {
     return 'term-vector';
   }
+  if (
+    path.includes('实数空间嵌入')
+    || path.includes('复数空间嵌入')
+    || (path.includes('表示空间') && path.includes('空间类型选择与配置'))
+  ) {
+    return 'representation-space';
+  }
+  if (
+    path.includes('基于距离的打分函数')
+    || path.includes('基于语义相似度的打分函数')
+    || path.includes('打分函数可视化解释')
+  ) {
+    return 'scoring-function';
+  }
+  if (
+    path.includes('平移距离模型库')
+    || path.includes('张量/矩阵分解模型库')
+    || path.includes('矩阵分解模型库')
+    || path.includes('神经网络模型库')
+    || path.includes('模型选择与超参数配置')
+  ) {
+    return 'encoding-model';
+  }
   return null;
 }
 
@@ -707,6 +921,29 @@ export function resolveAuditAlgorithmTab(pagePath: string | undefined): AuditAlg
   if (path.includes('关系图注意网络') || path.includes('关系图注意力网络')) return 'demo';
   if (path.includes('术语/事件粗抽取') || path.includes('术语/事件粗提取')) return 'demo';
   if (path.includes('术语向量生成')) return 'demo';
+  if (
+    path.includes('实数空间嵌入')
+    || path.includes('复数空间嵌入')
+    || (path.includes('表示空间') && path.includes('空间类型选择与配置'))
+  ) {
+    return 'demo';
+  }
+  if (
+    path.includes('基于距离的打分函数')
+    || path.includes('基于语义相似度的打分函数')
+    || path.includes('打分函数可视化解释')
+  ) {
+    return 'demo';
+  }
+  if (
+    path.includes('平移距离模型库')
+    || path.includes('张量/矩阵分解模型库')
+    || path.includes('矩阵分解模型库')
+    || path.includes('神经网络模型库')
+    || path.includes('模型选择与超参数配置')
+  ) {
+    return 'demo';
+  }
   return null;
 }
 
@@ -793,11 +1030,13 @@ export type GraphTasksDashTabFocus =
   | 'logs'
   | 'export-rdf'
   | 'export-formats'
-  | 'custom-upload';
+  | 'custom-upload'
+  | 'incremental-update';
 
 export function resolveGraphTasksDashTab(pagePath: string | undefined): GraphTasksDashTabFocus | null {
   const path = (pagePath ?? '').trim();
   if (!path) return null;
+  if (path.includes('增量更新') || path.includes('图谱增量更新')) return 'incremental-update';
   if (path.includes('实例生成预览') || path.includes('候选预览')) return 'candidates';
   if (path.includes('任务日志与告警') || path.includes('执行日志')) return 'logs';
   if (path.includes('实时执行监控')) return 'monitor';
@@ -827,7 +1066,9 @@ export type GraphFusionFocus =
   | 'templates'
   | 'fusion'
   | 'fusion-weight'
-  | 'fusion-vote';
+  | 'fusion-vote'
+  | 'triple-gen'
+  | 'conflict-detect';
 
 export function resolveGraphFusionFocus(pagePath: string | undefined): GraphFusionFocus | null {
   const path = (pagePath ?? '').trim();
@@ -841,6 +1082,8 @@ export function resolveGraphFusionFocus(pagePath: string | undefined): GraphFusi
   if (path.includes('流程模板管理') || path.includes('流程模版管理')) return 'templates';
   if (path.includes('策略权重配置')) return 'fusion-weight';
   if (path.includes('结果投票与排序')) return 'fusion-vote';
+  if (path.includes('三元组生成')) return 'triple-gen';
+  if (path.includes('冲突检测') && path.includes('图谱融合')) return 'conflict-detect';
   if (path.includes('多策略融合')) return 'fusion';
   if (path.includes('模糊关系')) return 'fuzzy';
   if (path.includes('逻辑关系')) return 'logic';

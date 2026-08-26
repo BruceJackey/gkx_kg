@@ -480,9 +480,16 @@ function RangeSlider({ min, max, value, onChange, label }: {
   );
 }
 
+function kbSourceLabel(title: string): '中文知识库' | '英文知识库' {
+  return /[\u4e00-\u9fff]/.test(title) ? '中文知识库' : '英文知识库';
+}
+
+export type KnowledgeSearchVariant = 'default' | 'cross-db-fusion';
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function KnowledgeSearch() {
+export default function KnowledgeSearch({ variant = 'default' }: { variant?: KnowledgeSearchVariant }) {
+  const isCrossDbFusion = variant === 'cross-db-fusion';
   // Search
   const [searchMode, setSearchMode] = useState<'text' | 'multimodal'>('text');
   const [searchQuery, setSearchQuery] = useState('知识图谱 Transformer 嵌入');
@@ -652,21 +659,28 @@ export default function KnowledgeSearch() {
       {/* ── TOP SEARCH AREA ── */}
       <div className="bg-white border-b border-gray-200 px-8 pt-5 pb-4 space-y-3">
         {/* Mode tabs */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setSearchMode('text')}
-            className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${searchMode === 'text' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
-          >
-            文本检索
-          </button>
-          <button
-            onClick={() => setSearchMode('multimodal')}
-            className={`text-sm px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${searchMode === 'multimodal' ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
-          >
-            <Layers size={14} />
-            多模态交叉检索
-          </button>
-        </div>
+        {!isCrossDbFusion && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setSearchMode('text')}
+              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${searchMode === 'text' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+            >
+              文本检索
+            </button>
+            <button
+              onClick={() => setSearchMode('multimodal')}
+              className={`text-sm px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${searchMode === 'multimodal' ? 'bg-violet-50 text-violet-700 font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+            >
+              <Layers size={14} />
+              多模态交叉检索
+            </button>
+          </div>
+        )}
+        {isCrossDbFusion && (
+          <div className="text-sm font-medium text-teal-800 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
+            跨库结果融合 · 并行检索中文 / 英文知识库，融合去重后统一返回
+          </div>
+        )}
 
         {/* Search bar */}
         <div className="flex gap-2">
@@ -675,9 +689,11 @@ export default function KnowledgeSearch() {
             <input
               className="flex-1 px-3 py-3 text-gray-900 placeholder-gray-400 text-sm outline-none bg-transparent"
               placeholder={
-                searchMode === 'multimodal'
-                  ? '可选：输入文本，与下方图片/表格/公式组成混合检索…'
-                  : '输入研究问题或关键概念，如「知识图谱 Transformer 嵌入」...'
+                isCrossDbFusion
+                  ? '输入查询意图，将并行检索中/英知识库并融合结果…'
+                  : searchMode === 'multimodal'
+                    ? '可选：输入文本，与下方图片/表格/公式组成混合检索…'
+                    : '输入研究问题或关键概念，如「知识图谱 Transformer 嵌入」...'
               }
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -690,12 +706,12 @@ export default function KnowledgeSearch() {
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 text-white text-sm font-medium rounded-xl shadow-sm transition-colors flex items-center gap-2"
           >
             {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-            检索
+            {isCrossDbFusion ? '跨库检索' : '检索'}
           </button>
         </div>
 
         {/* Multimodal panel */}
-        {searchMode === 'multimodal' && (
+        {!isCrossDbFusion && searchMode === 'multimodal' && (
           <div className="rounded-xl border border-violet-100 bg-violet-50/40 p-3 space-y-3">
             <div className="flex flex-wrap items-start gap-3">
               <div className="min-w-0 flex-1">
@@ -771,8 +787,17 @@ export default function KnowledgeSearch() {
         <div className="flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
             <span>
-              共检索到 <strong className="text-gray-900">1.5亿+</strong> 篇文献/专利，当前筛选结果{' '}
-              <strong className="text-blue-600">{filteredResults.length}</strong> 篇
+              {isCrossDbFusion ? (
+                <>
+                  跨库结果融合 · 中/英知识库已去重合并，当前统一结果{' '}
+                  <strong className="text-teal-700">{filteredResults.length}</strong> 条
+                </>
+              ) : (
+                <>
+                  共检索到 <strong className="text-gray-900">1.5亿+</strong> 篇文献/专利，当前筛选结果{' '}
+                  <strong className="text-blue-600">{filteredResults.length}</strong> 篇
+                </>
+              )}
             </span>
             {appliedQuery && (
               <span className="text-gray-400">· 文本：<span className="text-gray-600">"{appliedQuery}"</span></span>
@@ -785,106 +810,116 @@ export default function KnowledgeSearch() {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400">排序</span>
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none"
-            >
-              <option value="relevance">相关度</option>
-              <option value="date">发表时间</option>
-              <option value="citations">引用数</option>
-              <option value="if">影响因子</option>
-            </select>
-          </div>
+          {!isCrossDbFusion && (
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">排序</span>
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as any)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none"
+              >
+                <option value="relevance">相关度</option>
+                <option value="date">发表时间</option>
+                <option value="citations">引用数</option>
+                <option value="if">影响因子</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── BODY ── */}
       <div className="flex flex-1 min-h-0">
         {/* ── LEFT SIDEBAR ── */}
-        <aside className="w-60 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto px-4 py-4">
-          <div className="flex items-center gap-1.5 mb-3 text-gray-700">
-            <SlidersHorizontal size={14} />
-            <span className="text-sm font-semibold">筛选条件</span>
-          </div>
+        {!isCrossDbFusion && (
+          <aside className="w-60 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto px-4 py-4">
+            <div className="flex items-center gap-1.5 mb-3 text-gray-700">
+              <SlidersHorizontal size={14} />
+              <span className="text-sm font-semibold">筛选条件</span>
+            </div>
 
-          {/* Year range */}
-          <div className="border-b border-gray-100 pb-3 mb-3">
-            <SectionHeader title="发表时间" open={yearOpen} onToggle={() => setYearOpen(v => !v)} />
-            {yearOpen && (
-              <div className="mt-2">
-                <RangeSlider min={2018} max={2024} value={yearRange} onChange={setYearRange} label={v => String(v)} />
-              </div>
+            {/* Year range */}
+            <div className="border-b border-gray-100 pb-3 mb-3">
+              <SectionHeader title="发表时间" open={yearOpen} onToggle={() => setYearOpen(v => !v)} />
+              {yearOpen && (
+                <div className="mt-2">
+                  <RangeSlider min={2018} max={2024} value={yearRange} onChange={setYearRange} label={v => String(v)} />
+                </div>
+              )}
+            </div>
+
+            {/* Journals */}
+            <div className="border-b border-gray-100 pb-3 mb-3">
+              <SectionHeader title="期刊/会议" count={selectedJournals.length || undefined} open={journalOpen} onToggle={() => setJournalOpen(v => !v)} />
+              {journalOpen && (
+                <div className="mt-1 space-y-1">
+                  {JOURNALS.map(j => (
+                    <label key={j} className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${
+                        selectedJournals.includes(j) ? 'bg-blue-600 border-blue-600' : 'border-gray-300 group-hover:border-blue-400'
+                      }`}>
+                        {selectedJournals.includes(j) && <Check size={9} className="text-white" />}
+                      </div>
+                      <span className="text-xs text-gray-600 group-hover:text-gray-900 flex-1">{j}</span>
+                      <span className="text-xs text-gray-400">
+                        {literatureIndex.filter(p => p.journal === j).length}
+                      </span>
+                      <input type="checkbox" className="sr-only" checked={selectedJournals.includes(j)} onChange={() => toggleJournal(j)} />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* IF range */}
+            <div className="border-b border-gray-100 pb-3 mb-3">
+              <SectionHeader title="影响因子" open={ifOpen} onToggle={() => setIfOpen(v => !v)} />
+              {ifOpen && (
+                <div className="mt-2">
+                  <RangeSlider min={0} max={70} value={ifRange} onChange={setIfRange} label={v => v === 70 ? '70+' : String(v)} />
+                </div>
+              )}
+            </div>
+
+            {/* Doc types */}
+            <div>
+              <SectionHeader title="文档类型" open={docTypeOpen} onToggle={() => setDocTypeOpen(v => !v)} />
+              {docTypeOpen && (
+                <div className="mt-1 space-y-1">
+                  {['文献', '专利', '数据集'].map(t => (
+                    <label key={t} className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${
+                        selectedDocTypes.includes(t) ? 'bg-blue-600 border-blue-600' : 'border-gray-300 group-hover:border-blue-400'
+                      }`}>
+                        {selectedDocTypes.includes(t) && <Check size={9} className="text-white" />}
+                      </div>
+                      <span className="text-xs text-gray-600 group-hover:text-gray-900 flex-1">{t}</span>
+                      <input type="checkbox" className="sr-only" checked={selectedDocTypes.includes(t)} onChange={() => toggleDocType(t)} />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {(selectedJournals.length > 0 || selectedDocTypes.length > 0) && (
+              <button
+                onClick={() => { setSelectedJournals([]); setSelectedDocTypes([]); setYearRange([2018, 2024]); setIfRange([0, 70]); }}
+                className="mt-4 w-full text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center justify-center gap-1"
+              >
+                <X size={11} /> 清除所有筛选
+              </button>
             )}
-          </div>
-
-          {/* Journals */}
-          <div className="border-b border-gray-100 pb-3 mb-3">
-            <SectionHeader title="期刊/会议" count={selectedJournals.length || undefined} open={journalOpen} onToggle={() => setJournalOpen(v => !v)} />
-            {journalOpen && (
-              <div className="mt-1 space-y-1">
-                {JOURNALS.map(j => (
-                  <label key={j} className="flex items-center gap-2 cursor-pointer group">
-                    <div className={`w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${
-                      selectedJournals.includes(j) ? 'bg-blue-600 border-blue-600' : 'border-gray-300 group-hover:border-blue-400'
-                    }`}>
-                      {selectedJournals.includes(j) && <Check size={9} className="text-white" />}
-                    </div>
-                    <span className="text-xs text-gray-600 group-hover:text-gray-900 flex-1">{j}</span>
-                    <span className="text-xs text-gray-400">
-                      {literatureIndex.filter(p => p.journal === j).length}
-                    </span>
-                    <input type="checkbox" className="sr-only" checked={selectedJournals.includes(j)} onChange={() => toggleJournal(j)} />
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* IF range */}
-          <div className="border-b border-gray-100 pb-3 mb-3">
-            <SectionHeader title="影响因子" open={ifOpen} onToggle={() => setIfOpen(v => !v)} />
-            {ifOpen && (
-              <div className="mt-2">
-                <RangeSlider min={0} max={70} value={ifRange} onChange={setIfRange} label={v => v === 70 ? '70+' : String(v)} />
-              </div>
-            )}
-          </div>
-
-          {/* Doc types */}
-          <div>
-            <SectionHeader title="文档类型" open={docTypeOpen} onToggle={() => setDocTypeOpen(v => !v)} />
-            {docTypeOpen && (
-              <div className="mt-1 space-y-1">
-                {['文献', '专利', '数据集'].map(t => (
-                  <label key={t} className="flex items-center gap-2 cursor-pointer group">
-                    <div className={`w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${
-                      selectedDocTypes.includes(t) ? 'bg-blue-600 border-blue-600' : 'border-gray-300 group-hover:border-blue-400'
-                    }`}>
-                      {selectedDocTypes.includes(t) && <Check size={9} className="text-white" />}
-                    </div>
-                    <span className="text-xs text-gray-600 group-hover:text-gray-900 flex-1">{t}</span>
-                    <input type="checkbox" className="sr-only" checked={selectedDocTypes.includes(t)} onChange={() => toggleDocType(t)} />
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {(selectedJournals.length > 0 || selectedDocTypes.length > 0) && (
-            <button
-              onClick={() => { setSelectedJournals([]); setSelectedDocTypes([]); setYearRange([2018, 2024]); setIfRange([0, 70]); }}
-              className="mt-4 w-full text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center justify-center gap-1"
-            >
-              <X size={11} /> 清除所有筛选
-            </button>
-          )}
-        </aside>
+          </aside>
+        )}
 
         {/* ── MAIN RESULTS ── */}
         <main className="flex-1 overflow-y-auto px-6 py-4 pb-24">
+          {isCrossDbFusion && (
+            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-teal-900">
+              <Layers size={15} className="text-teal-600" />
+              跨库结果融合
+            </div>
+          )}
           {/* Select-all bar */}
           <div className="flex items-center gap-3 mb-3 text-xs text-gray-500">
             <label className="flex items-center gap-1.5 cursor-pointer">
@@ -929,6 +964,11 @@ export default function KnowledgeSearch() {
 
                     {/* Badges */}
                     <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+                      {isCrossDbFusion && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700 border border-teal-200">
+                          {kbSourceLabel(paper.title)}
+                        </span>
+                      )}
                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${relevanceBadgeColor(paper.relevanceScore)}`}>
                         相关度 {Math.round(paper.relevanceScore * 100)}%
                       </span>

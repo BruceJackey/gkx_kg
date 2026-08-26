@@ -70,6 +70,12 @@ import InstanceFeatureEngineering from './components/InstanceFeatureEngineering'
 import TextEntityRecognition from './components/TextEntityRecognition';
 import CandidateEntityGeneration from './components/CandidateEntityGeneration';
 import EntityLinkJudgment from './components/EntityLinkJudgment';
+import LinkAnnotationMapping from './components/LinkAnnotationMapping';
+import CrossLingualInstanceMatching from './components/CrossLingualInstanceMatching';
+import CrossLingualQueryFusion from './components/CrossLingualQueryFusion';
+import CrossLingualAttributeAlignment from './components/CrossLingualAttributeAlignment';
+import CrossLingualKbAlignment from './components/CrossLingualKbAlignment';
+import EntityMatchingDisambiguation from './components/EntityMatchingDisambiguation';
 import GraphConstruction from './components/GraphConstruction';
 import GraphTasks from './components/GraphTasks';
 import GraphFusion from './components/GraphFusion';
@@ -93,6 +99,16 @@ import {
   resolveRecognitionFocus,
   resolveTextEntityRecognitionFocus,
   resolveEntityLinkJudgmentFocus,
+  resolveLinkAnnotationFocus,
+  resolveLiteratureReaderFocus,
+  resolveCrossLingualFocus,
+  resolveCrossLingualQueryFocus,
+  resolveCrossLingualAttributeFocus,
+  resolveCrossLingualKbFocus,
+  resolveEntityMatchingDisambiguationFocus,
+  resolveRepresentationSpaceFocus,
+  resolveScoringFunctionFocus,
+  resolveEncodingModelFocus,
   resolveTemporalAuditMode,
   resolveLiteratureParseFocus,
   resolvePatentParseFocus,
@@ -142,6 +158,16 @@ import {
   type MultimodalDatasetFocus,
   type GraphFusionFocus,
   type EntityLinkJudgmentFocus,
+  type LinkAnnotationFocus,
+  type LiteratureReaderFocus,
+  type CrossLingualFocus,
+  type CrossLingualQueryFocus,
+  type CrossLingualAttributeFocus,
+  type CrossLingualKbFocus,
+  type EntityMatchingDisambiguationFocus,
+  type RepresentationSpaceFocus,
+  type ScoringFunctionFocus,
+  type EncodingModelFocus,
 } from './data/auditPageMap';
 
 function Placeholder({ title, desc }: { title: string; desc: string }) {
@@ -200,6 +226,16 @@ export default function App() {
   const [multimodalBuildFocus, setMultimodalBuildFocus] = useState<MultimodalDatasetFocus | null>(null);
   const [graphFusionFocus, setGraphFusionFocus] = useState<GraphFusionFocus | null>(null);
   const [entityLinkJudgmentFocus, setEntityLinkJudgmentFocus] = useState<EntityLinkJudgmentFocus | null>(null);
+  const [linkAnnotationFocus, setLinkAnnotationFocus] = useState<LinkAnnotationFocus | null>(null);
+  const [literatureReaderFocus, setLiteratureReaderFocus] = useState<LiteratureReaderFocus | null>(null);
+  const [crossLingualFocus, setCrossLingualFocus] = useState<CrossLingualFocus | null>(null);
+  const [crossLingualQueryFocus, setCrossLingualQueryFocus] = useState<CrossLingualQueryFocus | null>(null);
+  const [crossLingualAttributeFocus, setCrossLingualAttributeFocus] = useState<CrossLingualAttributeFocus | null>(null);
+  const [crossLingualKbFocus, setCrossLingualKbFocus] = useState<CrossLingualKbFocus | null>(null);
+  const [entityMatchingDisambiguationFocus, setEntityMatchingDisambiguationFocus] = useState<EntityMatchingDisambiguationFocus | null>(null);
+  const [representationSpaceFocus, setRepresentationSpaceFocus] = useState<RepresentationSpaceFocus | null>(null);
+  const [scoringFunctionFocus, setScoringFunctionFocus] = useState<ScoringFunctionFocus | null>(null);
+  const [encodingModelFocus, setEncodingModelFocus] = useState<EncodingModelFocus | null>(null);
 
   const resolveDataSourceView = (pagePath: string): DSMode => {
     if (pagePath.includes('外部词典导入')) return 'lexicon';
@@ -242,6 +278,16 @@ export default function App() {
     setMultimodalBuildFocus(null);
     setGraphFusionFocus(null);
     setEntityLinkJudgmentFocus(null);
+    setLinkAnnotationFocus(null);
+    setLiteratureReaderFocus(null);
+    setCrossLingualFocus(null);
+    setCrossLingualQueryFocus(null);
+    setCrossLingualAttributeFocus(null);
+    setCrossLingualKbFocus(null);
+    setEntityMatchingDisambiguationFocus(null);
+    setRepresentationSpaceFocus(null);
+    setScoringFunctionFocus(null);
+    setEncodingModelFocus(null);
   };
 
   const handleNavigate = (page: string) => {
@@ -253,7 +299,7 @@ export default function App() {
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
     // 审计专用独立页优先（不与产品页共用）
-    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment') {
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation') {
       if (pageId === 'temporal-relation-audit') {
         setTemporalAuditMode(resolveTemporalAuditMode(feature.pagePath) ?? 'extraction');
       }
@@ -296,6 +342,24 @@ export default function App() {
       if (pageId === 'entity-link-judgment') {
         setEntityLinkJudgmentFocus(resolveEntityLinkJudgmentFocus(feature.pagePath));
       }
+      if (pageId === 'link-annotation-mapping') {
+        setLinkAnnotationFocus(resolveLinkAnnotationFocus(feature.pagePath));
+      }
+      if (pageId === 'cross-lingual-instance-matching') {
+        setCrossLingualFocus(resolveCrossLingualFocus(feature.pagePath));
+      }
+      if (pageId === 'cross-lingual-query-fusion') {
+        setCrossLingualQueryFocus(resolveCrossLingualQueryFocus(feature.pagePath));
+      }
+      if (pageId === 'cross-lingual-attribute-alignment') {
+        setCrossLingualAttributeFocus(resolveCrossLingualAttributeFocus(feature.pagePath));
+      }
+      if (pageId === 'cross-lingual-kb-alignment') {
+        setCrossLingualKbFocus(resolveCrossLingualKbFocus(feature.pagePath));
+      }
+      if (pageId === 'entity-matching-disambiguation') {
+        setEntityMatchingDisambiguationFocus(resolveEntityMatchingDisambiguationFocus(feature.pagePath));
+      }
       setCurrentPage(pageId);
       return;
     }
@@ -304,6 +368,21 @@ export default function App() {
       setSelectedAlgorithmId(algorithmId);
       setAlgorithmDemoTab(resolveAuditAlgorithmDemoTab(feature.pagePath));
       setAlgorithmInitialTab(resolveAuditAlgorithmTab(feature.pagePath));
+      setRepresentationSpaceFocus(
+        algorithmId === 'representation-space'
+          ? resolveRepresentationSpaceFocus(feature.pagePath)
+          : null,
+      );
+      setScoringFunctionFocus(
+        algorithmId === 'scoring-function'
+          ? resolveScoringFunctionFocus(feature.pagePath)
+          : null,
+      );
+      setEncodingModelFocus(
+        algorithmId === 'encoding-model'
+          ? resolveEncodingModelFocus(feature.pagePath)
+          : null,
+      );
       setAutoStartDepTest(false);
       setCurrentPage('algorithm-detail');
       return;
@@ -365,6 +444,11 @@ export default function App() {
     if (pageId === 'kg-ontology') {
       setOntologyModelFocus(resolveOntologyModelFocus(feature.pagePath));
       setCurrentPage('kg-ontology');
+      return;
+    }
+    if (pageId === 'literature-reader') {
+      setLiteratureReaderFocus(resolveLiteratureReaderFocus(feature.pagePath));
+      setCurrentPage('literature-reader');
       return;
     }
     if (pageId) {
@@ -482,11 +566,27 @@ export default function App() {
       case 'algorithm-detail':
         return selectedAlgorithmId ? (
           <AlgorithmDetailPage
+            key={`${selectedAlgorithmId}-${representationSpaceFocus ?? scoringFunctionFocus ?? encodingModelFocus ?? 'all'}`}
             algorithmId={selectedAlgorithmId}
             onBack={handleBackToAlgorithmList}
             initialDemoTab={selectedAlgorithmId === 'candidate-term-generation' ? algorithmDemoTab ?? undefined : undefined}
             initialTab={algorithmInitialTab ?? undefined}
             autoStartDepTest={selectedAlgorithmId === 'dependency-graph' ? autoStartDepTest : false}
+            initialEmbeddingSpace={
+              selectedAlgorithmId === 'representation-space' && representationSpaceFocus && representationSpaceFocus !== 'config'
+                ? representationSpaceFocus
+                : undefined
+            }
+            initialScoringFunctionSection={
+              selectedAlgorithmId === 'scoring-function' && scoringFunctionFocus
+                ? scoringFunctionFocus
+                : undefined
+            }
+            initialEncodingModelFocus={
+              selectedAlgorithmId === 'encoding-model' && encodingModelFocus
+                ? encodingModelFocus
+                : undefined
+            }
             onNavigateToService={(algId) => {
               setSelectedAlgorithmServiceId(algId);
               setCurrentPage('algorithm-service-detail');
@@ -685,6 +785,48 @@ export default function App() {
             initialFocus={entityLinkJudgmentFocus}
           />
         );
+      case 'link-annotation-mapping':
+        return (
+          <LinkAnnotationMapping
+            key={linkAnnotationFocus ?? 'all'}
+            initialFocus={linkAnnotationFocus}
+          />
+        );
+      case 'cross-lingual-instance-matching':
+        return (
+          <CrossLingualInstanceMatching
+            key={crossLingualFocus ?? 'all'}
+            initialFocus={crossLingualFocus}
+          />
+        );
+      case 'cross-lingual-query-fusion':
+        return (
+          <CrossLingualQueryFusion
+            key={crossLingualQueryFocus ?? 'all'}
+            initialFocus={crossLingualQueryFocus}
+          />
+        );
+      case 'cross-lingual-attribute-alignment':
+        return (
+          <CrossLingualAttributeAlignment
+            key={crossLingualAttributeFocus ?? 'all'}
+            initialFocus={crossLingualAttributeFocus}
+          />
+        );
+      case 'cross-lingual-kb-alignment':
+        return (
+          <CrossLingualKbAlignment
+            key={crossLingualKbFocus ?? 'all'}
+            initialFocus={crossLingualKbFocus}
+          />
+        );
+      case 'entity-matching-disambiguation':
+        return (
+          <EntityMatchingDisambiguation
+            key={entityMatchingDisambiguationFocus ?? 'all'}
+            initialFocus={entityMatchingDisambiguationFocus}
+          />
+        );
       case 'kg-datasource':
         return <DataSourceManagement key={dataSourceView} viewMode={dataSourceView} />;
       case 'graph-construction':
@@ -721,6 +863,7 @@ export default function App() {
                   : undefined
             }
             initialOpenCustomUpload={graphTasksDashTab === 'custom-upload' || undefined}
+            focusIncremental={graphTasksDashTab === 'incremental-update' || undefined}
           />
         );
       case 'kg-construction':
@@ -768,7 +911,12 @@ export default function App() {
       case 'literature-processing':
         return <LiteratureProcessing />;
       case 'literature-reader':
-        return <LiteratureReader />;
+        return (
+          <LiteratureReader
+            key={literatureReaderFocus ?? 'default'}
+            initialFocus={literatureReaderFocus}
+          />
+        );
       case 'patent-processing':
         return <PatentProcessing />;
       case 'api-keys':
@@ -815,8 +963,8 @@ export default function App() {
         selectedAuditFeatureId={selectedAuditFeature?.id}
         onAuditFeatureSelect={handleAuditFeatureSelect}
       />
-      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset', 'candidate-entity-generation', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
-        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset', 'candidate-entity-generation', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
+      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
+        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
           {renderPage()}
         </div>
       </main>

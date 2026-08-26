@@ -684,7 +684,7 @@ export default function MappingManagement({
             onClick={() => setViewMode('list')}
             className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-gray-800 font-semibold' : 'text-gray-400 hover:text-gray-600'}`}
           >
-            <List size={12} /> 列表
+            <List size={12} /> 批量实体链接
           </button>
           <button
             onClick={() => setViewMode('visual')}

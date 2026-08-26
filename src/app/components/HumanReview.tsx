@@ -625,8 +625,18 @@ function MappingRulesPanel() {
 
 // ─── KG Review Panel ──────────────────────────────────────────────────────────
 
-function KGReviewPanel({ focusConsensus }: { focusConsensus?: boolean }) {
-  const [innerTab, setInnerTab] = useState<'candidates' | 'mapping-rules'>('candidates');
+export function KGReviewPanel({
+  focusConsensus,
+  initialInnerTab = 'candidates',
+  labels,
+}: {
+  focusConsensus?: boolean;
+  initialInnerTab?: 'candidates' | 'mapping-rules';
+  labels?: { candidates?: string; mappingRules?: string };
+}) {
+  const candidatesLabel = labels?.candidates ?? '候选属性审核界面';
+  const mappingRulesLabel = labels?.mappingRules ?? '映射规则';
+  const [innerTab, setInnerTab] = useState<'candidates' | 'mapping-rules'>(initialInnerTab);
   const [candidates, setCandidates] = useState<ReviewCandidate[]>(MOCK_CANDIDATES);
   const [currentUserId, setCurrentUserIdState] = useState(getCurrentReviewerId);
   const [selected, setSelected] = useState<string[]>([]);
@@ -793,14 +803,14 @@ function KGReviewPanel({ focusConsensus }: { focusConsensus?: boolean }) {
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 pt-3 flex gap-1">
         <button onClick={() => setInnerTab('candidates')}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${innerTab === 'candidates' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          <CheckSquare className="w-4 h-4" />候选属性审核界面
+          <CheckSquare className="w-4 h-4" />{candidatesLabel}
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-0.5 ${innerTab === 'candidates' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
             {myVisible.filter(c => (c.peerReviews.find(p => p.userId === currentUserId)?.result ?? 'pending') === 'pending').length}
           </span>
         </button>
         <button onClick={() => setInnerTab('mapping-rules')}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${innerTab === 'mapping-rules' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          <Workflow className="w-4 h-4" />映射规则
+          <Workflow className="w-4 h-4" />{mappingRulesLabel}
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-0.5 ${innerTab === 'mapping-rules' ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
             {MOCK_RULE_CANDIDATES.filter(r => r.status === 'pending').length}
           </span>

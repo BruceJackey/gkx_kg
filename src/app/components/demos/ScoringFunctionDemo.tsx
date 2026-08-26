@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 
 const SCORE_FNS = [
@@ -42,8 +42,14 @@ function getScore(fnId: string, idx: number) {
   return (SCORES[fnId]?.[idx] ?? 0.5).toFixed(3);
 }
 
-export function ScoringFunctionDemo() {
-  const [activeSection, setActiveSection] = useState<'distance' | 'similarity' | 'visualize'>('distance');
+export type ScoringFunctionSection = 'distance' | 'similarity' | 'visualize';
+
+interface ScoringFunctionDemoProps {
+  initialSection?: ScoringFunctionSection;
+}
+
+export function ScoringFunctionDemo({ initialSection }: ScoringFunctionDemoProps) {
+  const [activeSection, setActiveSection] = useState<ScoringFunctionSection>(initialSection ?? 'distance');
   const [selectedFn, setSelectedFn] = useState('transe');
   const [normType, setNormType] = useState<'L1' | 'L2'>('L1');
   const [dim, setDim] = useState(4);
@@ -57,6 +63,10 @@ export function ScoringFunctionDemo() {
 
   const toggleVizFn = (id: string) =>
     setVizFns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  useEffect(() => {
+    if (initialSection) setActiveSection(initialSection);
+  }, [initialSection]);
 
   const SECTIONS = [
     { id: 'distance' as const, label: '① 距离打分函数' },

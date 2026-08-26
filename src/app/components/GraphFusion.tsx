@@ -15,7 +15,9 @@ export default function GraphFusion({
         ? 'review'
         : initialFocus === 'fusion' ||
             initialFocus === 'fusion-weight' ||
-            initialFocus === 'fusion-vote'
+            initialFocus === 'fusion-vote' ||
+            initialFocus === 'triple-gen' ||
+            initialFocus === 'conflict-detect'
           ? 'fusion'
           : 'detail';
 
@@ -33,6 +35,7 @@ export default function GraphFusion({
           key={initialFocus ?? 'default'}
           initialMode="schema-match"
           lockMode={true}
+          hideHypernymPrediction={true}
           initialRightPanelTab={rightTab}
           initialShowDrawer={openDrawer}
           initialDrawerTab={drawerTab}

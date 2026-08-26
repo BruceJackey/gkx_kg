@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { CheckCircle, ChevronRight, Settings, Play, Info } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { CheckCircle, ChevronRight, Settings, Play, Info, Loader2 } from 'lucide-react';
 import {
   EmbeddingSpaceSelector,
   embeddingSpaceLabel,
   type EmbeddingSpace,
 } from './EmbeddingSpaceSelector';
+import type { EncodingModelFocus } from '../../data/auditPageMap';
 
 type ModelId = 'transe' | 'transh' | 'transr' | 'rescal' | 'distmult' | 'complex' | 'conve' | 'graphsage';
 type CategoryId = 'translation' | 'decomposition' | 'neural';
@@ -131,11 +132,31 @@ interface HyperParams {
   regularization: string;
 }
 
-export function EncodingModelDemo() {
-  const [activeSection, setActiveSection] = useState<'library' | 'config'>('library');
-  const [selectedModel, setSelectedModel] = useState<ModelId>('transe');
-  const [expandedCategory, setExpandedCategory] = useState<CategoryId | null>('translation');
+const FOCUS_DEFAULT_MODEL: Record<Exclude<EncodingModelFocus, 'config'>, ModelId> = {
+  translation: 'transe',
+  decomposition: 'distmult',
+  neural: 'conve',
+};
+
+interface EncodingModelDemoProps {
+  initialFocus?: EncodingModelFocus;
+  onRequestTrainingModal?: () => void;
+}
+
+export function EncodingModelDemo({ initialFocus, onRequestTrainingModal }: EncodingModelDemoProps) {
+  const libraryFocus = initialFocus && initialFocus !== 'config' ? initialFocus : null;
+  const [activeSection, setActiveSection] = useState<'library' | 'config'>(initialFocus === 'config' ? 'config' : 'library');
+  const [selectedModel, setSelectedModel] = useState<ModelId>(
+    libraryFocus ? FOCUS_DEFAULT_MODEL[libraryFocus] : 'transe',
+  );
+  const [expandedCategory, setExpandedCategory] = useState<CategoryId | null>(
+    libraryFocus ?? 'translation',
+  );
   const [saved, setSaved] = useState(false);
+  const [trainPhase, setTrainPhase] = useState<'idle' | 'running' | 'done'>('idle');
+  const [trainLogs, setTrainLogs] = useState<string[]>([]);
+  const [trainProgress, setTrainProgress] = useState(0);
+  const trainRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const model = MODELS.find(m => m.id === selectedModel)!;
   const cat = CATEGORIES.find(c => c.id === model.category)!;
@@ -167,6 +188,59 @@ export function EncodingModelDemo() {
 
   const spaceMismatch = model.preferredSpace === 'complex' && params.space === 'real';
   const paramDim = params.space === 'complex' ? params.dim * 2 : params.dim;
+
+  useEffect(() => {
+    if (!initialFocus) return;
+    if (initialFocus === 'config') {
+      setActiveSection('config');
+      return;
+    }
+    setActiveSection('library');
+    setExpandedCategory(initialFocus);
+    const defaultModel = FOCUS_DEFAULT_MODEL[initialFocus];
+    selectModel(defaultModel);
+  }, [initialFocus]);
+
+  useEffect(() => () => {
+    if (trainRef.current) clearInterval(trainRef.current);
+  }, []);
+
+  const resetTraining = () => {
+    if (trainRef.current) clearInterval(trainRef.current);
+    setTrainPhase('idle');
+    setTrainLogs([]);
+    setTrainProgress(0);
+  };
+
+  const buildTrainLogs = () => [
+    `加载编码模型 ${model.name}（${cat.label}）`,
+    `表示空间：${embeddingSpaceLabel(params.space)} · 嵌入维度 ${params.dim}d（实际 ${paramDim}d）`,
+    `超参数：lr=${params.lr} · batch=${params.batch} · epochs=${params.epochs} · ${params.optimizer.toUpperCase()}`,
+    '初始化负采样器与 Margin 损失函数',
+    `Epoch 1/${Math.min(params.epochs, 10)} · Loss 2.731 · MRR 0.198`,
+    `Epoch 3/${Math.min(params.epochs, 10)} · Loss 1.856 · MRR 0.289`,
+    `Epoch 6/${Math.min(params.epochs, 10)} · Loss 1.042 · MRR 0.341`,
+    `Epoch ${Math.min(params.epochs, 10)}/${Math.min(params.epochs, 10)} · Loss 0.712 · MRR ${model.mrr}`,
+    `保存模型版本 ${model.name.toLowerCase()}-${params.dim}d-${params.space}`,
+  ];
+
+  const startTraining = () => {
+    if (trainRef.current) clearInterval(trainRef.current);
+    const logs = buildTrainLogs();
+    setTrainPhase('running');
+    setTrainLogs([]);
+    setTrainProgress(0);
+    let step = 0;
+    trainRef.current = setInterval(() => {
+      step += 1;
+      setTrainLogs(prev => [...prev, logs[step - 1]]);
+      setTrainProgress((step / logs.length) * 100);
+      if (step >= logs.length) {
+        clearInterval(trainRef.current!);
+        setTrainPhase('done');
+      }
+    }, 600);
+  };
 
   const SECTIONS = [
     { id: 'library' as const, label: '① 模型库' },
@@ -523,11 +597,84 @@ export function EncodingModelDemo() {
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${saved ? 'bg-green-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
                 {saved ? '✓ 已保存' : '保存配置'}
               </button>
-              <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-gray-900 hover:bg-gray-800 text-white transition-colors">
-                <Play className="w-4 h-4" />发起训练
+              <button
+                onClick={startTraining}
+                disabled={trainPhase === 'running'}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-gray-900 hover:bg-gray-800 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {trainPhase === 'running' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                发起训练
               </button>
+              {onRequestTrainingModal && (
+                <button
+                  onClick={onRequestTrainingModal}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  完整训练配置
+                </button>
+              )}
             </div>
           </div>
+
+          {trainPhase !== 'idle' && (
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="px-6 py-3.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {trainPhase === 'running' ? '训练进行中' : '训练完成'} · {model.name}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {embeddingSpaceLabel(params.space)} · {params.dim}d · {params.epochs} epochs
+                  </p>
+                </div>
+                {trainPhase === 'done' && (
+                  <button onClick={resetTraining} className="text-xs px-3 py-1 border border-gray-200 rounded-lg text-gray-600 hover:bg-white">
+                    重新训练
+                  </button>
+                )}
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>进度</span>
+                    <span>{Math.round(trainProgress)}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${trainProgress}%` }} />
+                  </div>
+                </div>
+                <div className="bg-gray-900 rounded-lg p-4 font-mono text-xs text-green-400 space-y-1 max-h-48 overflow-y-auto">
+                  {trainLogs.map((log, i) => (
+                    <div key={i} className="flex gap-2">
+                      <span className="text-gray-500 shrink-0">[{String(i + 1).padStart(2, '0')}]</span>
+                      <span>{log}</span>
+                    </div>
+                  ))}
+                  {trainPhase === 'running' && (
+                    <div className="flex gap-2 text-gray-500">
+                      <Loader2 className="w-3 h-3 animate-spin mt-0.5" />
+                      <span>等待下一训练步骤…</span>
+                    </div>
+                  )}
+                </div>
+                {trainPhase === 'done' && (
+                  <div className="grid grid-cols-4 gap-3">
+                    {[
+                      { label: 'MRR', value: model.mrr },
+                      { label: 'Hits@10', value: `${model.hits10}%` },
+                      { label: '模型类别', value: cat.label.replace('模型库', '').replace('模型', '') },
+                      { label: '模型版本', value: `${model.name.toLowerCase()}-${params.dim}d` },
+                    ].map(item => (
+                      <div key={item.label} className="rounded-lg p-3 border bg-indigo-50 border-indigo-200">
+                        <p className="text-xs text-gray-500 mb-0.5">{item.label}</p>
+                        <p className="text-sm font-semibold text-gray-900">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

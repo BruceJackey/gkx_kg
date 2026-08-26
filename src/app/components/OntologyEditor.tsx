@@ -6,7 +6,7 @@ import {
   Sparkles, Loader2, ChevronUp, TrendingUp,
   Star, Sliders, GitMerge, Play, PanelRightOpen,
   CheckSquare, Square, ThumbsUp, ThumbsDown,
-  Workflow, Settings2, Database, Upload, AlertCircle, Network
+  Workflow, Settings2, Database, Upload, AlertCircle, Network, AlertTriangle,
 } from 'lucide-react';
 
 // ─── Prediction helpers ───────────────────────────────────────────────────────
@@ -309,11 +309,12 @@ function PropRow({ prop, onUpdate, onRemove }: {
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
-function EntityDetailPanel({ entity, allEntities, onChange, onDelete }: {
+function EntityDetailPanel({ entity, allEntities, onChange, onDelete, hideHypernymPrediction = false }: {
   entity: EntityType;
   allEntities: EntityType[];
   onChange: (e: EntityType) => void;
   onDelete: () => void;
+  hideHypernymPrediction?: boolean;
 }) {
   const u = (patch: Partial<EntityType>) => onChange({ ...entity, ...patch });
   const addProp = () => u({ properties: [...entity.properties, { id: uid(), key: '', label: '', type: 'string', required: false, description: '' }] });
@@ -430,6 +431,7 @@ function EntityDetailPanel({ entity, allEntities, onChange, onDelete }: {
       </div>
 
       {/* ── 上下位关系预测 ── */}
+      {!hideHypernymPrediction && (
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         <button
           onClick={() => setPredExpanded(v => !v)}
@@ -550,6 +552,7 @@ function EntityDetailPanel({ entity, allEntities, onChange, onDelete }: {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
@@ -951,6 +954,25 @@ function EntityNode({ entity, pos, selected, onClick, onDragStart }: {
   );
 }
 
+// ─── Fusion execute mock data ─────────────────────────────────────────────────
+
+const MOCK_FUSION_TRIPLES: Array<{ subject: string; predicate: string; object: string }> = [
+  { subject: 'ex:Person_001', predicate: 'rdf:type', object: 'ex:Person' },
+  { subject: 'ex:Person_001', predicate: 'ex:label', object: '"Geoffrey Hinton"@en' },
+  { subject: 'ex:Person_001', predicate: 'ex:affiliatedWith', object: 'ex:Org_Toronto' },
+  { subject: 'ex:Org_Toronto', predicate: 'rdf:type', object: 'ex:Organization' },
+  { subject: 'ex:Org_Toronto', predicate: 'ex:label', object: '"University of Toronto"@en' },
+  { subject: 'ex:Org_Toronto', predicate: 'ex:sameAs', object: 'wd:Q180865' },
+  { subject: 'ex:Tech_DL', predicate: 'rdf:type', object: 'ex:Technology' },
+  { subject: 'ex:Tech_DL', predicate: 'ex:label', object: '"Deep Learning"@en' },
+];
+
+const MOCK_FUSION_CONFLICTS: Array<{ id: string; triple: string; existing: string; type: string }> = [
+  { id: 'C1', triple: 'ex:Person_001 ex:bornIn "Toronto"', existing: 'ex:Person_001 ex:bornIn "多伦多"', type: '跨语言值冲突' },
+  { id: 'C2', triple: 'ex:Org_Toronto ex:founded "1827"', existing: 'ex:Org_Toronto ex:founded "1827-03-15"', type: '粒度不一致' },
+  { id: 'C3', triple: 'ex:Tech_DL ex:broaderThan ex:ML', existing: 'ex:Tech_DL rdfs:subClassOf ex:MachineLearning', type: '关系谓词冲突' },
+];
+
 // ─── Main OntologyEditor ──────────────────────────────────────────────────────
 
 export default function OntologyEditor({
@@ -959,12 +981,14 @@ export default function OntologyEditor({
   initialRightPanelTab = 'detail',
   initialShowDrawer = false,
   initialDrawerTab = 'components',
+  hideHypernymPrediction = false,
 }: {
   initialMode?: 'structure' | 'schema-match';
   lockMode?: boolean;
   initialRightPanelTab?: 'detail' | 'recommend' | 'review' | 'fusion';
   initialShowDrawer?: boolean;
   initialDrawerTab?: 'components' | 'templates';
+  hideHypernymPrediction?: boolean;
 }) {
   const [entityTypes, setEntityTypes] = useState<EntityType[]>(initEntityTypes);
   const [relationTypes, setRelationTypes] = useState<RelationType[]>(initRelationTypes);
@@ -1060,6 +1084,39 @@ export default function OntologyEditor({
   const [matchDone, setMatchDone] = useState(true);
   const [strategyWeights, setStrategyWeights] = useState({ text: 0.35, structure: 0.3, ml: 0.35 });
   const [fusionThreshold, setFusionThreshold] = useState(0.65);
+  const [fusionRunning, setFusionRunning] = useState(false);
+  const [visibleTriples, setVisibleTriples] = useState<typeof MOCK_FUSION_TRIPLES>([]);
+  const [visibleConflicts, setVisibleConflicts] = useState<typeof MOCK_FUSION_CONFLICTS>([]);
+  const [fusionPhase, setFusionPhase] = useState<'idle' | 'triples' | 'conflicts' | 'done'>('idle');
+  const fusionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => () => {
+    if (fusionTimerRef.current) clearInterval(fusionTimerRef.current);
+  }, []);
+
+  const runFusionExecute = () => {
+    if (fusionRunning) return;
+    if (fusionTimerRef.current) clearInterval(fusionTimerRef.current);
+    setFusionRunning(true);
+    setVisibleTriples([]);
+    setVisibleConflicts([]);
+    setFusionPhase('triples');
+    let step = 0;
+    fusionTimerRef.current = setInterval(() => {
+      step += 1;
+      if (step <= MOCK_FUSION_TRIPLES.length) {
+        setVisibleTriples(MOCK_FUSION_TRIPLES.slice(0, step));
+      } else if (step <= MOCK_FUSION_TRIPLES.length + MOCK_FUSION_CONFLICTS.length) {
+        setFusionPhase('conflicts');
+        setVisibleConflicts(MOCK_FUSION_CONFLICTS.slice(0, step - MOCK_FUSION_TRIPLES.length));
+      } else {
+        if (fusionTimerRef.current) clearInterval(fusionTimerRef.current);
+        fusionTimerRef.current = null;
+        setFusionRunning(false);
+        setFusionPhase('done');
+      }
+    }, 450);
+  };
 
   const startMatching = () => { setIsMatching(true); setTimeout(() => { setIsMatching(false); setMatchDone(true); }, 1800); };
 
@@ -1565,6 +1622,7 @@ export default function OntologyEditor({
               <div className="flex-1 overflow-y-auto p-3">
                 {rightPanelTab === 'detail' && (selectedEntity ? (
                   <EntityDetailPanel entity={selectedEntity} allEntities={entityTypes}
+                    hideHypernymPrediction={hideHypernymPrediction}
                     onChange={updated => setEntityTypes(prev => prev.map(e => e.id === updated.id ? updated : e))}
                     onDelete={() => { setEntityTypes(prev => prev.filter(e => e.id !== selectedEntity.id)); setSelectedId(null); }} />
                 ) : (
@@ -1635,7 +1693,79 @@ export default function OntologyEditor({
 
                 {rightPanelTab === 'fusion' && (
                   <div className="flex flex-col gap-3">
-                    <div className="text-[10px] text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={runFusionExecute}
+                      disabled={fusionRunning}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-medium bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white rounded-lg transition-colors"
+                    >
+                      {fusionRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                      {fusionRunning ? '融合执行中…' : '执行融合'}
+                    </button>
+
+                    <div className="border border-blue-100 rounded-lg overflow-hidden">
+                      <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 flex items-center gap-1.5">
+                        <Database className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="text-[11px] font-medium text-blue-800">三元组生成</span>
+                        {fusionPhase !== 'idle' && (
+                          <span className="ml-auto text-[10px] text-blue-600">
+                            {visibleTriples.length}/{MOCK_FUSION_TRIPLES.length}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-2 space-y-1 max-h-36 overflow-y-auto">
+                        {visibleTriples.length === 0 ? (
+                          <p className="text-[10px] text-gray-400 px-1 py-2 text-center">
+                            {fusionRunning && fusionPhase === 'triples' ? '正在生成 RDF 三元组…' : '执行后将逐条展示生成的三元组'}
+                          </p>
+                        ) : (
+                          visibleTriples.map((t, i) => (
+                            <div key={`${t.subject}-${t.predicate}-${i}`} className="text-[10px] font-mono text-gray-600 bg-gray-50 rounded px-2 py-1.5 leading-relaxed">
+                              <span className="text-blue-600">{t.subject}</span>{' '}
+                              <span className="text-purple-600">{t.predicate}</span>{' '}
+                              <span className="text-green-700">{t.object}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border border-amber-100 rounded-lg overflow-hidden">
+                      <div className="px-3 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                        <span className="text-[11px] font-medium text-amber-800">冲突检测</span>
+                        {(fusionPhase === 'conflicts' || fusionPhase === 'done') && (
+                          <span className="ml-auto text-[10px] text-amber-600">
+                            {visibleConflicts.length}/{MOCK_FUSION_CONFLICTS.length}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-2 space-y-1.5 max-h-32 overflow-y-auto">
+                        {visibleConflicts.length === 0 ? (
+                          <p className="text-[10px] text-gray-400 px-1 py-2 text-center">
+                            {fusionPhase === 'conflicts' ? '正在检测与知识库冲突…' : fusionPhase === 'done' ? '未发现新冲突' : '三元组生成完成后自动检测冲突'}
+                          </p>
+                        ) : (
+                          visibleConflicts.map((c) => (
+                            <div key={c.id} className="text-[10px] bg-amber-50/50 border border-amber-100 rounded px-2 py-1.5 space-y-0.5">
+                              <div className="flex items-center gap-1">
+                                <span className="px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">{c.type}</span>
+                              </div>
+                              <div className="font-mono text-gray-600 truncate" title={c.triple}>新：{c.triple}</div>
+                              <div className="font-mono text-gray-400 truncate" title={c.existing}>库：{c.existing}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {fusionPhase === 'done' && (
+                      <div className="text-[10px] text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                        融合完成：生成 {MOCK_FUSION_TRIPLES.length} 条三元组，检测到 {MOCK_FUSION_CONFLICTS.length} 处冲突
+                      </div>
+                    )}
+
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">
                       <Sliders className="w-3 h-3 text-orange-400" />策略权重配置
                     </div>
                     <div className="border border-gray-200 rounded-lg p-3 space-y-3">

@@ -1148,6 +1148,7 @@ export default function GraphTasks({
   initialOpenExport,
   exportFocus,
   initialOpenCustomUpload,
+  focusIncremental,
 }: {
   onNavigateTo?: (page: string) => void;
   initialDashTab?: GraphTasksDashTab;
@@ -1157,9 +1158,13 @@ export default function GraphTasks({
   exportFocus?: 'rdf' | 'formats';
   /** 审计跳转：自动打开自定义图谱上传弹窗 */
   initialOpenCustomUpload?: boolean;
+  /** 审计跳转：高亮增量更新按钮 */
+  focusIncremental?: boolean;
 }) {
   const [graphs, setGraphs] = useState<GraphEntry[]>(MOCK_GRAPHS);
-  const [expandedGraphId, setExpandedGraphId] = useState<string | null>(null);
+  const [expandedGraphId, setExpandedGraphId] = useState<string | null>(() =>
+    focusIncremental && MOCK_GRAPHS[0] ? MOCK_GRAPHS[0].id : null,
+  );
   const [openRunId, setOpenRunId] = useState<{ graphId: string; runId: string } | null>(() => {
     if (!initialDashTab && !focusTaskLogs) return null;
     const g = MOCK_GRAPHS[0];
@@ -1400,7 +1405,11 @@ export default function GraphTasks({
                               <Play className="w-3 h-3" />全量
                             </button>
                             <button onClick={() => handleFullBuild(g.id, 'incremental')} disabled={!g.lastFull || !!isActive}
-                              className="text-xs px-2.5 py-1 border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 rounded-lg transition-colors">
+                              className={`text-xs px-2.5 py-1 border rounded-lg transition-colors disabled:opacity-40 ${
+                                focusIncremental && g.id === graphs[0]?.id
+                                  ? 'border-emerald-400 text-emerald-700 bg-emerald-50 ring-2 ring-emerald-200'
+                                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                              }`}>
                               增量
                             </button>
                             {scanState === 'scanning' ? (

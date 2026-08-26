@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { ArrowLeft, Copy, Play, Settings, FileText, Eye, Database, Rocket, Download, TrendingUp, Calendar, Shuffle, GitBranch, Cpu, Network, Search, Check, X, Plus, Brain, CheckCircle, XCircle, Tag, Zap, Layers, BookOpen } from 'lucide-react';
-import { ScoringFunctionDemo } from './demos/ScoringFunctionDemo';
+import { ScoringFunctionDemo, type ScoringFunctionSection } from './demos/ScoringFunctionDemo';
 import { SupervisedSimilarityDemo } from './demos/SupervisedSimilarityDemo';
 import { RepresentationSpaceDemo } from './demos/RepresentationSpaceDemo';
 import { EncodingModelDemo } from './demos/EncodingModelDemo';
@@ -29,6 +29,7 @@ import { RGATDemo } from './demos/RGATDemo';
 import { TermVectorDemo } from './demos/TermVectorDemo';
 import { DependencyTreeDemo } from './demos/DependencyTreeDemo';
 import { CandidateTermGenerationDemo, type CandidateTermDemoTab } from './demos/CandidateTermGenerationDemo';
+import type { EncodingModelFocus } from '../data/auditPageMap';
 
 interface AlgorithmDetailProps {
   algorithmId: string;
@@ -39,6 +40,12 @@ interface AlgorithmDetailProps {
   initialTab?: 'intro' | 'demo' | 'models' | 'training' | 'deployment';
   /** 依存图抽样可视化：进入 demo 时自动启动测试 */
   autoStartDepTest?: boolean;
+  /** 表示空间算法：预选的嵌入空间类型 */
+  initialEmbeddingSpace?: 'real' | 'complex';
+  /** 打分函数算法：预选的演示分区 */
+  initialScoringFunctionSection?: ScoringFunctionSection;
+  /** 编码模型算法：模型库分类或超参数配置聚焦 */
+  initialEncodingModelFocus?: EncodingModelFocus;
 }
 
 const algorithmDetails: Record<string, any> = {
@@ -1688,6 +1695,9 @@ export function AlgorithmDetailPage({
   initialDemoTab,
   initialTab,
   autoStartDepTest = false,
+  initialEmbeddingSpace,
+  initialScoringFunctionSection,
+  initialEncodingModelFocus,
 }: AlgorithmDetailProps) {
   const resolveInitialTab = (): 'intro' | 'demo' | 'models' | 'training' | 'deployment' => {
     if (initialTab) return initialTab;
@@ -2173,11 +2183,28 @@ export function AlgorithmDetailPage({
         {activeTab === 'demo' && algorithmId === 'rl-denoising' && <RLDenoisingDemo />}
         {activeTab === 'demo' && algorithmId === 'node-similarity' && <NodeSimilarityDemo />}
         {activeTab === 'demo' && algorithmId === 'semantic-retrieval' && <SemanticRetrievalDemo />}
-        {activeTab === 'demo' && algorithmId === 'encoding-model' && <EncodingModelDemo />}
+        {activeTab === 'demo' && algorithmId === 'encoding-model' && (
+          <EncodingModelDemo
+            key={initialEncodingModelFocus ?? 'default'}
+            initialFocus={initialEncodingModelFocus}
+            onRequestTrainingModal={() => setShowTrainingModal(true)}
+          />
+        )}
         {activeTab === 'demo' && algorithmId === 'rule-extension' && <RuleExtensionDemo />}
-        {activeTab === 'demo' && algorithmId === 'scoring-function' && <ScoringFunctionDemo />}
+        {activeTab === 'demo' && algorithmId === 'scoring-function' && (
+          <ScoringFunctionDemo
+            key={initialScoringFunctionSection ?? 'default'}
+            initialSection={initialScoringFunctionSection}
+          />
+        )}
         {activeTab === 'demo' && algorithmId === 'supervised-similarity' && <SupervisedSimilarityDemo />}
-        {activeTab === 'demo' && algorithmId === 'representation-space' && <RepresentationSpaceDemo />}
+        {activeTab === 'demo' && algorithmId === 'representation-space' && (
+          <RepresentationSpaceDemo
+            key={initialEmbeddingSpace ?? 'default'}
+            initialSpace={initialEmbeddingSpace}
+            onRequestTrainingModal={() => setShowTrainingModal(true)}
+          />
+        )}
         {activeTab === 'demo' && algorithmId === 'event-relation-extraction' && <EventRelationExtractionDemo />}
         {activeTab === 'demo' && algorithmId === 'temporal-relation-dependency' && <TemporalRelationDependencyDemo />}
         {activeTab === 'demo' && algorithmId === 'cross-lingual-alignment' && <CrossLingualAlignmentDemo />}
@@ -2204,6 +2231,7 @@ export function AlgorithmDetailPage({
         <TrainingConfigModal
           algorithmId={algorithmId}
           algorithmName={algo.name}
+          initialEmbeddingSpace={algorithmId === 'representation-space' ? initialEmbeddingSpace : undefined}
           onClose={() => setShowTrainingModal(false)}
         />
       )}
@@ -2735,19 +2763,30 @@ const MODEL_COLOR: Record<string, { badge: string; card: string; border: string;
 function TrainingConfigModal({
   algorithmId,
   algorithmName,
+  initialEmbeddingSpace,
   onClose,
 }: {
   algorithmId: string;
   algorithmName: string;
+  initialEmbeddingSpace?: EmbeddingSpace;
   onClose: () => void;
 }) {
   const [selectedDataset, setSelectedDataset] = useState('');
   const [selectedModelId, setSelectedModelId] = useState(BASE_MODELS[0].id);
-  const [embeddingSpace, setEmbeddingSpace] = useState<EmbeddingSpace>('real');
-  const [embeddingDim, setEmbeddingDim] = useState(256);
   const graphModels = graphModelsForAlgorithm(algorithmId);
-  const [graphModelId, setGraphModelId] = useState(graphModels[0]?.id ?? 'transe');
+  const defaultSpace = initialEmbeddingSpace ?? 'real';
+  const defaultGraphModel = graphModels.find(m => m.space === defaultSpace)?.id ?? graphModels[0]?.id ?? 'transe';
+  const [embeddingSpace, setEmbeddingSpace] = useState<EmbeddingSpace>(defaultSpace);
+  const [embeddingDim, setEmbeddingDim] = useState(256);
+  const [graphModelId, setGraphModelId] = useState(defaultGraphModel);
   const graphModel = graphModels.find(m => m.id === graphModelId) ?? graphModels[0];
+
+  useEffect(() => {
+    if (!initialEmbeddingSpace) return;
+    setEmbeddingSpace(initialEmbeddingSpace);
+    const match = graphModels.find(m => m.space === initialEmbeddingSpace);
+    if (match) setGraphModelId(match.id);
+  }, [initialEmbeddingSpace, algorithmId]);
 
   const selectedModel = BASE_MODELS.find(m => m.id === selectedModelId) ?? BASE_MODELS[0];
   const modelColors = MODEL_COLOR[selectedModel.color];

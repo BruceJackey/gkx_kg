@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCcw, RotateCw,
@@ -46,6 +46,10 @@ interface KBEntity {
 }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
+
+export type LiteratureReaderFocus = 'highlight' | 'popup';
+
+const ReaderEntityFocusContext = createContext<{ forcePopupEntityId?: string | null }>({});
 
 // ─── Entity Database ───────────────────────────────────────────────────────────
 
@@ -360,6 +364,7 @@ function EntityPopup({ entity, anchorRect, onClose, pinned }: {
 
 function EntitySpan({ entityId, children }: { entityId: string; children: React.ReactNode }) {
   const entity = ENTITY_DB[entityId];
+  const { forcePopupEntityId } = useContext(ReaderEntityFocusContext);
   if (!entity) return <>{children}</>;
 
   const cfg = ENTITY_TYPE_CONFIG[entity.type];
@@ -408,6 +413,20 @@ function EntitySpan({ entityId, children }: { entityId: string; children: React.
   }, [pinned]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  useEffect(() => {
+    if (forcePopupEntityId !== entityId) return;
+    const t = window.setTimeout(() => {
+      spanRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const r = getRect();
+      if (r) {
+        setRect(r);
+        setShow(true);
+        setPinned(true);
+      }
+    }, 450);
+    return () => window.clearTimeout(t);
+  }, [forcePopupEntityId, entityId]);
 
   return (
     <>
@@ -912,7 +931,11 @@ const ENTITY_LIST_BY_TYPE: { type: EntityType; ids: string[] }[] = [
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
-export default function LiteratureReader() {
+export default function LiteratureReader({
+  initialFocus,
+}: {
+  initialFocus?: LiteratureReaderFocus | null;
+}) {
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(100);
   const [viewMode, setViewMode] = useState<'single' | 'double'>('single');
@@ -970,6 +993,20 @@ export default function LiteratureReader() {
   };
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMsgs]);
+
+  useEffect(() => {
+    if (!initialFocus) return;
+    setRightOpen(true);
+    setRightTab('entities');
+    setCurrentPage(1);
+    if (initialFocus === 'highlight') {
+      window.setTimeout(() => {
+        document.getElementById('reader-doc-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
+  }, [initialFocus]);
+
+  const forcePopupEntityId = initialFocus === 'popup' ? 'tkgEmbed' : null;
 
   const handleParaClick = (paraId: string, page: number) => {
     if (!PARA_TOOLS.includes(activeTool)) return;
@@ -1059,7 +1096,20 @@ export default function LiteratureReader() {
   const SUGGEST_QUESTIONS = ['论文的核心贡献是什么？', '模型架构如何工作？', '消融实验说明了什么？', '与RotatE相比有何优势？'];
 
   return (
+    <ReaderEntityFocusContext.Provider value={{ forcePopupEntityId }}>
     <div className="h-full flex flex-col bg-gray-100 overflow-hidden">
+      {initialFocus === 'highlight' && (
+        <div className="flex-shrink-0 px-4 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-800 flex items-center gap-2">
+          <Highlighter className="w-3.5 h-3.5 flex-shrink-0" />
+          <span><strong>实体高亮</strong>：已链接实体在原文中以彩色虚线下划线标识，右侧可查看实体类型图例</span>
+        </div>
+      )}
+      {initialFocus === 'popup' && (
+        <div className="flex-shrink-0 px-4 py-2 bg-violet-50 border-b border-violet-100 text-xs text-violet-800 flex items-center gap-2">
+          <Tag className="w-3.5 h-3.5 flex-shrink-0" />
+          <span><strong>实体信息浮窗</strong>：悬停预览知识库信息，点击高亮实体可固定浮窗；已为您打开示例实体 TKGEmbed</span>
+        </div>
+      )}
       {/* ── Toolbar ── */}
       <div className="flex items-center gap-1 px-3 py-2 bg-white border-b border-gray-200 flex-shrink-0 flex-wrap">
         <div className="flex items-center gap-2 mr-2 min-w-0">
@@ -1261,7 +1311,7 @@ export default function LiteratureReader() {
         )}
 
         {/* ── Page Area ── */}
-        <div className="flex-1 overflow-auto flex items-start justify-center p-6 gap-6 bg-gray-200">
+        <div id="reader-doc-body" className="flex-1 overflow-auto flex items-start justify-center p-6 gap-6 bg-gray-200">
           {pendingNoteParaId && (
             <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" onClick={() => setPendingNoteParaId(null)}>
               <div className="bg-white rounded-xl shadow-xl p-5 w-80" onClick={e => e.stopPropagation()}>
@@ -1585,5 +1635,6 @@ export default function LiteratureReader() {
         selectedPapers={[currentPaper]}
       />
     </div>
+    </ReaderEntityFocusContext.Provider>
   );
 }

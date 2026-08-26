@@ -2403,18 +2403,18 @@
                           "name": "人工标注工作台",
                           "type": "feature",
                           "reqId": "87",
-                          "pagePath": "",
+                          "pagePath": "链接标注与映射生成/人工标注工作台",
                           "featureDesc": "提供高效的界面供用户对实体链接结果进行人工标注和修正。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应链接标注与映射生成 · 人工标注工作台"
                         },
                         {
                           "id": "fp-87-193",
                           "name": "映射规则生成",
                           "type": "feature",
                           "reqId": "87",
-                          "pagePath": "",
+                          "pagePath": "链接标注与映射生成/映射规则生成",
                           "featureDesc": "将人工确认的链接结果保存为固定的映射规则，用于后续的批量处理。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应链接标注与映射生成 · 映射规则生成"
                         }
                       ]
                     },
@@ -2428,18 +2428,18 @@
                           "name": "实体高亮",
                           "type": "feature",
                           "reqId": "88",
-                          "pagePath": "",
+                          "pagePath": "知识库/文档阅读器/实体高亮",
                           "featureDesc": "在原文中高亮显示已链接的实体。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应知识库 · 文档阅读器 · 实体高亮"
                         },
                         {
                           "id": "fp-88-195",
                           "name": "实体信息浮窗",
                           "type": "feature",
                           "reqId": "88",
-                          "pagePath": "",
+                          "pagePath": "知识库/文档阅读器/实体信息浮窗",
                           "featureDesc": "当用户鼠标悬停或点击高亮实体时，弹出浮窗，展示该实体在知识库中的核心信息。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应知识库 · 文档阅读器 · 实体信息浮窗"
                         }
                       ]
                     }
@@ -2460,18 +2460,18 @@
                           "name": "跨语言词向量匹配",
                           "type": "feature",
                           "reqId": "89",
-                          "pagePath": "",
+                          "pagePath": "跨语言实例匹配/跨语言词向量匹配",
                           "featureDesc": "利用跨语言词向量模型来计算不同语言实例名称的语义相似度。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应跨语言实例匹配 · 词向量语义相似度"
                         },
                         {
                           "id": "fp-89-197",
                           "name": "翻译服务集成",
                           "type": "feature",
                           "reqId": "89",
-                          "pagePath": "",
+                          "pagePath": "跨语言实例匹配/翻译服务集成",
                           "featureDesc": "集成第三方翻译服务，将实例名称翻译为统一语言后再进行匹配。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应跨语言实例匹配 · 翻译服务"
                         }
                       ]
                     },
@@ -2485,18 +2485,18 @@
                           "name": "查询意图翻译",
                           "type": "feature",
                           "reqId": "90",
-                          "pagePath": "",
+                          "pagePath": "查询驱动的实例匹配/查询意图翻译",
                           "featureDesc": "自动将用户的查询翻译成知识库支持的其他语言。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应查询驱动实例匹配 · 查询意图翻译"
                         },
                         {
                           "id": "fp-90-199",
                           "name": "跨库结果融合",
                           "type": "feature",
                           "reqId": "90",
-                          "pagePath": "",
+                          "pagePath": "查询驱动的实例匹配/跨库结果融合",
                           "featureDesc": "将来自不同语言知识库的查询结果进行融合、去重后统一返回。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应查询驱动实例匹配 · 跨库结果融合"
                         }
                       ]
                     },
@@ -2510,18 +2510,18 @@
                           "name": "属性名称翻译与匹配",
                           "type": "feature",
                           "reqId": "91",
-                          "pagePath": "",
+                          "pagePath": "跨语言属性对齐/属性名称翻译与匹配",
                           "featureDesc": "通过翻译和字符串相似度算法匹配属性名称。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应跨语言属性对齐 · 属性名称翻译与匹配"
                         },
                         {
                           "id": "fp-91-201",
                           "name": "基于实例值的属性对齐",
                           "type": "feature",
                           "reqId": "91",
-                          "pagePath": "",
+                          "pagePath": "跨语言属性对齐/基于实例值的属性对齐",
                           "featureDesc": "通过分析不同属性下的实例值是否高度重合来判断属性是否等价。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应跨语言属性对齐 · 基于实例值的属性对齐"
                         }
                       ]
                     },
@@ -2535,18 +2535,18 @@
                           "name": "批量对齐任务管理",
                           "type": "feature",
                           "reqId": "92",
-                          "pagePath": "",
+                          "pagePath": "跨语言知识库生成与对齐/批量对齐任务管理",
                           "featureDesc": "支持创建、监控和管理大规模的跨语言知识库对齐任务。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应跨语言知识库生成与对齐 · 批量对齐任务管理"
                         },
                         {
                           "id": "fp-92-203",
                           "name": "对齐结果存储",
                           "type": "feature",
                           "reqId": "92",
-                          "pagePath": "",
+                          "pagePath": "跨语言知识库生成与对齐/对齐结果存储",
                           "featureDesc": "将生成的对齐关系持久化存储。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应跨语言知识库生成与对齐 · 对齐结果存储"
                         }
                       ]
                     }
@@ -2567,9 +2567,9 @@
                           "name": "批量实体链接",
                           "type": "feature",
                           "reqId": "93",
-                          "pagePath": "",
+                          "pagePath": "数据语义链接/语义关联与消歧/批量实体链接",
                           "featureDesc": "对表格中的某一列进行批量实体链接操作。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应映射配置解析与保存 · 批量实体链接（列表视图）"
                         },
                         {
                           "id": "fp-93-205",
@@ -2592,18 +2592,18 @@
                           "name": "候选实体列表",
                           "type": "feature",
                           "reqId": "94",
-                          "pagePath": "",
+                          "pagePath": "实体匹配消歧/候选实体列表",
                           "featureDesc": "为存在歧义的数据项，列出所有可能的候选实体。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应实体匹配消歧 · 候选实体列表"
                         },
                         {
                           "id": "fp-94-207",
                           "name": "人工裁决界面",
                           "type": "feature",
                           "reqId": "94",
-                          "pagePath": "",
+                          "pagePath": "实体匹配消歧/人工裁决界面",
                           "featureDesc": "提供一个界面，让用户从候选实体列表中选择最正确的一个。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应实体匹配消歧 · 人工裁决界面"
                         }
                       ]
                     },
@@ -2617,18 +2617,18 @@
                           "name": "三元组生成",
                           "type": "feature",
                           "reqId": "95",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/三元组生成",
                           "featureDesc": "根据数据和映射关系，自动生成符合RDF标准的三元组。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 三元组生成（执行后逐条展示）"
                         },
                         {
                           "id": "fp-95-209",
                           "name": "冲突检测",
                           "type": "feature",
                           "reqId": "95",
-                          "pagePath": "",
+                          "pagePath": "图谱融合/冲突检测",
                           "featureDesc": "在合并前，检测新生成的三元组是否与知识库中已有知识存在冲突。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱融合 · 冲突检测（执行后逐条展示）"
                         }
                       ]
                     },
@@ -2651,9 +2651,9 @@
                           "name": "增量更新",
                           "type": "feature",
                           "reqId": "96",
-                          "pagePath": "",
+                          "pagePath": "图谱任务/增量更新",
                           "featureDesc": "支持对知识库进行增量式的数据写入和更新。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱任务 · 增量更新按钮"
                         }
                       ]
                     }
@@ -2681,27 +2681,27 @@
                           "name": "实数空间嵌入",
                           "type": "feature",
                           "reqId": "97",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/表示空间/实数空间嵌入",
                           "featureDesc": "支持将实体和关系表示为传统的实数向量，适用于大多数基础模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 表示空间 · 实数空间配置与发起训练"
                         },
                         {
                           "id": "fp-97-213",
                           "name": "复数空间嵌入",
                           "type": "feature",
                           "reqId": "97",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/表示空间/复数空间嵌入",
                           "featureDesc": "支持将实体和关系表示为复数向量，能够更好地建模对称/反对称等复杂关系。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 表示空间 · 复数空间配置与发起训练"
                         },
                         {
                           "id": "fp-97-214",
                           "name": "空间类型选择与配置",
                           "type": "feature",
                           "reqId": "97",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/表示空间/空间类型选择与配置",
                           "featureDesc": "提供用户界面，允许在模型训练时选择嵌入的表示空间类型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 表示空间 · 空间类型配置 Tab"
                         }
                       ]
                     },
@@ -2715,27 +2715,27 @@
                           "name": "基于距离的打分函数",
                           "type": "feature",
                           "reqId": "98",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/打分函数/基于距离的打分函数",
                           "featureDesc": "内置打分函数，通过计算实体间距离来评估三元组的合理性。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 打分函数 · 距离打分函数演示"
                         },
                         {
                           "id": "fp-98-216",
                           "name": "基于语义相似度的打分函数",
                           "type": "feature",
                           "reqId": "98",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/打分函数/基于语义相似度的打分函数",
                           "featureDesc": "内置DistMult、ComplEx等模型的打分函数，通过向量运算来评估语义相似度。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 打分函数 · 语义相似度打分演示"
                         },
                         {
                           "id": "fp-98-217",
                           "name": "打分函数可视化解释",
                           "type": "feature",
                           "reqId": "98",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/打分函数/打分函数可视化解释",
                           "featureDesc": "提供辅助工具，可视化解释特定三元组在不同打分函数下的得分原理。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 打分函数 · 可视化解释 Tab"
                         }
                       ]
                     },
@@ -2749,36 +2749,36 @@
                           "name": "平移距离模型库",
                           "type": "feature",
                           "reqId": "99",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/编码模型/平移距离模型库",
                           "featureDesc": "提供TransE、TransH、TransR平移距离模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 编码模型 · 平移距离模型库 Tab"
                         },
                         {
                           "id": "fp-99-219",
                           "name": "张量/矩阵分解模型库",
                           "type": "feature",
                           "reqId": "99",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/编码模型/张量/矩阵分解模型库",
                           "featureDesc": "提供RESCAL、DistMult、ComplEx张量/矩阵分解模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 编码模型 · 张量/矩阵分解模型库 Tab"
                         },
                         {
                           "id": "fp-99-220",
                           "name": "神经网络模型库",
                           "type": "feature",
                           "reqId": "99",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/编码模型/神经网络模型库",
                           "featureDesc": "提供ConvE、GraphSAGE基于深度学习的模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 编码模型 · 神经网络模型库 Tab"
                         },
                         {
                           "id": "fp-99-221",
                           "name": "模型选择与超参数配置",
                           "type": "feature",
                           "reqId": "99",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/编码模型/模型选择与超参数配置",
                           "featureDesc": "提供清晰的界面供用户选择模型，并配置向量维度、学习率等超参数。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应算法仓库 · 编码模型 · 超参数配置与发起训练"
                         }
                       ]
                     },
@@ -3248,9 +3248,9 @@
                           "name": "图谱增量更新",
                           "type": "feature",
                           "reqId": "112",
-                          "pagePath": "",
+                          "pagePath": "图谱任务/增量更新",
                           "featureDesc": "支持对知识图谱进行增量式更新，避免每次都全量重建。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应图谱任务 · 增量更新按钮"
                         },
                         {
                           "id": "fp-112-262",
