@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, Calendar, BarChart3 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import type { CallLogsFocus } from '../data/auditPageMap';
 
 type LogModule = 'algorithm' | 'pipeline' | 'service';
 
@@ -17,6 +18,39 @@ interface ApiCallLog {
 }
 
 const mockLogs: ApiCallLog[] = [
+  {
+    id: 'log_sr_001',
+    timestamp: '2026-04-23 14:31:02',
+    apiKey: 'kg_prod_a3f7...n8o1',
+    module: 'algorithm',
+    endpoint: '/api/semantic-retrieval/search',
+    method: 'POST',
+    statusCode: 200,
+    responseTime: 42,
+    userAgent: 'Python/3.9 requests/2.28.0',
+  },
+  {
+    id: 'log_sr_002',
+    timestamp: '2026-04-23 14:30:48',
+    apiKey: 'kg_prod_a3f7...n8o1',
+    module: 'algorithm',
+    endpoint: '/api/semantic-retrieval/recommend',
+    method: 'POST',
+    statusCode: 200,
+    responseTime: 68,
+    userAgent: 'Python/3.9 requests/2.28.0',
+  },
+  {
+    id: 'log_sr_003',
+    timestamp: '2026-04-23 14:30:35',
+    apiKey: 'kg_test_x9y8...k5j4',
+    module: 'algorithm',
+    endpoint: '/api/semantic-retrieval/search',
+    method: 'POST',
+    statusCode: 200,
+    responseTime: 38,
+    userAgent: 'axios/1.3.4',
+  },
   {
     id: 'log_001',
     timestamp: '2026-04-23 14:30:25',
@@ -84,6 +118,8 @@ const callVolumeData = [
 ];
 
 const endpointData = [
+  { name: 'semantic-retrieval/search', count: 4280 },
+  { name: 'semantic-retrieval/recommend', count: 3120 },
   { name: 'entity/search', count: 3520 },
   { name: 'relation/query', count: 2840 },
   { name: 'graph/visualize', count: 1950 },
@@ -91,11 +127,26 @@ const endpointData = [
   { name: 'reasoning/infer', count: 980 },
 ];
 
-export function ApiCallLogs() {
+interface ApiCallLogsProps {
+  focusContext?: CallLogsFocus;
+}
+
+export function ApiCallLogs({ focusContext }: ApiCallLogsProps) {
   const [logs] = useState<ApiCallLog[]>(mockLogs);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState(
+    focusContext === 'semantic-retrieval' ? 'semantic-retrieval' : '',
+  );
   const [statusFilter, setStatusFilter] = useState('all');
-  const [moduleFilter, setModuleFilter] = useState<'all' | LogModule>('all');
+  const [moduleFilter, setModuleFilter] = useState<'all' | LogModule>(
+    focusContext === 'semantic-retrieval' ? 'algorithm' : 'all',
+  );
+
+  useEffect(() => {
+    if (focusContext === 'semantic-retrieval') {
+      setSearchText('semantic-retrieval');
+      setModuleFilter('algorithm');
+    }
+  }, [focusContext]);
 
   const getModuleLabel = (m: LogModule) => {
     if (m === 'algorithm') return '算法服务';
@@ -138,9 +189,18 @@ export function ApiCallLogs() {
       <div>
         <h2 className="text-2xl font-semibold text-gray-900">调用日志</h2>
         <p className="text-sm text-gray-600 mt-1">
-          统一查看算法服务、流程服务、图谱服务的接口调用记录
+          {focusContext === 'semantic-retrieval'
+            ? '语义检索与推荐应用 · 接口调用频率、响应时间与错误率监控'
+            : '统一查看算法服务、流程服务、图谱服务的接口调用记录'}
         </p>
       </div>
+
+      {focusContext === 'semantic-retrieval' && (
+        <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+          已筛选语义检索（<code className="font-mono text-xs">/api/semantic-retrieval/search</code>）与推荐候选集（
+          <code className="font-mono text-xs">/api/semantic-retrieval/recommend</code>）接口调用记录
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">

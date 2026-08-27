@@ -29,7 +29,7 @@ import { RGATDemo } from './demos/RGATDemo';
 import { TermVectorDemo } from './demos/TermVectorDemo';
 import { DependencyTreeDemo } from './demos/DependencyTreeDemo';
 import { CandidateTermGenerationDemo, type CandidateTermDemoTab } from './demos/CandidateTermGenerationDemo';
-import type { EncodingModelFocus } from '../data/auditPageMap';
+import type { EncodingModelFocus, SupervisedSimilarityFocus, NodeSimilarityFocus, SemanticRetrievalFocus } from '../data/auditPageMap';
 
 interface AlgorithmDetailProps {
   algorithmId: string;
@@ -46,6 +46,12 @@ interface AlgorithmDetailProps {
   initialScoringFunctionSection?: ScoringFunctionSection;
   /** 编码模型算法：模型库分类或超参数配置聚焦 */
   initialEncodingModelFocus?: EncodingModelFocus;
+  /** 监督相似度算法：训练或评估与发布聚焦 */
+  initialSupervisedSimilarityFocus?: SupervisedSimilarityFocus;
+  /** 节点相似度算法：路径 / 嵌入 / API 聚焦 */
+  initialNodeSimilarityFocus?: NodeSimilarityFocus;
+  /** 语义检索与推荐：检索 API 或推荐 API 聚焦 */
+  initialSemanticRetrievalFocus?: SemanticRetrievalFocus;
 }
 
 const algorithmDetails: Record<string, any> = {
@@ -1698,6 +1704,9 @@ export function AlgorithmDetailPage({
   initialEmbeddingSpace,
   initialScoringFunctionSection,
   initialEncodingModelFocus,
+  initialSupervisedSimilarityFocus,
+  initialNodeSimilarityFocus,
+  initialSemanticRetrievalFocus,
 }: AlgorithmDetailProps) {
   const resolveInitialTab = (): 'intro' | 'demo' | 'models' | 'training' | 'deployment' => {
     if (initialTab) return initialTab;
@@ -2181,8 +2190,18 @@ export function AlgorithmDetailPage({
         {activeTab === 'demo' && algorithmId === 'stat-instance-generation' && <StatInstanceGenerationDemo />}
         {activeTab === 'demo' && algorithmId === 'instance-matching' && <InstanceMatchingDemo />}
         {activeTab === 'demo' && algorithmId === 'rl-denoising' && <RLDenoisingDemo />}
-        {activeTab === 'demo' && algorithmId === 'node-similarity' && <NodeSimilarityDemo />}
-        {activeTab === 'demo' && algorithmId === 'semantic-retrieval' && <SemanticRetrievalDemo />}
+        {activeTab === 'demo' && algorithmId === 'node-similarity' && (
+          <NodeSimilarityDemo
+            key={initialNodeSimilarityFocus ?? 'default'}
+            initialSection={initialNodeSimilarityFocus}
+          />
+        )}
+        {activeTab === 'demo' && algorithmId === 'semantic-retrieval' && (
+          <SemanticRetrievalDemo
+            key={initialSemanticRetrievalFocus ?? 'default'}
+            initialSection={initialSemanticRetrievalFocus}
+          />
+        )}
         {activeTab === 'demo' && algorithmId === 'encoding-model' && (
           <EncodingModelDemo
             key={initialEncodingModelFocus ?? 'default'}
@@ -2197,7 +2216,13 @@ export function AlgorithmDetailPage({
             initialSection={initialScoringFunctionSection}
           />
         )}
-        {activeTab === 'demo' && algorithmId === 'supervised-similarity' && <SupervisedSimilarityDemo />}
+        {activeTab === 'demo' && algorithmId === 'supervised-similarity' && (
+          <SupervisedSimilarityDemo
+            key={initialSupervisedSimilarityFocus ?? 'default'}
+            initialSection={initialSupervisedSimilarityFocus}
+            onRequestTrainingModal={() => setShowTrainingModal(true)}
+          />
+        )}
         {activeTab === 'demo' && algorithmId === 'representation-space' && (
           <RepresentationSpaceDemo
             key={initialEmbeddingSpace ?? 'default'}
@@ -2771,7 +2796,6 @@ function TrainingConfigModal({
   initialEmbeddingSpace?: EmbeddingSpace;
   onClose: () => void;
 }) {
-  const [selectedDataset, setSelectedDataset] = useState('');
   const [selectedModelId, setSelectedModelId] = useState(BASE_MODELS[0].id);
   const graphModels = graphModelsForAlgorithm(algorithmId);
   const defaultSpace = initialEmbeddingSpace ?? 'real';
@@ -2792,62 +2816,6 @@ function TrainingConfigModal({
   const modelColors = MODEL_COLOR[selectedModel.color];
   const showSpace = supportsEmbeddingSpace(algorithmId);
   const paramDim = embeddingSpace === 'complex' ? embeddingDim * 2 : embeddingDim;
-
-  const nerDatasets = [
-    {
-      id: 'dataset-1',
-      name: 'medical_entities_training.jsonl',
-      records: 12500,
-      size: '45.2 MB',
-      type: '实体抽取',
-      format: 'JSONL',
-    },
-    {
-      id: 'dataset-2',
-      name: 'relation_extraction_data.jsonl',
-      records: 8300,
-      size: '28.7 MB',
-      type: '关系抽取',
-      format: 'JSONL',
-    },
-    {
-      id: 'dataset-3',
-      name: 'tech_literature_entities.csv',
-      records: 5600,
-      size: '15.3 MB',
-      type: '实体抽取',
-      format: 'CSV',
-    },
-  ];
-  const graphDatasets = [
-    {
-      id: 'dataset-5',
-      name: 'graph_embedding_samples.txt',
-      records: 35000,
-      size: '102.5 MB',
-      type: '图嵌入',
-      format: 'TXT',
-    },
-    {
-      id: 'dataset-11',
-      name: 'knowledge_graph_structure.txt',
-      records: 28000,
-      size: '85.6 MB',
-      type: '图嵌入',
-      format: 'TXT',
-    },
-    {
-      id: 'dataset-fb15k',
-      name: 'FB15k-237_triples.txt',
-      records: 310116,
-      size: '24.1 MB',
-      type: '知识图谱三元组',
-      format: 'TXT',
-    },
-  ];
-  const datasets = showSpace ? graphDatasets : nerDatasets;
-
-  const selectedDatasetInfo = datasets.find((d) => d.id === selectedDataset);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2950,35 +2918,24 @@ function TrainingConfigModal({
           </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              选择训练数据集 <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={selectedDataset}
-              onChange={(e) => setSelectedDataset(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-            >
-              <option value="">请选择数据集</option>
-              {datasets.map((dataset) => (
-                <option key={dataset.id} value={dataset.id}>
-                  {dataset.name} ({dataset.records.toLocaleString()}条, {dataset.size})
-                </option>
-              ))}
-            </select>
-            {selectedDatasetInfo && (
-              <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <div className="flex items-center justify-between text-xs text-gray-600">
-                  <span>类型: <span className="text-gray-900 font-medium">{selectedDatasetInfo.type}</span></span>
-                  <span>格式: <span className="text-gray-900 font-medium">{selectedDatasetInfo.format}</span></span>
-                  <span>记录数: <span className="text-gray-900 font-medium">{selectedDatasetInfo.records.toLocaleString()}</span></span>
-                  <span>大小: <span className="text-gray-900 font-medium">{selectedDatasetInfo.size}</span></span>
-                </div>
-              </div>
-            )}
-            <p className="mt-2 text-xs text-gray-500">
-              未找到合适的数据集？<a href="#" className="text-blue-600 hover:underline">前往数据集管理上传</a>
+          <div className="border border-blue-200 bg-blue-50 rounded-xl p-4">
+            <h4 className="text-sm font-semibold text-blue-900 mb-2">训练集 / 验证集 / 测试集</h4>
+            <p className="text-xs text-blue-800 mb-3">
+              训练集与验证集已在「数据集管理 → 数据集构建与划分」中配置。发起训练时将自动引用已构建的划分结果，无需在此重复选择。
             </p>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              {[
+                { label: '训练集', name: 'entity-extraction_train_v3.jsonl', count: '8,750 条', ratio: '70%' },
+                { label: '验证集', name: 'entity-extraction_val_v3.jsonl', count: '1,875 条', ratio: '15%' },
+                { label: '测试集', name: 'entity-extraction_test_v3.jsonl', count: '1,875 条', ratio: '15%' },
+              ].map(s => (
+                <div key={s.label} className="bg-white border border-blue-100 rounded-lg px-3 py-2">
+                  <p className="font-semibold text-gray-800">{s.label}</p>
+                  <p className="text-gray-600 mt-0.5 truncate" title={s.name}>{s.name}</p>
+                  <p className="text-gray-500 mt-1">{s.count} · {s.ratio}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -3051,14 +3008,6 @@ function TrainingConfigModal({
                   <option value="adam">Adam</option>
                   <option value="sgd">SGD</option>
                   <option value="adamw">AdamW</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">验证集比例</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                  <option value="0.1">10%</option>
-                  <option value="0.2">20%</option>
-                  <option value="0.3">30%</option>
                 </select>
               </div>
               <div>

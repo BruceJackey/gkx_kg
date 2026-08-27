@@ -590,7 +590,16 @@ function ArchiveRulesModal({ open, onOpenChange, rules, folders, onChange, onRun
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-interface Props { onNavigate: (page: string) => void; }
+interface Props {
+  onNavigate: (
+    page: string,
+    options?: {
+      docId?: string;
+      literatureReaderFocus?: 'highlight' | 'popup' | 'generate-notes';
+      academicPosterTab?: 'poster' | 'audio' | 'notes';
+    },
+  ) => void;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -1163,10 +1172,16 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                               onMouseLeave={() => setOpenMenuId(null)}
                             >
                               <button
-                                onClick={() => { onNavigate('literature-reader'); setOpenMenuId(null); }}
+                                onClick={() => { onNavigate('literature-reader', { docId: doc.id }); setOpenMenuId(null); }}
                                 className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-2"
                               >
                                 <BookOpen className="w-3.5 h-3.5" />打开阅读
+                              </button>
+                              <button
+                                onClick={() => { onNavigate('literature-reader', { docId: doc.id, literatureReaderFocus: 'generate-notes' }); setOpenMenuId(null); }}
+                                className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />一键生成笔记
                               </button>
                               <button
                                 onClick={() => { onNavigate(doc.type === '专利' ? 'patent-processing' : 'literature-processing'); setOpenMenuId(null); }}
@@ -1175,10 +1190,10 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                                 <Cpu className="w-3.5 h-3.5" />深度处理
                               </button>
                               <button
-                                onClick={() => { onNavigate('academic-poster'); setOpenMenuId(null); }}
+                                onClick={() => { onNavigate('academic-poster', { docId: doc.id, academicPosterTab: 'poster' }); setOpenMenuId(null); }}
                                 className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-2"
                               >
-                                <GalleryHorizontal className="w-3.5 h-3.5" />生成海报 / 音频
+                                <GalleryHorizontal className="w-3.5 h-3.5" />学术海报与音频概览生成
                               </button>
                               <div className="h-px bg-gray-100 my-1" />
                               {(['文献', '专利', '笔记'] as DocType[]).map(t => (
@@ -1385,10 +1400,16 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                 {/* Action buttons */}
                 <div className="p-4 flex flex-col gap-2">
                   <button
-                    onClick={() => onNavigate('literature-reader')}
+                    onClick={() => onNavigate('literature-reader', { docId: selectedDoc.id })}
                     className="flex items-center gap-2 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors font-medium"
                   >
                     <BookOpen className="w-4 h-4" />打开阅读
+                  </button>
+                  <button
+                    onClick={() => onNavigate('literature-reader', { docId: selectedDoc.id, literatureReaderFocus: 'generate-notes' })}
+                    className="flex items-center gap-2 px-3 py-2.5 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm rounded-lg transition-colors font-medium"
+                  >
+                    <Sparkles className="w-4 h-4" />一键生成笔记
                   </button>
                   <button
                     onClick={() => onNavigate(selectedDoc.type === '专利' ? 'patent-processing' : 'literature-processing')}
@@ -1397,10 +1418,10 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                     <Cpu className="w-4 h-4 text-gray-400" />深度处理
                   </button>
                   <button
-                    onClick={() => onNavigate('academic-poster')}
+                    onClick={() => onNavigate('academic-poster', { docId: selectedDoc.id, academicPosterTab: 'poster' })}
                     className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm rounded-lg transition-colors"
                   >
-                    <GalleryHorizontal className="w-4 h-4 text-gray-400" />生成海报 / 音频
+                    <GalleryHorizontal className="w-4 h-4 text-gray-400" />学术海报与音频概览生成
                   </button>
                   <button
                     onClick={() => onNavigate('knowledge-search')}

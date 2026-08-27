@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Check, X, Edit2, GitMerge, Search, Tag, GitBranch, CalendarDays, AlertTriangle, CheckSquare, ScanLine, Workflow, ChevronDown, ChevronRight, BookMarked, ArrowRight, Sparkles, Filter, Users } from 'lucide-react';
+import { Check, X, Edit2, GitMerge, Search, Tag, GitBranch, CalendarDays, AlertTriangle, CheckSquare, ScanLine, Workflow, ChevronDown, ChevronRight, BookMarked, ArrowRight, Sparkles, Filter, Users, RotateCcw, Crosshair } from 'lucide-react';
 import { SeedTermPanel, HyponymyPanel, EventReviewPanel } from './TermReview';
 import { RecognitionResultManagementPanel } from './RecognitionResultManagement';
 import {
@@ -625,18 +625,61 @@ function MappingRulesPanel() {
 
 // ─── KG Review Panel ──────────────────────────────────────────────────────────
 
+export type KGReviewInnerTab = 'candidates' | 'mapping-rules' | 'feedback-loop';
+
+interface FeedbackRecord {
+  id: string;
+  candidateId: string;
+  content: string;
+  entityType: string;
+  type: CandidateType;
+  action: 'approved' | 'rejected' | 'modified';
+  reviewerId: string;
+  reviewerName: string;
+  timestamp: string;
+  originalContent?: string;
+  modifiedContent?: string;
+  sourceDoc: string;
+  loopStatus: 'pending' | 'synced';
+}
+
+const FEEDBACK_ACTION_META: Record<FeedbackRecord['action'], { label: string; className: string }> = {
+  approved: { label: '确认', className: 'bg-green-50 text-green-600' },
+  rejected: { label: '拒绝', className: 'bg-red-50 text-red-500' },
+  modified: { label: '修正', className: 'bg-blue-50 text-blue-600' },
+};
+
 export function KGReviewPanel({
   focusConsensus,
+  focusActions,
   initialInnerTab = 'candidates',
   labels,
+  hideMappingRules,
+  enableFeedbackLoop,
+  reportMode = false,
 }: {
   focusConsensus?: boolean;
-  initialInnerTab?: 'candidates' | 'mapping-rules';
-  labels?: { candidates?: string; mappingRules?: string };
+  focusActions?: boolean;
+  initialInnerTab?: KGReviewInnerTab;
+  labels?: {
+    candidates?: string;
+    mappingRules?: string;
+    feedbackLoop?: string;
+    consensus?: string;
+    actions?: string;
+  };
+  hideMappingRules?: boolean;
+  enableFeedbackLoop?: boolean;
+  reportMode?: boolean;
 }) {
   const candidatesLabel = labels?.candidates ?? '候选属性审核界面';
   const mappingRulesLabel = labels?.mappingRules ?? '映射规则';
-  const [innerTab, setInnerTab] = useState<'candidates' | 'mapping-rules'>(initialInnerTab);
+  const feedbackLoopLabel = labels?.feedbackLoop ?? '反馈数据闭环';
+  const consensusLabel = labels?.consensus ?? '跨用户共识算法';
+  const actionsLabel = labels?.actions ?? '操作（一键入库或拒绝）';
+  const feedbackLoopEnabled = enableFeedbackLoop ?? false;
+  const [innerTab, setInnerTab] = useState<KGReviewInnerTab>(initialInnerTab);
+  const [feedbackRecords, setFeedbackRecords] = useState<FeedbackRecord[]>([]);
   const [candidates, setCandidates] = useState<ReviewCandidate[]>(MOCK_CANDIDATES);
   const [currentUserId, setCurrentUserIdState] = useState(getCurrentReviewerId);
   const [selected, setSelected] = useState<string[]>([]);
@@ -649,6 +692,10 @@ export function KGReviewPanel({
   const [filterSource, setFilterSource] = useState('');
 
   useEffect(() => {
+    setInnerTab(initialInnerTab);
+  }, [initialInnerTab]);
+
+  useEffect(() => {
     if (!focusConsensus) return;
     setInnerTab('candidates');
     const timer = window.setTimeout(() => {
@@ -656,10 +703,20 @@ export function KGReviewPanel({
     }, 200);
     return () => window.clearTimeout(timer);
   }, [focusConsensus]);
+
+  useEffect(() => {
+    if (!focusActions) return;
+    setInnerTab('candidates');
+    const timer = window.setTimeout(() => {
+      document.getElementById('kg-review-actions-col')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [focusActions]);
   const [editCandidate, setEditCandidate] = useState<ReviewCandidate | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editEntityType, setEditEntityType] = useState('');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [locatedId, setLocatedId] = useState<string | null>(null);
 
   const latestTask = useMemo(() => getLatestReviewTask(), [candidates, currentUserId]);
 
@@ -713,11 +770,34 @@ export function KGReviewPanel({
     }));
   };
 
+  const recordFeedback = (candidate: ReviewCandidate, action: PeerReviewResult, modifiedContent?: string) => {
+    if (!feedbackLoopEnabled || action === 'pending') return;
+    const me = REVIEWER_OPTIONS.find(r => r.id === currentUserId);
+    setFeedbackRecords(prev => [{
+      id: `fb-${Date.now()}-${candidate.id}`,
+      candidateId: candidate.id,
+      content: modifiedContent ?? candidate.modifiedContent ?? candidate.content,
+      entityType: candidate.entityType,
+      type: candidate.type,
+      action,
+      reviewerId: currentUserId,
+      reviewerName: me?.name ?? currentUserId,
+      timestamp: new Date().toLocaleString('zh-CN'),
+      originalContent: action === 'modified' ? candidate.content : undefined,
+      modifiedContent: action === 'modified' ? modifiedContent : undefined,
+      sourceDoc: candidate.sourceDoc,
+      loopStatus: 'pending',
+    }, ...prev]);
+  };
+
   const updateStatus = (id: string, status: ReviewStatus, modifiedContent?: string) => {
+    const candidate = candidates.find(c => c.id === id);
     applyMyResult(id, status, modifiedContent);
+    if (candidate) recordFeedback(candidate, status, modifiedContent);
   };
 
   const bulkApprove = () => {
+    const targets = candidates.filter(c => selected.includes(c.id));
     setCandidates(prev => prev.map(c => {
       if (!selected.includes(c.id)) return c;
       const peerReviews = c.peerReviews.map(p =>
@@ -725,10 +805,12 @@ export function KGReviewPanel({
       );
       return { ...c, status: 'approved' as ReviewStatus, peerReviews };
     }));
+    targets.forEach(c => recordFeedback(c, 'approved'));
     setSelected([]);
   };
 
   const bulkReject = () => {
+    const targets = candidates.filter(c => selected.includes(c.id));
     setCandidates(prev => prev.map(c => {
       if (!selected.includes(c.id)) return c;
       const peerReviews = c.peerReviews.map(p =>
@@ -736,6 +818,7 @@ export function KGReviewPanel({
       );
       return { ...c, status: 'rejected' as ReviewStatus, peerReviews };
     }));
+    targets.forEach(c => recordFeedback(c, 'rejected'));
     setSelected([]);
   };
 
@@ -758,7 +841,8 @@ export function KGReviewPanel({
     setEditCandidate(null);
   };
 
-  const filtered = myVisible.filter(c => {
+  const filtered = (reportMode ? myVisible.filter(c => c.fromScan) : myVisible).filter(c => {
+    if (reportMode) return true;
     const myResult = c.peerReviews.find(p => p.userId === currentUserId)?.result ?? 'pending';
     if (search && !c.content.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterType && c.type !== filterType) return false;
@@ -797,9 +881,18 @@ export function KGReviewPanel({
   const currentUser = REVIEWER_OPTIONS.find(r => r.id === currentUserId);
   const hiddenCount = candidates.length - myVisible.length;
 
+  const locateIssue = (id: string) => {
+    setLocatedId(id);
+    window.setTimeout(() => {
+      document.getElementById(`validation-row-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+    window.setTimeout(() => setLocatedId(null), 2400);
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Inner sub-tabs */}
+      {!reportMode && (
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 pt-3 flex gap-1">
         <button onClick={() => setInnerTab('candidates')}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${innerTab === 'candidates' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -808,22 +901,97 @@ export function KGReviewPanel({
             {myVisible.filter(c => (c.peerReviews.find(p => p.userId === currentUserId)?.result ?? 'pending') === 'pending').length}
           </span>
         </button>
-        <button onClick={() => setInnerTab('mapping-rules')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${innerTab === 'mapping-rules' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          <Workflow className="w-4 h-4" />{mappingRulesLabel}
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-0.5 ${innerTab === 'mapping-rules' ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
-            {MOCK_RULE_CANDIDATES.filter(r => r.status === 'pending').length}
-          </span>
-        </button>
+        {!hideMappingRules && (
+          <button onClick={() => setInnerTab('mapping-rules')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${innerTab === 'mapping-rules' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <Workflow className="w-4 h-4" />{mappingRulesLabel}
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-0.5 ${innerTab === 'mapping-rules' ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
+              {MOCK_RULE_CANDIDATES.filter(r => r.status === 'pending').length}
+            </span>
+          </button>
+        )}
+        {feedbackLoopEnabled && (
+          <button onClick={() => setInnerTab('feedback-loop')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${innerTab === 'feedback-loop' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <RotateCcw className="w-4 h-4" />{feedbackLoopLabel}
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-0.5 ${innerTab === 'feedback-loop' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-500'}`}>
+              {feedbackRecords.length}
+            </span>
+          </button>
+        )}
       </div>
+      )}
 
       {/* Mapping rules tab */}
-      {innerTab === 'mapping-rules' && <MappingRulesPanel />}
+      {innerTab === 'mapping-rules' && !hideMappingRules && <MappingRulesPanel />}
+
+      {/* Feedback loop tab */}
+      {innerTab === 'feedback-loop' && feedbackLoopEnabled && (
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-sm text-emerald-800">
+            审核员在「{candidatesLabel}」中执行确认、拒绝或修正操作后，结构化反馈将自动写入本列表，并同步至分层置信标注集用于下一轮模型迭代。
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">操作时间</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">候选内容</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">操作类型</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">审核员</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">反馈详情</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">来源</th>
+                  <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">闭环状态</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {feedbackRecords.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">
+                      暂无反馈记录。请先在「{candidatesLabel}」中执行审核操作。
+                    </td>
+                  </tr>
+                )}
+                {feedbackRecords.map(record => {
+                  const actionMeta = FEEDBACK_ACTION_META[record.action];
+                  return (
+                    <tr key={record.id}>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{record.timestamp}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-800 text-sm">{record.content}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{record.entityType}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${actionMeta.className}`}>{actionMeta.label}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{record.reviewerName}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600 max-w-xs">
+                        {record.action === 'modified' ? (
+                          <span>{record.originalContent} → <span className="font-medium text-blue-600">{record.modifiedContent}</span></span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-gray-500">{record.sourceDoc}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${record.loopStatus === 'synced' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                          {record.loopStatus === 'synced' ? '已纳入标注集' : '待同步'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Candidates tab — everything below only renders when innerTab === 'candidates' */}
-      {innerTab === 'candidates' && <>
+      {(reportMode || innerTab === 'candidates') && <>
 
       {/* Reviewer context bar */}
+      {!reportMode && (
       <div className="flex-shrink-0 bg-indigo-50/80 border-b border-indigo-100 px-6 py-2.5 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5 text-xs text-indigo-700 font-medium">
           <Users className="w-3.5 h-3.5" />当前审核身份
@@ -847,8 +1015,10 @@ export function KGReviewPanel({
           </span>
         )}
       </div>
+      )}
 
       {/* Stats bar */}
+      {!reportMode && (
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex gap-4">
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex-1 text-center">
@@ -873,8 +1043,10 @@ export function KGReviewPanel({
           </div>
         </div>
       </div>
+      )}
 
       {/* Filter bar */}
+      {!reportMode && (
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-3 flex gap-2 flex-wrap items-center">
         <div className="relative">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -930,9 +1102,11 @@ export function KGReviewPanel({
           </>
         )}
       </div>
+      )}
 
       {/* Table */}
       <div className="flex-1 overflow-y-auto p-6 space-y-3">
+        {!reportMode && (
         <div id="kg-review-credibility" className="bg-white border border-indigo-100 rounded-xl px-4 py-3 flex items-center gap-4 flex-wrap text-sm">
           <span className="font-semibold text-indigo-700 flex-shrink-0">知识可信度分层</span>
           <span className="text-gray-300">|</span>
@@ -940,57 +1114,123 @@ export function KGReviewPanel({
           <span className="text-gray-600">单人标注可信度：<span className="font-semibold text-gray-900">80</span></span>
           <span className="text-gray-600">多人共识可信度：<span className="font-semibold text-gray-900">90</span></span>
         </div>
+        )}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                {!reportMode && (
                 <th className="px-4 py-3 w-8">
                   <input type="checkbox" onChange={() => toggleAll(filtered)} checked={filtered.length > 0 && filtered.every(c => selected.includes(c.id))} />
                 </th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">候选内容</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">来源 / 上下文</th>
+                )}
+                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">
+                  {reportMode ? '违规对象' : '候选内容'}
+                </th>
+                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">
+                  {reportMode ? '对象类型' : '来源 / 上下文'}
+                </th>
+                {!reportMode && (
+                <>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">置信度</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">命中规则</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">冲突原因</th>
-                <th id="kg-review-consensus-col" className="text-left text-xs font-medium text-gray-500 px-4 py-3">跨用户共识算法</th>
+                <th id="kg-review-consensus-col" className="text-left text-xs font-medium text-gray-500 px-4 py-3">{consensusLabel}</th>
                 <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">我的状态</th>
-                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">操作（一键入库或拒绝）</th>
+                <th id="kg-review-actions-col" className="text-left text-xs font-medium text-gray-500 px-4 py-3">{actionsLabel}</th>
+                </>
+                )}
+                {reportMode && (
+                <>
+                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">命中规则</th>
+                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">具体错误</th>
+                <th className="text-left text-xs font-medium text-gray-500 px-4 py-3 w-28">操作</th>
+                </>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400">
-                    当前身份「{currentUser?.name}」没有可审核条目
-                    {hiddenCount > 0 ? `（另有 ${hiddenCount} 条分配给其他审核员）` : ''}
+                  <td colSpan={reportMode ? 5 : 9} className="px-4 py-10 text-center text-sm text-gray-400">
+                    {reportMode ? '暂无扫描发现的校验问题，请先执行数据一致性扫描' : (
+                      <>当前身份「{currentUser?.name}」没有可审核条目
+                      {hiddenCount > 0 ? `（另有 ${hiddenCount} 条分配给其他审核员）` : ''}</>
+                    )}
                   </td>
                 </tr>
               )}
               {filtered.map(c => (
-                <tr key={c.id} className={selected.includes(c.id) ? 'bg-blue-50' : ''}>
+                <tr
+                  key={c.id}
+                  id={reportMode ? `validation-row-${c.id}` : undefined}
+                  className={`${selected.includes(c.id) ? 'bg-blue-50' : ''} ${locatedId === c.id ? 'bg-amber-50 ring-2 ring-inset ring-amber-300' : ''}`}
+                >
+                  {!reportMode && (
                   <td className="px-4 py-3">
                     <input type="checkbox" checked={selected.includes(c.id)} onChange={() => toggleSelect(c.id)} />
                   </td>
+                  )}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-medium text-gray-800 text-sm">{c.modifiedContent || c.content}</span>
-                      {c.fromScan && (
+                      {c.fromScan && !reportMode && (
                         <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-orange-50 text-orange-600 border border-orange-200 font-medium">
                           <ScanLine size={9} />一致性扫描
                         </span>
                       )}
                     </div>
+                    {!reportMode && (
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className={`text-xs px-1.5 py-0.5 rounded-full ${c.type === 'entity' ? 'bg-blue-50 text-blue-600' : c.type === 'relation' ? 'bg-purple-50 text-purple-600' : 'bg-gray-100 text-gray-600'}`}>
                         {c.type === 'entity' ? '实体' : c.type === 'relation' ? '关系' : '属性'}
                       </span>
                       <span className="text-xs text-gray-400">{c.entityType}</span>
                     </div>
+                    )}
+                    {reportMode && (
+                      <div className="font-mono text-[11px] text-gray-400 mt-1">{c.sourceDoc}</div>
+                    )}
                   </td>
                   <td className="px-4 py-3 max-w-xs">
+                    {reportMode ? (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${c.type === 'entity' ? 'bg-blue-50 text-blue-600' : c.type === 'relation' ? 'bg-purple-50 text-purple-600' : 'bg-gray-100 text-gray-600'}`}>
+                        {c.type === 'entity' ? '实体' : c.type === 'relation' ? '关系' : '属性'} · {c.entityType}
+                      </span>
+                    ) : (
+                    <>
                     <div className="font-mono text-xs text-gray-500">{c.sourceDoc}</div>
                     <div className="text-xs text-gray-400 mt-0.5 truncate" title={c.context}>{c.context}</div>
+                    </>
+                    )}
                   </td>
+                  {reportMode ? (
+                    <>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {c.hitRules.length > 0 ? c.hitRules.map(r => (
+                            <span key={r} className="text-xs px-1.5 py-0.5 rounded-full bg-green-50 text-green-600">{r}</span>
+                          )) : <span className="text-xs text-gray-300">—</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 max-w-md">
+                        <p className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded leading-relaxed">{c.conflictReason || c.context}</p>
+                        {c.schemaHint && (
+                          <p className="text-[11px] text-gray-400 mt-1 font-mono">Schema: {c.schemaHint}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => locateIssue(c.id)}
+                          className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <Crosshair size={12} /> 一键定位
+                        </button>
+                      </td>
+                    </>
+                  ) : (
+                  <>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-16 bg-gray-100 rounded-full h-1.5 flex-shrink-0">
@@ -1062,6 +1302,8 @@ export function KGReviewPanel({
                       )}
                     </div>
                   </td>
+                  </>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -1070,6 +1312,7 @@ export function KGReviewPanel({
       </div>
 
       {/* Bottom bar */}
+      {!reportMode && (
       <div className="flex-shrink-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-between items-center">
         <button className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">保存审核进度</button>
         <div className="flex gap-2">
@@ -1077,12 +1320,13 @@ export function KGReviewPanel({
           <button onClick={() => setShowSubmitModal(true)} className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">提交入图</button>
         </div>
       </div>
+      )}
 
       {/* End of candidates tab */}
       </>}
 
       {/* Edit Modal */}
-      {editCandidate && (
+      {!reportMode && editCandidate && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 w-[480px]">
             <div className="text-sm font-semibold text-gray-800 mb-4">修改后通过</div>
@@ -1148,7 +1392,7 @@ export function KGReviewPanel({
       )}
 
       {/* Submit Modal */}
-      {showSubmitModal && (
+      {!reportMode && showSubmitModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 w-96">
             <div className="text-sm font-semibold text-gray-800 mb-4">确认提交入图</div>

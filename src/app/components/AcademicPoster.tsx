@@ -476,13 +476,15 @@ function AudioCardView({
 
 export default function AcademicPoster({
   initialTab = 'poster',
+  initialDocId,
 }: {
   initialTab?: GenTab;
+  initialDocId?: string;
 }) {
   // ── Left panel state ──
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<DocType | 'all'>('all');
-  const [selectedDocId, setSelectedDocId] = useState<string | null>('d1');
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(initialDocId ?? 'd1');
 
   // ── Tab state ──
   const [activeTab, setActiveTab] = useState<GenTab>(initialTab);
@@ -490,6 +492,10 @@ export default function AcademicPoster({
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    if (initialDocId) setSelectedDocId(initialDocId);
+  }, [initialDocId]);
 
   // ── Poster state ──
   const [selectedTemplate, setSelectedTemplate] = useState(POSTER_TEMPLATES[0].id);

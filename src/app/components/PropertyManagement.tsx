@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Search, Edit2, Save, X, ChevronLeft, ChevronRight, Tag, Hash, FileText,
   Calendar, ChevronDown, Database, Plus, Trash2, AlertTriangle, Link,
@@ -8,6 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, BarChart, Bar, Cell,
 } from 'recharts';
+import type { PropertyManagementTab, PropertyManagementFocus } from '../data/auditPageMap';
 
 // ── Interfaces ─────────────────────────────────────────────────────────────────
 
@@ -378,17 +379,24 @@ const TABS = [
   { id: 'add-relation',    label: '添加关键词关系' },
   { id: 'delete-entity',   label: '删除关键词' },
   { id: 'delete-relation', label: '删除关键词间关系' },
+  { id: 'validation',      label: '结构校验' },
   { id: 'stats',           label: '图谱统计' },
   { id: 'timeseries',      label: '时序可视化' },
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
 
+type PanelFocus = PropertyManagementFocus;
+
+function focusRing(active: boolean) {
+  return active ? 'ring-2 ring-blue-300 ring-offset-2 rounded-xl' : '';
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Panel: 检索设置
 // ══════════════════════════════════════════════════════════════════════════════
 
-function SearchPanel({ entities }: { entities: Entity[] }) {
+function SearchPanel({ entities, panelFocus }: { entities: Entity[]; panelFocus?: PanelFocus }) {
   // ── ① fuzzy search
   const [fuzzy, setFuzzy] = useState('');
   const [showDrop, setShowDrop] = useState(false);
@@ -488,7 +496,7 @@ function SearchPanel({ entities }: { entities: Entity[] }) {
   return (
     <div className="space-y-6 max-w-3xl">
       {/* ① Fuzzy search */}
-      <div className="border border-gray-200 rounded-xl overflow-visible">
+      <div id="pm-fuzzy-search" className={`border border-gray-200 rounded-xl overflow-visible ${focusRing(panelFocus === 'fuzzy-search')}`}>
         <div className="bg-gray-50 border-b border-gray-200 px-5 py-3">
           <p className="text-sm font-semibold text-gray-800">① 实体模糊搜索</p>
           <p className="text-xs text-gray-400 mt-0.5">按名称或别名模糊匹配，支持自动补全</p>
@@ -541,7 +549,7 @@ function SearchPanel({ entities }: { entities: Entity[] }) {
       </div>
 
       {/* ② Advanced structured query */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div id="pm-advanced-query" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'advanced-query')}`}>
         <div className="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-start justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-800">② 高级条件查询</p>
@@ -804,7 +812,7 @@ function SearchPanel({ entities }: { entities: Entity[] }) {
 // Panel: 添加关键词关系
 // ══════════════════════════════════════════════════════════════════════════════
 
-function AddRelationPanel({ entities, onAdd }: { entities: Entity[]; onAdd: (r: Relation) => void }) {
+function AddRelationPanel({ entities, onAdd, panelFocus }: { entities: Entity[]; onAdd: (r: Relation) => void; panelFocus?: PanelFocus }) {
   const [step, setStep] = useState<'src' | 'tgt' | 'form'>('src');
   const [srcId, setSrcId] = useState('');
   const [tgtId, setTgtId] = useState('');
@@ -866,7 +874,7 @@ function AddRelationPanel({ entities, onAdd }: { entities: Entity[]; onAdd: (r: 
 
       <div className="grid grid-cols-2 gap-5">
         {/* Graph canvas */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <div id="pm-relation-create" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'relation-create')}`}>
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">
             {step === 'src' ? '点击选择起点' : step === 'tgt' ? '点击选择终点' : '路径已确定'}
           </div>
@@ -922,7 +930,7 @@ function AddRelationPanel({ entities, onAdd }: { entities: Entity[]; onAdd: (r: 
               </div>
 
               {/* Searchable relation type dropdown */}
-              <div className="relative">
+              <div id="pm-relation-type" className={`relative ${focusRing(panelFocus === 'relation-type')}`}>
                 <label className="block text-xs font-medium text-gray-600 mb-1">关系类型 <span className="text-red-500">*</span></label>
                 <input
                   value={relType || relSearch}
@@ -948,7 +956,7 @@ function AddRelationPanel({ entities, onAdd }: { entities: Entity[]; onAdd: (r: 
               </div>
 
               {/* Relation attributes */}
-              <div>
+              <div id="pm-relation-attrs" className={focusRing(panelFocus === 'relation-attrs')}>
                 <label className="block text-xs font-medium text-gray-600 mb-1.5">关系属性（可选）</label>
                 <div className="space-y-2">
                   {attrs.map((a, i) => (
@@ -1003,14 +1011,22 @@ function AddRelationPanel({ entities, onAdd }: { entities: Entity[]; onAdd: (r: 
 // Panel: 删除关键词
 // ══════════════════════════════════════════════════════════════════════════════
 
-function DeleteEntityPanel({ entities, relations, onDelete }: {
+function DeleteEntityPanel({ entities, relations, onDelete, panelFocus }: {
   entities: Entity[];
   relations: Relation[];
   onDelete: (ids: string[]) => void;
+  panelFocus?: PanelFocus;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showConfirm, setShowConfirm] = useState(false);
   const [flash, setFlash] = useState(false);
+
+  useEffect(() => {
+    if (panelFocus === 'cascade-delete' && entities[0]) {
+      setSelected(new Set([entities[0].id]));
+      setShowConfirm(true);
+    }
+  }, [panelFocus, entities]);
 
   const toggle = (id: string) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -1039,7 +1055,7 @@ function DeleteEntityPanel({ entities, relations, onDelete }: {
         </div>
       )}
 
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div id="pm-entity-delete" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'entity-delete')}`}>
         <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-700">实体列表</span>
           <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
@@ -1087,7 +1103,7 @@ function DeleteEntityPanel({ entities, relations, onDelete }: {
 
       {showConfirm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+          <div id="pm-cascade-delete" className={`bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl ${focusRing(panelFocus === 'cascade-delete')}`}>
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
@@ -1126,13 +1142,22 @@ function DeleteEntityPanel({ entities, relations, onDelete }: {
 // Panel: 删除关键词间关系
 // ══════════════════════════════════════════════════════════════════════════════
 
-function DeleteRelationPanel({ relations, onDelete }: {
+function DeleteRelationPanel({ relations, onDelete, panelFocus }: {
   relations: Relation[];
   onDelete: (id: string) => void;
+  panelFocus?: PanelFocus;
 }) {
   const [selId, setSelId] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [flash, setFlash] = useState('');
+
+  useEffect(() => {
+    if (panelFocus === 'cascade-delete') return;
+    if (panelFocus === 'relation-delete-confirm' && relations[0]) {
+      setSelId(relations[0].id);
+      setShowConfirm(true);
+    }
+  }, [panelFocus, relations]);
 
   const selRel = relations.find(r => r.id === selId);
 
@@ -1160,7 +1185,7 @@ function DeleteRelationPanel({ relations, onDelete }: {
 
       <div className="grid grid-cols-2 gap-5">
         {/* Graph canvas */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <div id="pm-relation-select" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'relation-select')}`}>
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">点击连线选中关系</div>
           <svg viewBox="0 0 490 270" className="w-full" style={{ height: 250 }}>
             <rect width="490" height="270" fill="#f9fafb" />
@@ -1257,11 +1282,143 @@ function DeleteRelationPanel({ relations, onDelete }: {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Panel: 知识模型结构智能化校验
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface ValidationIssue {
+  id: string;
+  entity: string;
+  entityType: string;
+  rule: string;
+  field: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+
+const SCHEMA_CONSTRAINTS = [
+  { entityType: '人物', field: 'affiliation', constraint: '必填 · string' },
+  { entityType: '人物', field: 'h_index', constraint: 'number · 0–200' },
+  { entityType: '组织', field: 'location', constraint: '必填 · string' },
+  { entityType: '论文', field: 'pub_year', constraint: 'number · 1900–2026' },
+  { entityType: '关系', field: 'AUTHORED_BY', constraint: 'Paper → Person' },
+];
+
+const VALIDATION_ISSUES: ValidationIssue[] = [
+  { id: 'vi1', entity: 'papers#4521', entityType: '论文', rule: '属性值范围校验', field: 'pub_year', message: '值 2099 超出本体定义范围 1900–2026', severity: 'error' },
+  { id: 'vi2', entity: '作者#7721', entityType: '人物', rule: '孤立实体检测', field: '—', message: '无任何出入度关系', severity: 'warning' },
+  { id: 'vi3', entity: 'papers#4521→inst#88', entityType: '关系', rule: '关系端点类型校验', field: 'AUTHORED_BY', message: '目标类型应为 Person，实际为 Institution', severity: 'error' },
+  { id: 'vi4', entity: '北京AI研究院', entityType: '组织', rule: '必填属性缺失', field: 'location', message: '缺少必填属性 location', severity: 'warning' },
+];
+
+function ValidationPanel({ panelFocus }: { panelFocus?: PanelFocus }) {
+  const [scanning, setScanning] = useState(false);
+  const [lastScan, setLastScan] = useState<string | null>('2026-07-31 09:15');
+  const [issues, setIssues] = useState(VALIDATION_ISSUES);
+
+  const runScan = () => {
+    setScanning(true);
+    setTimeout(() => {
+      setIssues(VALIDATION_ISSUES);
+      setLastScan(new Date().toLocaleString('zh-CN'));
+      setScanning(false);
+    }, 1200);
+  };
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <p className="text-base font-semibold text-gray-900">知识模型结构智能化校验</p>
+        <p className="text-sm text-gray-500 mt-0.5">Schema 约束定义、全图一致性扫描与校验报告</p>
+      </div>
+
+      <div id="pm-schema-constraints" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'schema-constraints')}`}>
+        <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-700">Schema 约束规则定义</div>
+        <table className="w-full text-sm">
+          <thead className="bg-white border-b border-gray-100 text-xs text-gray-400">
+            <tr>
+              <th className="text-left px-4 py-2 font-medium">实体类型</th>
+              <th className="text-left px-4 py-2 font-medium">属性/关系</th>
+              <th className="text-left px-4 py-2 font-medium">约束条件</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {SCHEMA_CONSTRAINTS.map(row => (
+              <tr key={`${row.entityType}-${row.field}`}>
+                <td className="px-4 py-2.5 text-gray-800">{row.entityType}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-blue-700">{row.field}</td>
+                <td className="px-4 py-2.5 text-gray-600 text-xs">{row.constraint}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div id="pm-consistency-scan" className={`flex items-center gap-4 p-4 border border-gray-200 rounded-xl bg-white ${focusRing(panelFocus === 'consistency-scan')}`}>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-gray-800">数据一致性自动扫描</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {lastScan ? `上次扫描：${lastScan} · 发现 ${issues.length} 条潜在问题` : '尚未执行扫描'}
+          </p>
+        </div>
+        <button
+          onClick={runScan}
+          disabled={scanning}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm rounded-lg"
+        >
+          {scanning ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+          {scanning ? '扫描中…' : '立即扫描'}
+        </button>
+      </div>
+
+      <div id="pm-validation-report" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'validation-report')}`}>
+        <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
+          <span className="text-xs font-semibold text-gray-700">校验结果报告</span>
+          <span className="text-xs text-gray-400">{issues.length} 条</span>
+        </div>
+        <table className="w-full text-sm">
+          <thead className="border-b border-gray-100 text-xs text-gray-400">
+            <tr>
+              <th className="text-left px-4 py-2 font-medium">实体/关系</th>
+              <th className="text-left px-4 py-2 font-medium">规则</th>
+              <th className="text-left px-4 py-2 font-medium">字段</th>
+              <th className="text-left px-4 py-2 font-medium">错误详情</th>
+              <th className="text-left px-4 py-2 font-medium">操作</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {issues.map(issue => (
+              <tr key={issue.id} className="hover:bg-gray-50">
+                <td className="px-4 py-2.5">
+                  <div className="font-medium text-gray-800 text-xs">{issue.entity}</div>
+                  <div className="text-[10px] text-gray-400">{issue.entityType}</div>
+                </td>
+                <td className="px-4 py-2.5 text-xs text-gray-600">{issue.rule}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{issue.field}</td>
+                <td className="px-4 py-2.5 text-xs text-gray-600 max-w-xs">{issue.message}</td>
+                <td className="px-4 py-2.5">
+                  <button className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                    <ArrowRight className="w-3 h-3" />定位
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Panel: 图谱统计数据可视化
 // ══════════════════════════════════════════════════════════════════════════════
 
-function StatsPanel() {
+function StatsPanel({ panelFocus }: { panelFocus?: PanelFocus }) {
   const [drillOpen, setDrillOpen] = useState(false);
+
+  useEffect(() => {
+    if (panelFocus === 'outlier-drill') setDrillOpen(true);
+  }, [panelFocus]);
 
   const svgW = 300;
   const toX = (v: number) => ((v - 0) / 100) * svgW;
@@ -1288,7 +1445,7 @@ function StatsPanel() {
 
       <div className="grid grid-cols-2 gap-5">
         {/* Histogram */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <div id="pm-value-distribution" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'value-distribution')}`}>
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-700">值分布直方图</span>
             {OUTLIER_VALS.length > 0 && (
@@ -1421,7 +1578,7 @@ function renderTimeSeriesDot(props: { cx?: number; cy?: number; payload?: TsPoin
   );
 }
 
-function TimeSeriesPanel() {
+function TimeSeriesPanel({ panelFocus }: { panelFocus?: PanelFocus }) {
   const [tsKey, setTsKey] = useState<TsKey>('papers');
   const [drillPoint, setDrillPoint] = useState<TsPoint | null>(null);
 
@@ -1430,6 +1587,11 @@ function TimeSeriesPanel() {
   const entityName = tsKey === 'papers' ? '李明' : '北京人工智能研究院';
   const anomalies = data.filter(d => d.anomaly);
   const avg = Math.round(data.reduce((a, d) => a + d.value, 0) / data.length);
+
+  useEffect(() => {
+    const anomaly = data.find(d => d.anomaly);
+    if (panelFocus === 'anomaly-detect' && anomaly) setDrillPoint(anomaly);
+  }, [panelFocus, data]);
 
   const handleDotClick = (p: TsPoint) => setDrillPoint(d => d?.date === p.date ? null : p);
 
@@ -1460,7 +1622,7 @@ function TimeSeriesPanel() {
         )}
       </div>
 
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div id="pm-timeseries-curve" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'timeseries-curve')}`}>
         <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-700">
           {entityName} · {label}
         </div>
@@ -1686,8 +1848,14 @@ function AddOntologyNodeDialog({
 // Main component
 // ══════════════════════════════════════════════════════════════════════════════
 
-export default function PropertyManagement() {
-  const [activeTab, setActiveTab] = useState<TabId>('entity');
+export default function PropertyManagement({
+  initialTab,
+  initialFocus,
+}: {
+  initialTab?: PropertyManagementTab;
+  initialFocus?: PropertyManagementFocus;
+}) {
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'entity');
   const [activeSpaceId, setActiveSpaceId] = useState('gs1');
   const [spaceDropOpen, setSpaceDropOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1704,6 +1872,36 @@ export default function PropertyManagement() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [relations, setRelations] = useState<Relation[]>(SEED_RELATIONS);
   const [showAddNode, setShowAddNode] = useState(false);
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    if (!initialFocus) return;
+    const targetMap: Partial<Record<PropertyManagementFocus, string>> = {
+      'fuzzy-search': 'pm-fuzzy-search',
+      'advanced-query': 'pm-advanced-query',
+      'relation-create': 'pm-relation-create',
+      'relation-type': 'pm-relation-type',
+      'relation-attrs': 'pm-relation-attrs',
+      'entity-delete': 'pm-entity-delete',
+      'cascade-delete': 'pm-cascade-delete',
+      'relation-select': 'pm-relation-select',
+      'relation-delete-confirm': 'pm-relation-select',
+      'schema-constraints': 'pm-schema-constraints',
+      'consistency-scan': 'pm-consistency-scan',
+      'validation-report': 'pm-validation-report',
+      'value-distribution': 'pm-value-distribution',
+      'outlier-drill': 'pm-value-distribution',
+      'timeseries-curve': 'pm-timeseries-curve',
+      'anomaly-detect': 'pm-timeseries-curve',
+    };
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetMap[initialFocus] ?? '')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [initialFocus, activeTab]);
 
   const activeSpace = graphSpaces.find(s => s.id === activeSpaceId)!;
   const ontologyMeta = GRAPH_ONTOLOGY[activeSpaceId];
@@ -1958,12 +2156,13 @@ export default function PropertyManagement() {
           </div>
         )}
 
-        {activeTab === 'search' && <SearchPanel entities={spaceEntities} />}
+        {activeTab === 'search' && <SearchPanel entities={spaceEntities} panelFocus={initialFocus} />}
 
         {activeTab === 'add-relation' && (
           <AddRelationPanel
             entities={spaceEntities.slice(0, 8)}
             onAdd={r => setRelations(prev => [r, ...prev])}
+            panelFocus={initialFocus}
           />
         )}
 
@@ -1972,6 +2171,7 @@ export default function PropertyManagement() {
             entities={spaceEntities}
             relations={relations}
             onDelete={handleDeleteEntities}
+            panelFocus={initialFocus}
           />
         )}
 
@@ -1979,12 +2179,15 @@ export default function PropertyManagement() {
           <DeleteRelationPanel
             relations={relations}
             onDelete={id => setRelations(prev => prev.filter(r => r.id !== id))}
+            panelFocus={initialFocus}
           />
         )}
 
-        {activeTab === 'stats' && <StatsPanel />}
+        {activeTab === 'validation' && <ValidationPanel panelFocus={initialFocus} />}
 
-        {activeTab === 'timeseries' && <TimeSeriesPanel />}
+        {activeTab === 'stats' && <StatsPanel panelFocus={initialFocus} />}
+
+        {activeTab === 'timeseries' && <TimeSeriesPanel panelFocus={initialFocus} />}
       </div>
 
       {showAddNode && ontologyMeta && (

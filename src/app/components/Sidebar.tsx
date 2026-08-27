@@ -95,7 +95,7 @@ const allMenuItems: MenuItem[] = [
     children: [
       { id: 'knowledge-base', label: '知识库', icon: BookOpen },
       { id: 'knowledge-search', label: '知识搜索', icon: Search },
-      { id: 'academic-poster', label: '学术海报与音频', icon: GalleryHorizontal },
+      { id: 'academic-poster', label: '学术海报与音频概览生成', icon: GalleryHorizontal },
     ],
   },
   {

@@ -102,18 +102,88 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '知识表示学习/编码模型/张量/矩阵分解模型库': 'algorithm-detail',
   '知识表示学习/编码模型/神经网络模型库': 'algorithm-detail',
   '知识表示学习/编码模型/模型选择与超参数配置': 'algorithm-detail',
+  '知识相关性计算/基于监督学习的相似度计算/相似度样本标注工具': 'dataset-category-detail',
+  '数据集管理/相似度计算数据集/相似度样本标注工具': 'dataset-category-detail',
+  '知识相关性计算/基于监督学习的相似度计算/相似度模型训练': 'algorithm-detail',
+  '知识相关性计算/基于监督学习的相似度计算/模型评估与发布': 'algorithm-detail',
+  '算法管理/算法仓库/知识推理/基于监督学习的相似度计算/相似度模型训练': 'algorithm-detail',
+  '算法管理/算法仓库/知识推理/基于监督学习的相似度计算/模型评估与发布': 'algorithm-detail',
+  '知识相关性计算/快速图节点相似度计算/基于路径的算法': 'algorithm-detail',
+  '知识相关性计算/快速图节点相似度计算/基于嵌入向量的算法': 'algorithm-detail',
+  '知识相关性计算/快速图节点相似度计算/实时计算接口': 'algorithm-detail',
+  '算法管理/算法仓库/知识推理/快速图节点相似度计算/基于路径的算法': 'algorithm-detail',
+  '算法管理/算法仓库/知识推理/快速图节点相似度计算/基于嵌入向量的算法': 'algorithm-detail',
+  '算法管理/算法仓库/知识推理/快速图节点相似度计算/实时计算接口': 'algorithm-detail',
+  '知识相关性计算/关联强度量化/得分归一化': 'knowledge-graph-dashboard',
+  '知识相关性计算/关联强度量化/强度等级划分': 'knowledge-graph-dashboard',
+  '知识相关性计算/关联强度量化/量化结果可视化': 'knowledge-graph-dashboard',
+  '知识图谱看板/关联强度量化': 'knowledge-graph-dashboard',
+  '知识相关性计算/语义检索与推荐应用支持/应用调用监控': 'call-logs',
+  '算法管理/算法仓库/知识推理/语义检索与推荐应用支持/应用调用监控': 'call-logs',
+  '调用日志': 'call-logs',
+  '知识推理模型/关系推理/基于规则的推理': 'relation-reasoning',
+  '知识推理模型/关系推理/基于路径的推理': 'relation-reasoning',
+  '知识推理模型/关系推理/推理结果审核': 'relation-reasoning',
+  '算法管理/算法仓库/知识推理/关系推理/基于规则的推理': 'relation-reasoning',
+  '算法管理/算法仓库/知识推理/关系推理/基于路径的推理': 'relation-reasoning',
+  '算法管理/算法仓库/知识推理/关系推理/推理结果审核': 'relation-reasoning',
+  '知识补全/大模型生成能力接口/多模型API集成': 'llm-api-integration',
+  '知识补全/大模型生成能力接口/提示词工程模板': 'app-center',
+  '知识补全/大模型生成能力接口/生成结果解析与格式化': 'app-center',
+  '算法管理/算法仓库/知识补全/大模型生成能力接口/多模型API集成': 'llm-api-integration',
+  '算法管理/算法仓库/知识补全/大模型生成能力接口/提示词工程模板': 'app-center',
+  '算法管理/算法仓库/知识补全/大模型生成能力接口/生成结果解析与格式化': 'app-center',
+  '知识补全/分层置信标注集管理/数据源置信度评级': 'dataset-category-detail',
+  '知识补全/分层置信标注集管理/标注数据版本控制': 'dataset-category-detail',
+  '知识补全/分层置信标注集管理/数据集构建与划分': 'dataset-category-detail',
+  '数据集管理/分层置信标注集管理/数据源置信度评级': 'dataset-category-detail',
+  '数据集管理/分层置信标注集管理/标注数据版本控制': 'dataset-category-detail',
+  '数据集管理/分层置信标注集管理/数据集构建与划分': 'dataset-category-detail',
+  '知识补全/多源人工验证数据反馈机制/人机协同审核队列': 'human-machine-review',
+  '知识补全/多源人工验证数据反馈机制/反馈数据采集': 'human-machine-review',
+  '知识补全/多源人工验证数据反馈机制/审核员一致性分析': 'human-machine-review',
+  '知识补全/多源人工验证数据反馈机制/反馈数据闭环': 'human-machine-review',
   '算法仓库/计算类算法': 'algorithm-list',
   '算法任务/部署任务': 'algorithm-tasks',
   '算法任务/训练任务/查看日志': 'algorithm-tasks',
   '图谱应用中心/图谱可视化': 'graph-visualization',
   '图谱应用中心/图谱可视化/分析/路径溯源': 'graph-visualization',
   '图谱应用中心/应用中心': 'app-center',
+  '图谱应用中心/应用中心/文献智能推荐': 'app-center',
+  '图谱应用中心/应用中心/文献智能推荐/检索输入': 'app-center',
+  '图谱应用中心/应用中心/文献智能推荐/检索库': 'app-center',
+  '图谱应用中心/应用中心/文献智能推荐/检索结果': 'app-center',
+  '图谱应用中心/应用中心/文献智能推荐/结果输出': 'app-center',
+  '图谱应用中心/应用中心/文献智能推荐/大模型': 'app-center',
+  '图谱应用/语义搜索/检索输入': 'app-center',
+  '图谱应用/语义搜索/检索库': 'app-center',
+  '图谱应用/语义搜索/检索结果': 'app-center',
+  '图谱应用/语义搜索/结果输出': 'app-center',
+  '图谱应用/语义搜索/大模型': 'app-center',
   '知识图谱构造引擎/知识资产管理/知识搜索': 'knowledge-search',
   '知识图谱构造引擎/知识资产管理/知识搜索/检索输入': 'knowledge-search',
   '知识图谱构造引擎/知识资产管理/知识搜索/检索库': 'knowledge-search',
   '知识图谱构造引擎/知识资产管理/知识搜索/结果输出': 'knowledge-search',
   '知识图谱构造引擎/知识资产管理/知识搜索/文献列表筛选': 'knowledge-search',
   '知识图谱构造引擎/知识资产管理/知识搜索/深入对话': 'knowledge-search',
+  '知识图谱构造引擎/知识资产管理/知识搜索/检索结果': 'knowledge-search',
+  '知识图谱构造引擎/知识资产管理/知识搜索/保存': 'knowledge-search',
+  '知识图谱构造引擎/知识资产管理/知识搜索/多模态反向检索': 'knowledge-search',
+  '知识图谱构造引擎/知识资产管理/知识搜索/跨资源混合检索': 'knowledge-search',
+  '图谱应用/多模态语义检索与路径导航/多模态反向检索': 'knowledge-search',
+  '图谱应用/多模态语义检索与路径导航/跨资源混合检索': 'knowledge-search',
+  '多模态反向检索': 'knowledge-search',
+  '跨资源混合检索': 'knowledge-search',
+  '检索结果': 'knowledge-search',
+  '知识图谱构造引擎/知识资产管理/属性管理': 'property-management',
+  '知识图谱构造引擎/知识资产管理/属性管理/知识校验': 'property-management',
+  '属性管理/知识校验': 'property-management',
+  '知识图谱构造引擎/知识资产管理/属性管理/知识校验/结构校验/Schema约束规则定义': 'schema-constraint-rules',
+  '知识图谱构造引擎/知识资产管理/属性管理/知识校验/结构校验/数据一致性自动扫描': 'data-consistency-scan',
+  '知识图谱构造引擎/知识资产管理/属性管理/知识校验/结构校验/校验结果报告': 'validation-report',
+  'Schema约束规则定义': 'schema-constraint-rules',
+  '数据一致性自动扫描': 'data-consistency-scan',
+  '校验结果报告': 'validation-report',
   '基于置信度图传播的术语排序/交互式审核与采纳': 'interactive-review-adoption',
   '子图生成/概念对共现索引': 'concept-cooccurrence-index',
   '上下位关系生成/批量预测任务': 'hypernym-generation-audit',
@@ -174,6 +244,12 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '知识存储/增量更新': 'graph-tasks',
   '增量更新': 'graph-tasks',
   '图谱增量更新': 'graph-tasks',
+  '图谱任务/变更日志与版本回滚': 'graph-tasks',
+  '变更日志与版本回滚': 'graph-tasks',
+  '知识补全/知识图谱迭代修正/图谱增量更新': 'graph-tasks',
+  '知识补全/知识图谱迭代修正/变更日志与版本回滚': 'graph-tasks',
+  '知识补全/知识图谱迭代修正/已验证知识写入模块': 'verified-knowledge-write',
+  '已验证知识写入模块': 'verified-knowledge-write',
   '图谱融合/逻辑关系构建': 'graph-fusion',
   '图谱融合/模糊关系构建': 'graph-fusion',
   '图谱融合/关系可视化': 'graph-fusion',
@@ -312,9 +388,12 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '图谱类比搜索工具': 'upper-intelligent-tools',
   '科研问题生成工具': 'upper-intelligent-tools',
   '学术海报与音频概览生成/学术海报音频概览自动生成': 'academic-poster',
+  '学术海报与音频概览生成/学术海报生成': 'academic-poster',
+  '学术海报与音频概览生成/音频概览生成': 'academic-poster',
   '学术海报、音频概览自动生成': 'academic-poster',
-  '学术海报与音频概览生成/一键生成笔记': 'academic-poster',
-  '一键生成笔记': 'academic-poster',
+  '知识库/文档阅读器/一键生成笔记': 'literature-reader',
+  '学术海报与音频概览生成/一键生成笔记': 'literature-reader',
+  '一键生成笔记': 'literature-reader',
   '多模态知识图谱相关数据集/数据集构建/数据导入与整合': 'multimodal-dataset',
   '多模态知识图谱相关数据集/数据集构建/可视化构建向导': 'multimodal-dataset',
   '多模态知识图谱相关数据集/数据集构建/数据集版本管理': 'multimodal-dataset',
@@ -402,7 +481,279 @@ export const AUDIT_ALGORITHM_MAP: Record<string, string> = {
   '知识表示学习/编码模型/张量/矩阵分解模型库': 'encoding-model',
   '知识表示学习/编码模型/神经网络模型库': 'encoding-model',
   '知识表示学习/编码模型/模型选择与超参数配置': 'encoding-model',
+  '知识相关性计算/基于监督学习的相似度计算/相似度模型训练': 'supervised-similarity',
+  '知识相关性计算/基于监督学习的相似度计算/模型评估与发布': 'supervised-similarity',
+  '算法管理/算法仓库/知识推理/基于监督学习的相似度计算/相似度模型训练': 'supervised-similarity',
+  '算法管理/算法仓库/知识推理/基于监督学习的相似度计算/模型评估与发布': 'supervised-similarity',
+  '知识相关性计算/快速图节点相似度计算/基于路径的算法': 'node-similarity',
+  '知识相关性计算/快速图节点相似度计算/基于嵌入向量的算法': 'node-similarity',
+  '知识相关性计算/快速图节点相似度计算/实时计算接口': 'node-similarity',
+  '算法管理/算法仓库/知识推理/快速图节点相似度计算/基于路径的算法': 'node-similarity',
+  '算法管理/算法仓库/知识推理/快速图节点相似度计算/基于嵌入向量的算法': 'node-similarity',
+  '算法管理/算法仓库/知识推理/快速图节点相似度计算/实时计算接口': 'node-similarity',
+  '知识相关性计算/语义检索与推荐应用支持/语义检索服务接口': 'semantic-retrieval',
+  '知识相关性计算/语义检索与推荐应用支持/推荐候选集生成接口': 'semantic-retrieval',
+  '算法管理/算法仓库/知识推理/语义检索与推荐应用支持/语义检索服务接口': 'semantic-retrieval',
+  '算法管理/算法仓库/知识推理/语义检索与推荐应用支持/推荐候选集生成接口': 'semantic-retrieval',
 };
+
+export type SemanticRetrievalFocus = 'retrieval' | 'recommendation';
+
+/** 语义检索与推荐应用：检索 API 或推荐 API 聚焦 */
+export function resolveSemanticRetrievalFocus(pagePath: string | undefined): SemanticRetrievalFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('语义检索服务接口')) return 'retrieval';
+  if (path.includes('推荐候选集生成接口')) return 'recommendation';
+  return null;
+}
+
+export type CallLogsFocus = 'semantic-retrieval';
+
+/** 调用日志：语义检索与推荐接口监控聚焦 */
+export function resolveCallLogsFocus(pagePath: string | undefined): CallLogsFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('语义检索与推荐') || path.includes('应用调用监控')) return 'semantic-retrieval';
+  return null;
+}
+
+export type AppCenterFocus =
+  | 'prompt-template'
+  | 'response-parse'
+  | 'input'
+  | 'corpus'
+  | 'results'
+  | 'output'
+  | 'llm-model';
+
+/** 应用中心：提示词模板 / 结果解析 / 文献智能推荐各区域聚焦 */
+export function resolveAppCenterFocus(pagePath: string | undefined): AppCenterFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('大模型') && (path.includes('文献智能推荐') || path.includes('语义搜索'))) return 'llm-model';
+  if (path.includes('提示词工程模板')) return 'prompt-template';
+  if (path.includes('生成结果解析与格式化')) return 'response-parse';
+  if (path.includes('检索输入')) return 'input';
+  if (path.includes('检索库')) return 'corpus';
+  if (path.includes('检索结果')) return 'results';
+  if (path.includes('结果输出')) return 'output';
+  return null;
+}
+
+/** 应用中心：打开对应助手（语义搜索 → 文献智能推荐） */
+export function resolveAppCenterAssistantId(pagePath: string | undefined): string {
+  const path = (pagePath ?? '').trim();
+  if (!path) return 'kg-qa';
+  if (
+    path.includes('文献智能推荐') ||
+    path.includes('语义搜索') ||
+    (path.includes('检索输入') && path.includes('应用中心')) ||
+    (path.includes('检索库') && path.includes('应用中心')) ||
+    (path.includes('检索结果') && path.includes('应用中心')) ||
+    (path.includes('结果输出') && path.includes('应用中心'))
+  ) {
+    return 'paper-recommendation';
+  }
+  return 'kg-qa';
+}
+
+export type RelationReasoningFocus = 'rule' | 'path' | 'review';
+
+/** 关系推理页：规则 / 路径 / 审核队列聚焦 */
+export function resolveRelationReasoningFocus(pagePath: string | undefined): RelationReasoningFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('基于规则的推理')) return 'rule';
+  if (path.includes('基于路径的推理')) return 'path';
+  if (path.includes('推理结果审核')) return 'review';
+  return null;
+}
+
+export type HumanMachineReviewFocus = 'queue' | 'feedback-collection' | 'consensus' | 'feedback-loop';
+
+/** 多源人工验证：审核队列 / 反馈采集 / 一致性分析 / 反馈闭环聚焦 */
+export function resolveHumanMachineReviewFocus(pagePath: string | undefined): HumanMachineReviewFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('反馈数据闭环')) return 'feedback-loop';
+  if (path.includes('审核员一致性分析')) return 'consensus';
+  if (path.includes('反馈数据采集')) return 'feedback-collection';
+  if (path.includes('人机协同审核队列')) return 'queue';
+  return null;
+}
+
+export type KnowledgeSearchFocus =
+  | 'input'
+  | 'corpus'
+  | 'results'
+  | 'output'
+  | 'filter'
+  | 'chat'
+  | 'save'
+  | 'multimodal-reverse'
+  | 'multimodal-hybrid';
+
+/** 知识搜索页：检索输入 / 检索库 / 结果 / 筛选 / 对话等聚焦 */
+export function resolveKnowledgeSearchFocus(pagePath: string | undefined): KnowledgeSearchFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('多模态反向检索')) return 'multimodal-reverse';
+  if (path.includes('跨资源混合检索')) return 'multimodal-hybrid';
+  if (path.includes('检索输入')) return 'input';
+  if (path.includes('检索库')) return 'corpus';
+  if (path.includes('检索结果')) return 'results';
+  if (path.includes('结果输出')) return 'output';
+  if (path.includes('文献列表筛选')) return 'filter';
+  if (path.includes('深入对话')) return 'chat';
+  if (path.includes('/保存') || path.endsWith('保存')) return 'save';
+  return null;
+}
+
+export type PropertyManagementTab =
+  | 'entity'
+  | 'search'
+  | 'add-relation'
+  | 'delete-entity'
+  | 'delete-relation'
+  | 'validation'
+  | 'stats'
+  | 'timeseries';
+
+export type PropertyManagementFocus =
+  | 'fuzzy-search'
+  | 'advanced-query'
+  | 'relation-create'
+  | 'relation-type'
+  | 'relation-attrs'
+  | 'entity-delete'
+  | 'cascade-delete'
+  | 'relation-select'
+  | 'relation-delete-confirm'
+  | 'schema-constraints'
+  | 'consistency-scan'
+  | 'validation-report'
+  | 'value-distribution'
+  | 'outlier-drill'
+  | 'timeseries-curve'
+  | 'anomaly-detect';
+
+/** 属性管理：审计目录跳转到 Tab */
+export function resolvePropertyManagementTab(pagePath: string | undefined): PropertyManagementTab | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('检索设置') || path.includes('实体模糊搜索') || path.includes('高级条件查询')) return 'search';
+  if (path.includes('添加关键词关系') || path.includes('可视化关系') || path.includes('关系类型选择') || path.includes('关系属性编辑')) return 'add-relation';
+  if (path.includes('删除关键词间关系') || path.includes('关系选择与定位') || path.includes('删除操作确认')) return 'delete-relation';
+  if (path.includes('删除关键词') || path.includes('节点选择与删除') || path.includes('级联删除确认')) return 'delete-entity';
+  if (path.includes('Schema约束规则定义')) return null;
+  if (path.includes('数据一致性自动扫描')) return null;
+  if (path.includes('校验结果报告')) return null;
+  if (path.includes('结构校验') || path.includes('Schema约束') || path.includes('一致性自动扫描')) return 'validation';
+  if (path.includes('图谱统计') || path.includes('属性值分布') || path.includes('异常点高亮')) return 'stats';
+  if (path.includes('时序可视化') || path.includes('时序变化曲线') || path.includes('异常变化点')) return 'timeseries';
+  if (path.includes('知识校验') || path.includes('属性管理')) return 'search';
+  return null;
+}
+
+/** 属性管理：子区域聚焦 */
+export function resolvePropertyManagementFocus(pagePath: string | undefined): PropertyManagementFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('实体模糊搜索')) return 'fuzzy-search';
+  if (path.includes('高级条件查询')) return 'advanced-query';
+  if (path.includes('可视化关系创建')) return 'relation-create';
+  if (path.includes('关系类型选择')) return 'relation-type';
+  if (path.includes('关系属性编辑')) return 'relation-attrs';
+  if (path.includes('节点选择与删除')) return 'entity-delete';
+  if (path.includes('级联删除确认')) return 'cascade-delete';
+  if (path.includes('关系选择与定位')) return 'relation-select';
+  if (path.includes('删除操作确认')) return 'relation-delete-confirm';
+  if (path.includes('Schema约束规则定义')) return 'schema-constraints';
+  if (path.includes('数据一致性自动扫描')) return 'consistency-scan';
+  if (path.includes('校验结果报告')) return 'validation-report';
+  if (path.includes('属性值分布分析')) return 'value-distribution';
+  if (path.includes('异常点高亮')) return 'outlier-drill';
+  if (path.includes('属性时序变化曲线')) return 'timeseries-curve';
+  if (path.includes('异常变化点检测')) return 'anomaly-detect';
+  return null;
+}
+
+export type NodeSimilarityFocus = 'path' | 'embedding' | 'api';
+
+/** 快速图节点相似度：路径 / 嵌入 / 统一 API 接口聚焦 */
+export function resolveNodeSimilarityFocus(pagePath: string | undefined): NodeSimilarityFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('基于路径的算法')) return 'path';
+  if (path.includes('基于嵌入向量的算法')) return 'embedding';
+  if (path.includes('实时计算接口')) return 'api';
+  return null;
+}
+
+export type AssociationStrengthFocus = 'normalize' | 'threshold' | 'visualization';
+
+/** 知识图谱看板 · 关联强度量化聚焦 */
+export function resolveAssociationStrengthFocus(pagePath: string | undefined): AssociationStrengthFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('得分归一化')) return 'normalize';
+  if (path.includes('强度等级划分')) return 'threshold';
+  if (path.includes('量化结果可视化')) return 'visualization';
+  return null;
+}
+
+export type DatasetCategoryTab = 'list' | 'confidence' | 'split' | 'annotation';
+
+export type DatasetCategoryFocus = 'version-control';
+
+/** 数据集分类页：审计目录跳转到指定分类 */
+export function resolveDatasetCategoryId(pagePath: string | undefined): string | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('相似度样本标注工具') || path.includes('相似度计算数据集')) {
+    return 'entity-similarity';
+  }
+  if (
+    path.includes('分层置信标注集')
+    || path.includes('数据源置信度评级')
+    || path.includes('标注数据版本控制')
+    || path.includes('数据集构建与划分')
+  ) {
+    return 'entity-extraction';
+  }
+  return null;
+}
+
+/** 数据集分类页：打开指定 Tab */
+export function resolveDatasetCategoryTab(pagePath: string | undefined): DatasetCategoryTab | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('相似度样本标注工具')) return 'annotation';
+  if (path.includes('数据源置信度评级')) return 'confidence';
+  if (path.includes('标注数据版本控制')) return 'list';
+  if (path.includes('数据集构建与划分')) return 'split';
+  return null;
+}
+
+/** 数据集分类页：列表 Tab 内聚焦（如自动展开版本控制） */
+export function resolveDatasetCategoryFocus(pagePath: string | undefined): DatasetCategoryFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('标注数据版本控制')) return 'version-control';
+  return null;
+}
+
+export type SupervisedSimilarityFocus = 'train' | 'evaluate';
+
+/** 监督相似度算法：训练或评估与发布 */
+export function resolveSupervisedSimilarityFocus(pagePath: string | undefined): SupervisedSimilarityFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('相似度模型训练')) return 'train';
+  if (path.includes('模型评估与发布')) return 'evaluate';
+  return null;
+}
 
 export type EncodingModelFocus = 'translation' | 'decomposition' | 'neural' | 'config';
 
@@ -521,11 +872,12 @@ export function resolveLinkAnnotationFocus(pagePath: string | undefined): LinkAn
   return null;
 }
 
-export type LiteratureReaderFocus = 'highlight' | 'popup';
+export type LiteratureReaderFocus = 'highlight' | 'popup' | 'generate-notes';
 
 export function resolveLiteratureReaderFocus(pagePath: string | undefined): LiteratureReaderFocus | null {
   const path = (pagePath ?? '').trim();
   if (!path) return null;
+  if (path.includes('一键生成笔记') || path.includes('智能笔记')) return 'generate-notes';
   if (path.includes('实体信息浮窗')) return 'popup';
   if (path.includes('实体高亮')) return 'highlight';
   return null;
@@ -712,8 +1064,9 @@ export type AcademicPosterTab = 'poster' | 'audio' | 'notes';
 export function resolveAcademicPosterTab(pagePath: string | undefined): AcademicPosterTab | null {
   const path = (pagePath ?? '').trim();
   if (!path) return null;
-  if (path.includes('一键生成笔记') || path.includes('生成笔记')) return 'notes';
-  if (path.includes('学术海报') || path.includes('音频概览')) return 'poster';
+  if (path.includes('音频概览') || path.includes('音频概览生成')) return 'audio';
+  if (path.includes('学术海报') || path.includes('海报生成')) return 'poster';
+  if (path.includes('学术海报音频概览自动生成')) return 'poster';
   return null;
 }
 
@@ -746,16 +1099,16 @@ export function resolveMultimodalDatasetFocus(
   if (path.includes('统计特征')) return 'eval-stats';
   if (path.includes('质量与完整性') || path.includes('完整性报告')) return 'eval-quality';
   if (path.includes('评估基准') || path.includes('基准对比')) return 'eval-benchmark';
+  if (path.includes('表示模型管理与训练') || path.includes('模型管理与训练')) return 'index';
+  if (path.includes('存储与索引') || path.includes('高效数据')) return 'index';
   if (
     path.includes('跨模态表示') ||
     path.includes('统一语义') ||
-    path.includes('表示模型') ||
     path.includes('完备表示')
   ) {
     return 'representation';
   }
   if (path.includes('预处理') || path.includes('对齐工具')) return 'preprocess';
-  if (path.includes('存储与索引') || path.includes('高效数据')) return 'index';
   if (path.includes('版本管理') || path.includes('版本控制')) return 'version';
   if (path.includes('可视化构建') || path.includes('构建向导')) return 'wizard';
   if (path.includes('数据导入') || path.includes('导入与整合')) return 'import';
@@ -834,7 +1187,8 @@ const AUDIT_PAGE_PREFIX: Array<{ prefix: string; pageId: string }> = [
   { prefix: '算法仓库/', pageId: 'algorithm-list' },
   { prefix: '算法任务/', pageId: 'algorithm-tasks' },
   { prefix: '图谱应用中心/图谱可视化', pageId: 'graph-visualization' },
-  { prefix: '图谱应用中心/应用中心', pageId: 'app-center' },
+  { prefix: '图谱应用中心/应用中心/文献智能推荐', pageId: 'app-center' },
+  { prefix: '图谱应用/语义搜索', pageId: 'app-center' },
   { prefix: '知识图谱构造引擎/知识资产管理/知识搜索', pageId: 'knowledge-search' },
   { prefix: '数据概览/属性', pageId: 'kg-ontology' },
   { prefix: '图谱构造引擎/本体管理/概念及属性管理', pageId: 'kg-ontology' },
@@ -848,6 +1202,12 @@ const AUDIT_PAGE_PREFIX: Array<{ prefix: string; pageId: string }> = [
   { prefix: '演化分析', pageId: 'evolution-analysis' },
   { prefix: '垂直领域', pageId: 'vertical-domain-graph' },
   { prefix: '知识库', pageId: 'knowledge-base' },
+  { prefix: '多模态知识图谱相关数据集', pageId: 'multimodal-dataset' },
+  { prefix: '多模态数据集管理', pageId: 'multimodal-dataset' },
+  { prefix: '学术海报与音频概览生成', pageId: 'academic-poster' },
+  { prefix: '知识图谱构造引擎/知识资产管理/属性管理', pageId: 'property-management' },
+  { prefix: '属性管理/知识校验', pageId: 'property-management' },
+  { prefix: '关联强度量化', pageId: 'knowledge-graph-dashboard' },
   { prefix: 'API', pageId: 'api-keys' },
 ];
 
@@ -898,6 +1258,19 @@ export function resolveAuditAlgorithmId(pagePath: string | undefined): string | 
   ) {
     return 'encoding-model';
   }
+  if (path.includes('相似度模型训练') || path.includes('模型评估与发布')) {
+    return 'supervised-similarity';
+  }
+  if (
+    path.includes('基于路径的算法')
+    || path.includes('基于嵌入向量的算法')
+    || path.includes('实时计算接口')
+  ) {
+    return 'node-similarity';
+  }
+  if (path.includes('语义检索服务接口') || path.includes('推荐候选集生成接口')) {
+    return 'semantic-retrieval';
+  }
   return null;
 }
 
@@ -942,6 +1315,19 @@ export function resolveAuditAlgorithmTab(pagePath: string | undefined): AuditAlg
     || path.includes('神经网络模型库')
     || path.includes('模型选择与超参数配置')
   ) {
+    return 'demo';
+  }
+  if (path.includes('相似度模型训练') || path.includes('模型评估与发布')) {
+    return 'demo';
+  }
+  if (
+    path.includes('基于路径的算法')
+    || path.includes('基于嵌入向量的算法')
+    || path.includes('实时计算接口')
+  ) {
+    return 'demo';
+  }
+  if (path.includes('语义检索服务接口') || path.includes('推荐候选集生成接口')) {
     return 'demo';
   }
   return null;
@@ -1031,11 +1417,13 @@ export type GraphTasksDashTabFocus =
   | 'export-rdf'
   | 'export-formats'
   | 'custom-upload'
-  | 'incremental-update';
+  | 'incremental-update'
+  | 'version-rollback';
 
 export function resolveGraphTasksDashTab(pagePath: string | undefined): GraphTasksDashTabFocus | null {
   const path = (pagePath ?? '').trim();
   if (!path) return null;
+  if (path.includes('变更日志') || path.includes('版本回滚')) return 'version-rollback';
   if (path.includes('增量更新') || path.includes('图谱增量更新')) return 'incremental-update';
   if (path.includes('实例生成预览') || path.includes('候选预览')) return 'candidates';
   if (path.includes('任务日志与告警') || path.includes('执行日志')) return 'logs';

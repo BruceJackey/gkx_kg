@@ -326,7 +326,15 @@ function IssueRow({ issue, onReview }: { issue: ScanIssue; onReview: (id: string
   );
 }
 
-export default function DataConsistencyScan({ onNavigateTo }: { onNavigateTo?: (page: string) => void }) {
+export default function DataConsistencyScan({
+  onNavigateTo,
+  pageTitle = '数据一致性自动扫描',
+  pageDescription = '提供后台任务，能够定期或按需扫描全图数据，寻找不一致、不规范的数据，如属性值超出范围、关系不符合定义。',
+}: {
+  onNavigateTo?: (page: string) => void;
+  pageTitle?: string;
+  pageDescription?: string;
+}) {
   const [tasks, setTasks] = useState<ScanTask[]>(MOCK_TASKS);
   const [showModal, setShowModal] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>('scan-20260731-001');
@@ -365,10 +373,10 @@ export default function DataConsistencyScan({ onNavigateTo }: { onNavigateTo?: (
           <div>
             <div className="flex items-center gap-2.5">
               <ShieldCheck className="w-5 h-5 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900">数据一致性扫描</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{pageTitle}</h1>
             </div>
             <p className="text-sm text-gray-500 mt-0.5">
-              定期或按需扫描全图数据，发现属性越界、关系不合规等问题，并推送至人工审核。
+              {pageDescription}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -558,7 +566,7 @@ export default function DataConsistencyScan({ onNavigateTo }: { onNavigateTo?: (
                         ))}
                       </div>
                       {pendingIssues.length > 0 && (
-                        <button onClick={() => onNavigateTo?.('human-review')}
+                        <button onClick={() => onNavigateTo?.('validation-report')}
                           className="text-xs px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors flex items-center gap-1.5">
                           <Eye className="w-3 h-3" />转人工审核（{pendingIssues.length}）
                         </button>

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Network, TrendingUp, Activity, Zap, Settings2, ChevronRight } from 'lucide-react';
+import type { AssociationStrengthFocus } from '../data/auditPageMap';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // ─── Static chart data ────────────────────────────────────────────────────────
@@ -78,7 +79,7 @@ const PAIRS: EntityPair[] = [
     pathCount: 134, avgPathWeight: 0.64,
     dimensions: [
       { name: '共现频次', value: 72 }, { name: '路径强度', value: 65 },
-      { name: '语义相似', value: 70 }, { name: '63图结构', value: 63 },
+      { name: '语义相似', value: 70 }, { name: '图结构', value: 63 },
     ],
   },
   {
@@ -201,15 +202,41 @@ function PercentBar({ value, color, height = 8 }: { value: number; color: string
 
 // ─── Main dashboard ───────────────────────────────────────────────────────────
 
-export function KnowledgeGraphDashboard() {
+const NORM_METHODS = [
+  { id: 'minmax' as const, label: 'Min-Max', desc: '线性映射至 [0, 100]，适合得分区间已知' },
+  { id: 'zscore' as const, label: 'Z-Score', desc: '基于均值与标准差标准化，适合分布近似正态' },
+  { id: 'sigmoid' as const, label: 'Sigmoid', desc: '非线性压缩至 (0, 100)，适合极端值较多的场景' },
+];
+
+interface KnowledgeGraphDashboardProps {
+  initialAssociationFocus?: AssociationStrengthFocus;
+}
+
+export function KnowledgeGraphDashboard({ initialAssociationFocus }: KnowledgeGraphDashboardProps) {
+  const strengthSectionRef = useRef<HTMLDivElement>(null);
   const totalEntities = entityData.reduce((sum, item) => sum + item.value, 0);
   const totalRelations = relationData.reduce((sum, item) => sum + item.value, 0);
 
-  // Association strength state
   const [strongThreshold, setStrongThreshold] = useState(80);
   const [mediumThreshold, setMediumThreshold] = useState(60);
   const [selectedPair, setSelectedPair] = useState<EntityPair>(PAIRS[0]);
   const [showThresholdEditor, setShowThresholdEditor] = useState(false);
+  const [normMethod, setNormMethod] = useState<'minmax' | 'zscore' | 'sigmoid'>('minmax');
+  const [focusHighlight, setFocusHighlight] = useState<AssociationStrengthFocus | null>(null);
+
+  useEffect(() => {
+    if (!initialAssociationFocus) return;
+    setFocusHighlight(initialAssociationFocus);
+    strengthSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (initialAssociationFocus === 'normalize' || initialAssociationFocus === 'threshold') {
+      setShowThresholdEditor(true);
+    }
+    if (initialAssociationFocus === 'visualization') {
+      setSelectedPair(PAIRS[0]);
+    }
+    const t = setTimeout(() => setFocusHighlight(null), 3000);
+    return () => clearTimeout(t);
+  }, [initialAssociationFocus]);
 
   const getScoreColor = (s: number) =>
     s >= strongThreshold ? '#16a34a' : s >= mediumThreshold ? '#f59e0b' : '#ef4444';
@@ -222,7 +249,7 @@ export function KnowledgeGraphDashboard() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-gray-900">知识图谱看板</h2>
-        <p className="text-sm text-gray-600 mt-1">可视化展示知识图谱的规模、质量、增长趋势与实体关联强度</p>
+        <p className="text-sm text-gray-600 mt-1">可视化展示知识图谱的规模、质量、增长趋势与关联强度量化</p>
       </div>
 
       {/* ── Stats ── */}
@@ -247,13 +274,15 @@ export function KnowledgeGraphDashboard() {
         ))}
       </div>
 
-      {/* ── Association Strength Section ── */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {/* Header */}
+      {/* ── Association Strength Quantification ── */}
+      <div
+        ref={strengthSectionRef}
+        className={`bg-white rounded-xl border overflow-hidden transition-shadow ${focusHighlight ? 'border-blue-400 ring-2 ring-blue-100' : 'border-gray-200'}`}
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">实体关联强度分析</h3>
-            <p className="text-xs text-gray-400 mt-0.5">基于共现频次、路径强度、语义相似度与图结构综合量化</p>
+            <h3 className="text-base font-semibold text-gray-900">关联强度量化</h3>
+            <p className="text-xs text-gray-400 mt-0.5">得分归一化 · 强度等级划分 · 仪表盘与百分比条可视化</p>
           </div>
           <button onClick={() => setShowThresholdEditor(v => !v)}
             className={`flex items-center gap-1.5 text-sm px-3 py-2 border rounded-lg transition-colors ${showThresholdEditor ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
@@ -263,7 +292,29 @@ export function KnowledgeGraphDashboard() {
 
         {/* Threshold editor */}
         {showThresholdEditor && (
-          <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
+          <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 space-y-5">
+            <div className={`rounded-xl border p-4 transition-colors ${focusHighlight === 'normalize' ? 'border-indigo-300 bg-indigo-50/50' : 'border-gray-200 bg-white'}`}>
+              <div className="text-xs font-semibold text-gray-700 mb-2">得分归一化方法</div>
+              <p className="text-xs text-gray-500 mb-3">将 PPR、SimRank、余弦相似度等不同算法的原始得分映射到 0–100 统一区间</p>
+              <div className="grid grid-cols-3 gap-2">
+                {NORM_METHODS.map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setNormMethod(m.id)}
+                    className={`text-left p-3 rounded-lg border text-sm transition-colors ${normMethod === m.id ? 'border-indigo-400 bg-indigo-50 text-indigo-900' : 'border-gray-200 hover:border-gray-300'}`}
+                  >
+                    <span className="font-semibold block">{m.label}</span>
+                    <span className="text-[10px] text-gray-500 mt-0.5 leading-snug">{m.desc}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 font-mono">
+                示例：原始得分 0.847 → {normMethod === 'minmax' ? '84.7' : normMethod === 'zscore' ? '76.2' : '82.1'}（归一化后）
+              </div>
+            </div>
+            <div className={`rounded-xl border p-4 transition-colors ${focusHighlight === 'threshold' ? 'border-amber-300 bg-amber-50/50' : 'border-transparent'}`}>
+              <div className="text-xs font-semibold text-gray-700 mb-3">强度等级划分</div>
             <div className="grid grid-cols-3 gap-6 items-end">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -317,11 +368,12 @@ export function KnowledgeGraphDashboard() {
                 <span className="absolute text-[10px] text-gray-400 transform -translate-x-1/2" style={{ left: `${strongThreshold}%` }}>{strongThreshold}</span>
               </div>
             </div>
+            </div>
           </div>
         )}
 
         {/* Main content: gauge + list */}
-        <div className="grid grid-cols-5 divide-x divide-gray-100">
+        <div className={`grid grid-cols-5 divide-x divide-gray-100 transition-colors ${focusHighlight === 'visualization' ? 'bg-blue-50/30' : ''}`}>
           {/* Left: pair list */}
           <div className="col-span-3 divide-y divide-gray-100">
             {PAIRS.map(pair => {

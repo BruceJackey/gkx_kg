@@ -7,6 +7,7 @@ import {
   ZoomIn, ZoomOut, Maximize2, X, CornerDownLeft,
   TrendingUp, SlidersHorizontal, FileText, BookOpen, Link2,
 } from 'lucide-react';
+import type { AppCenterFocus } from '../data/auditPageMap';
 
 // ─── Assistant definitions ────────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ const ASSISTANTS: Assistant[] = [
     icon: MessageSquare, color: 'text-blue-600', bgColor: 'bg-blue-50',
     placeholder: '按下方模板构建问题，或直接输入，例如："Transformer 在知识图谱中的作用是什么？"',
     promptTemplates: [
+      { label: '三元组查询转换', pattern: '基于以下三元组查询生成自然语言问题并回答：\n(?, 研究方向, 知识图谱)\n(清华大学, 就职于, ?)\n请将上述 SPARQL 风格三元组转换为高质量提示词，并从图谱检索答案', hint: '将结构化三元组查询转换为自然语言提示词，提升大模型回答精度' },
       { label: '实体属性查询', pattern: '请介绍[实体名称]的基本信息，重点说明[属性A]、[属性B]，以及它在[所属领域]中的学术地位', hint: '明确实体名称和关注属性，可避免答案过于宽泛' },
       { label: '概念对比分析', pattern: '请比较[概念A]与[概念B]的核心区别与联系，从[技术原理]和[应用场景]两个维度展开', hint: '对比式问题比单独查询更能暴露两个概念的本质差异' },
       { label: '时序发展脉络', pattern: '[技术/领域]在近[N]年经历了哪些关键进展？请按时间线梳理，并指出当前最受关注的分支方向', hint: '加入时间范围约束，引导助手聚焦近期动态而非历史综述' },
@@ -107,6 +109,36 @@ const CATEGORY_COLORS: Record<string, string> = {
   '分析': 'bg-green-100 text-green-700', '推理': 'bg-orange-100 text-orange-700',
   '决策': 'bg-rose-100 text-rose-700', '校验': 'bg-teal-100 text-teal-700',
 };
+
+const PAPER_LLM_MODELS = [
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
+  { id: 'claude-35', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
+  { id: 'qwen-max', name: '通义千问 Max', provider: '阿里云' },
+  { id: 'deepseek-v3', name: 'DeepSeek V3', provider: 'DeepSeek' },
+];
+
+const DEMO_PAPER_QUERY = '推荐关于知识图谱 Transformer 嵌入的高引论文，近5年，按引用量降序';
+const DEMO_PAPER_RESULTS = `语义检索完成，共匹配 **42 篇**相关文献（1.5亿+ 文献库），按相关度与引用量综合排序，展示前 5 篇：
+
+1. **基于Transformer的知识图谱嵌入方法研究** — IEEE TKDE 2024 · IF 8.9 · 引用 142
+2. **Large Language Models for Scientific Knowledge Extraction** — NeurIPS 2024 · IF 12.4 · 引用 389
+3. **面向科研领域的知识图谱构建与应用综述** — ACM SIGKDD 2023 · IF 7.2 · 引用 256
+4. **Graph Neural Networks for Biomedical Knowledge Discovery** — Nature 2024 · IF 69.5 · 引用 1203
+5. **Multimodal Knowledge Graphs for Scientific Discovery** — KDD 2023 · 引用 178
+
+可在下方证据列表中查看原文片段，或继续追问以缩小范围。`;
+const DEMO_PAPER_OUTPUT = `**AI 文献概括**（已索引至对应文献条目）
+
+**主题：知识图谱 Transformer 嵌入**
+
+近三年该方向的核心进展：Transformer 自注意力机制逐步取代 TransE 类平移模型，成为知识图谱嵌入的主流架构。TKGEmbed（IEEE TKDE 2024）提出关系感知位置编码，在 FB15k-237 上 MRR 提升 4.2%；BERT-KG（ACL 2023）将预训练语言模型与图谱结构联合建模，显著改善长尾关系预测。
+
+**可索引摘要片段：**
+- 论文 #1：关系感知位置编码策略为后续 KG+LLM 融合奠定基础
+- 论文 #2：指令微调模型在科学 IE 任务上 F1 领先微调基线 11%
+- 论文 #5：跨模态检索 NDCG@10 提升 5.8%，支持图文联合语义检索
+
+概括内容已写入各文献 AI 摘要字段，可在知识库中直接检索。`;
 
 // ─── KG Entity & Graph types ──────────────────────────────────────────────────
 
@@ -243,6 +275,7 @@ const DEFAULT_GRAPH: EvidenceGraph = {
 interface Message {
   id: string; role: 'user' | 'assistant'; content: string;
   entities?: string[]; // detected KG entities in this message
+  parsedTriples?: { subject: string; predicate: string; object: string; confidence: number }[];
   evidences?: EvidenceItem[];
 }
 interface Conversation { id: string; assistantId: string; title: string; messages: Message[]; createdAt: Date; }
@@ -359,8 +392,26 @@ function detectEntities(text: string): string[] {
   return KG_ENTITIES.filter(e => text.includes(e.name)).map(e => e.name);
 }
 
-function generateResponse(assistantId: string, question: string): string {
+function parseStructuredTriples(content: string, entities: string[]): Message['parsedTriples'] {
+  if (entities.length === 0) return undefined;
+  const triples: NonNullable<Message['parsedTriples']> = [];
+  if (content.includes('Transformer') && content.includes('知识图谱')) {
+    triples.push({ subject: 'Transformer', predicate: '应用于', object: '知识图谱嵌入', confidence: 0.94 });
+    triples.push({ subject: 'TKGEmbed', predicate: '发表期刊', object: 'IEEE TKDE', confidence: 0.91 });
+  }
+  if (content.includes('KG+LLM') || content.includes('大语言模型')) {
+    triples.push({ subject: '知识图谱', predicate: '融合', object: '大语言模型', confidence: 0.93 });
+    triples.push({ subject: 'KG+LLM', predicate: '研究热点', object: '知识补全', confidence: 0.88 });
+  }
+  if (triples.length === 0 && entities.length >= 2) {
+    triples.push({ subject: entities[0], predicate: '关联', object: entities[1], confidence: 0.82 });
+  }
+  return triples.length > 0 ? triples : undefined;
+}
+
+function generateResponse(assistantId: string, question: string, llmModelId?: string): string {
   const q = question.toLowerCase();
+  const modelName = PAPER_LLM_MODELS.find(m => m.id === llmModelId)?.name ?? 'GPT-4o';
   switch (assistantId) {
     case 'kg-qa':
       if (q.includes('transformer') || q.includes('嵌入')) return 'Transformer架构在知识图谱嵌入中已成为主流方法。代表性工作包括 TKGEmbed（IEEE TKDE 2024）、BERT-KG（ACL 2023）等，利用多头自注意力机制聚合实体邻居信息，相比传统 TransE 方法在 MRR 指标上平均提升7-12%。\n\n关键进展：\n• 关系感知位置编码成为重要方向\n• 多跳推理能力显著提升\n• 与大语言模型的融合（KG+LLM）是当前热点';
@@ -374,6 +425,11 @@ function generateResponse(assistantId: string, question: string): string {
       return `决策建议报告\n\n推荐研究方向（综合竞争力评分）\n1. KG+LLM 融合 — 评分 9.2/10，发文增长率 +67%\n2. 时序知识图谱 — 评分 8.7/10，应用场景广泛\n3. 多模态图谱 — 评分 8.3/10，交叉融合机会大\n\n核心依据：引用增长率、顶会接受率、产业应用需求三项综合评估。建议优先布局 KG+LLM 方向，同时关注时序知识图谱的跨领域应用。`;
     case 'knowledge-validation':
       return `图谱校验报告\n\n检测结果摘要\n• 正常节点：6,204 个\n• 警告（属性缺失）：89 个\n• 异常（孤立节点/关系错误）：12 个\n\n主要问题：\n1. 12个实体缺少必填属性（birth_date / founded）\n2. 5条关系的目标实体不存在于图谱中\n3. 3个节点疑似重复（相似度 > 95%）\n\n点击确认即可执行自动修复。`;
+    case 'paper-recommendation':
+      if (q.includes('推荐') || q.includes('论文') || q.includes('文献')) {
+        return `使用 **${modelName}** 完成语义检索，共匹配 **42 篇**文献（1.5亿+ 库），展示前 5 篇：\n\n1. 基于Transformer的知识图谱嵌入方法研究 — IEEE TKDE 2024 · 引用 142\n2. Large Language Models for Scientific Knowledge Extraction — NeurIPS 2024 · 引用 389\n3. 面向科研领域的知识图谱构建与应用综述 — ACM SIGKDD 2023 · 引用 256\n4. Graph Neural Networks for Biomedical Knowledge Discovery — Nature 2024 · 引用 1203\n5. Multimodal Knowledge Graphs for Scientific Discovery — KDD 2023 · 引用 178`;
+      }
+      return `基于 **${modelName}** 与 1.5亿+ 文献库的语义检索，关于「${question}」共找到 42 篇相关文献。请说明发表年份、期刊等级或引用量等约束，以获得更精准的推荐列表。`;
     default:
       return `基于图谱数据，关于"${question}"的分析：\n\n已检索到相关实体 156个，关系路径 423条。如需具体维度的深入分析，请继续提问。`;
   }
@@ -1186,7 +1242,15 @@ function KGPanel({
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export function ApplicationCenter() {
+interface ApplicationCenterProps {
+  initialAssistantId?: string;
+  initialFocus?: AppCenterFocus;
+}
+
+const DEMO_PARSE_QUESTION = 'Transformer 在知识图谱嵌入中有什么作用？请基于图谱回答。';
+const DEMO_PARSE_ANSWER = 'Transformer架构在知识图谱嵌入中已成为主流方法。代表性工作包括 TKGEmbed（IEEE TKDE 2024）、BERT-KG（ACL 2023）等，利用多头自注意力机制聚合实体邻居信息，相比传统 TransE 方法在 MRR 指标上平均提升7-12%。\n\n关键进展：\n• 关系感知位置编码成为重要方向\n• 多跳推理能力显著提升\n• 与大语言模型的融合（KG+LLM）是当前热点';
+
+export function ApplicationCenter({ initialAssistantId, initialFocus }: ApplicationCenterProps) {
   const [view, setView] = useState<'home' | 'configure' | 'chat'>('home');
   const [orchNodes, setOrchNodes] = useState<OrcheNode[]>([]);
   const [activeAssistant, setActiveAssistant] = useState<Assistant | null>(null);
@@ -1197,8 +1261,82 @@ export function ApplicationCenter() {
   const [loading, setLoading] = useState(false);
   const [kgPanelOpen, setKgPanelOpen] = useState(false);
   const [hoveredEntity, setHoveredEntity] = useState<string | null>(null);
+  const [selectedPaperModel, setSelectedPaperModel] = useState(PAPER_LLM_MODELS[0].id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const paperFocusRing = (focus: AppCenterFocus) =>
+    initialFocus === focus ? 'ring-2 ring-cyan-300 ring-offset-1 rounded-lg' : '';
+
+  useEffect(() => {
+    if (!initialAssistantId && !initialFocus) return;
+    const assistant = ASSISTANTS.find(a => a.id === (initialAssistantId ?? 'kg-qa')) ?? ASSISTANTS[0];
+    setActiveAssistant(assistant);
+    if (initialFocus === 'response-parse') {
+      const entities = detectEntities(DEMO_PARSE_ANSWER);
+      const parsedTriples = parseStructuredTriples(DEMO_PARSE_ANSWER, entities);
+      setMessages([
+        { id: uid(), role: 'user', content: DEMO_PARSE_QUESTION, entities: [] },
+        {
+          id: uid(),
+          role: 'assistant',
+          content: DEMO_PARSE_ANSWER,
+          entities,
+          parsedTriples,
+          evidences: pickEvidences(assistant.id, DEMO_PARSE_QUESTION),
+        },
+      ]);
+      setKgPanelOpen(true);
+    } else if (assistant.id === 'paper-recommendation' && initialFocus === 'results') {
+      setMessages([
+        { id: uid(), role: 'user', content: DEMO_PAPER_QUERY, entities: [] },
+        {
+          id: uid(),
+          role: 'assistant',
+          content: DEMO_PAPER_RESULTS,
+          entities: [],
+          evidences: pickEvidences('paper-recommendation', DEMO_PAPER_QUERY),
+        },
+      ]);
+      setKgPanelOpen(false);
+    } else if (assistant.id === 'paper-recommendation' && initialFocus === 'output') {
+      setMessages([
+        { id: uid(), role: 'user', content: DEMO_PAPER_QUERY, entities: [] },
+        {
+          id: uid(),
+          role: 'assistant',
+          content: DEMO_PAPER_OUTPUT,
+          entities: detectEntities(DEMO_PAPER_OUTPUT),
+          evidences: pickEvidences('paper-recommendation', DEMO_PAPER_QUERY),
+        },
+      ]);
+      setKgPanelOpen(false);
+    } else {
+      setMessages([{
+        id: uid(),
+        role: 'assistant',
+        content: `你好！我是${assistant.name}。${assistant.description}\n\n您可以直接提问，也可以选择下方的**提示词工程模板**（含三元组查询转换），填入具体参数后发送，往往能获得更准确的回答。`,
+        entities: [],
+      }]);
+    }
+    setView('chat');
+  }, [initialAssistantId, initialFocus]);
+
+  useEffect(() => {
+    if (!initialFocus || view !== 'chat') return;
+    const targetId =
+      initialFocus === 'input' ? 'app-paper-input'
+      : initialFocus === 'corpus' ? 'app-paper-corpus'
+      : initialFocus === 'results' ? 'app-paper-results'
+      : initialFocus === 'output' ? 'app-paper-output'
+      : initialFocus === 'llm-model' ? 'app-paper-llm-model'
+      : null;
+    if (!targetId) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [initialFocus, view]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1246,10 +1384,11 @@ export function ApplicationCenter() {
     setInput('');
     setLoading(true);
     setTimeout(() => {
-      const content = generateResponse(activeAssistant.id, userMsg.content);
+      const content = generateResponse(activeAssistant.id, userMsg.content, selectedPaperModel);
       const entities = detectEntities(content);
+      const parsedTriples = parseStructuredTriples(content, entities);
       const evidences = pickEvidences(activeAssistant.id, userMsg.content);
-      const reply: Message = { id: uid(), role: 'assistant', content, entities, evidences };
+      const reply: Message = { id: uid(), role: 'assistant', content, entities, parsedTriples, evidences };
       const final = [...next, reply];
       setMessages(final);
       setLoading(false);
@@ -1412,6 +1551,31 @@ export function ApplicationCenter() {
                 </div>
               </div>
 
+              {activeAssistant.id === 'paper-recommendation' && (
+                <div className="px-5 py-2.5 bg-cyan-50/70 border-b border-cyan-100 flex flex-wrap items-center gap-4 flex-shrink-0">
+                  <div id="app-paper-corpus" className={`flex items-center gap-2 ${paperFocusRing('corpus')}`}>
+                    <BookOpen size={14} className="text-cyan-600" />
+                    <span className="text-xs text-cyan-900">
+                      检索库 · <strong className="font-semibold">1.5亿+</strong> 篇文献/专利
+                    </span>
+                  </div>
+                  <div id="app-paper-llm-model" className={`flex items-center gap-2 ${paperFocusRing('llm-model')}`}>
+                    <Bot size={14} className="text-cyan-600" />
+                    <span className="text-xs text-gray-600">大模型</span>
+                    <select
+                      value={selectedPaperModel}
+                      onChange={e => setSelectedPaperModel(e.target.value)}
+                      className="text-xs border border-cyan-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-cyan-400"
+                    >
+                      {PAPER_LLM_MODELS.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}（{m.provider}）</option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-gray-400">{PAPER_LLM_MODELS.length} 种可选</span>
+                  </div>
+                </div>
+              )}
+
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4 min-h-0">
                 {messages.map(msg => (
@@ -1421,7 +1585,9 @@ export function ApplicationCenter() {
                         ? <activeAssistant.icon className={`w-4 h-4 ${activeAssistant.color}`} />
                         : <User className="w-4 h-4 text-gray-500" />}
                     </div>
-                    <div className={`max-w-[78%] text-sm leading-relaxed rounded-2xl px-4 py-3 ${msg.role === 'assistant' ? 'bg-white border border-gray-200 text-gray-700' : 'bg-blue-600 text-white'}`}>
+                    <div className={`max-w-[78%] text-sm leading-relaxed rounded-2xl px-4 py-3 ${msg.role === 'assistant' ? 'bg-white border border-gray-200 text-gray-700' : 'bg-blue-600 text-white'} ${msg.role === 'assistant' && initialFocus === 'output' && msg.content === DEMO_PAPER_OUTPUT ? paperFocusRing('output') : ''}`}
+                      id={msg.role === 'assistant' && initialFocus === 'results' && msg.content === DEMO_PAPER_RESULTS ? 'app-paper-results' : msg.role === 'assistant' && initialFocus === 'output' && msg.content === DEMO_PAPER_OUTPUT ? 'app-paper-output' : undefined}
+                    >
                       {msg.role === 'assistant' && (msg.entities?.length ?? 0) > 0 ? (
                         <HighlightedText
                           text={msg.content}
@@ -1434,6 +1600,7 @@ export function ApplicationCenter() {
                       {/* Entity chips below assistant message */}
                       {msg.role === 'assistant' && (msg.entities?.length ?? 0) > 0 && (
                         <div className="flex flex-wrap gap-1 mt-3 pt-2.5 border-t border-gray-100">
+                          <span className="text-[10px] text-gray-400 w-full mb-0.5">结构化实体解析</span>
                           {msg.entities!.map(name => {
                             const entity = KG_ENTITIES.find(e => e.name === name);
                             return (
@@ -1448,6 +1615,28 @@ export function ApplicationCenter() {
                             );
                           })}
                           <span className="text-[10px] text-gray-400 self-center ml-1">点击实体可继续追问</span>
+                        </div>
+                      )}
+                      {msg.role === 'assistant' && (msg.parsedTriples?.length ?? 0) > 0 && (
+                        <div className="mt-3 pt-2.5 border-t border-gray-100">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Link2 className="w-3.5 h-3.5 text-teal-600" />
+                            <span className="text-[10px] font-semibold text-gray-600">生成结果解析与格式化</span>
+                            <span className="text-[10px] text-gray-400">— 从自然语言回复提取结构化三元组</span>
+                          </div>
+                          <div className="rounded-lg border border-teal-100 bg-teal-50/50 overflow-hidden">
+                            <div className="grid grid-cols-[1fr_auto_1fr_56px] gap-1 px-2.5 py-1.5 bg-teal-100/60 text-[10px] font-medium text-teal-800">
+                              <span>主体</span><span>谓词</span><span>客体</span><span>置信度</span>
+                            </div>
+                            {msg.parsedTriples!.map((t, i) => (
+                              <div key={i} className="grid grid-cols-[1fr_auto_1fr_56px] gap-1 px-2.5 py-1.5 text-[11px] border-t border-teal-100 items-center">
+                                <span className="font-medium text-gray-800 truncate">{t.subject}</span>
+                                <span className="text-teal-700 font-medium px-1">{t.predicate}</span>
+                                <span className="font-medium text-gray-800 truncate">{t.object}</span>
+                                <span className="text-gray-500 font-mono text-[10px]">{(t.confidence * 100).toFixed(0)}%</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                       {msg.role === 'assistant' && (msg.evidences?.length ?? 0) > 0 && (
@@ -1469,8 +1658,13 @@ export function ApplicationCenter() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {messages.length <= 1 && (
+              {(messages.length <= 1 || initialFocus === 'prompt-template' || initialFocus === 'input') && (
                 <div className="px-5 pb-3 flex-shrink-0 border-t border-gray-100 pt-3">
+                  {initialFocus === 'prompt-template' && (
+                    <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      提示词工程模板：选择下方模板，将三元组查询或实体参数填入 <span className="font-mono bg-white px-1 rounded">[占位符]</span> 后发送
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 mb-2.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                     <span className="text-xs font-semibold text-gray-700">提示词工程模板</span>
@@ -1501,7 +1695,7 @@ export function ApplicationCenter() {
               )}
 
               {/* Input */}
-              <div className="px-5 pb-5 flex-shrink-0">
+              <div id="app-paper-input" className={`px-5 pb-5 flex-shrink-0 ${activeAssistant.id === 'paper-recommendation' ? paperFocusRing('input') : ''}`}>
                 <div className="flex gap-2 bg-white border border-gray-200 rounded-2xl px-4 py-3 focus-within:border-blue-400 focus-within:shadow-sm transition-all">
                   <textarea
                     ref={inputRef}

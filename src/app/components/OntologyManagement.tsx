@@ -770,12 +770,13 @@ function EntityPropertyPanel({
   );
 }
 
-function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps }: {
+function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps, hideSparkles = false }: {
   entity: OntoEntity;
   onUpdate: (e: OntoEntity) => void;
   onDelete: () => void;
   onSparkles: () => void;
   inheritedProps?: OntoProp[];
+  hideSparkles?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -820,9 +821,11 @@ function EntityCard({ entity, onUpdate, onDelete, onSparkles, inheritedProps }: 
               </div>
               <div className="text-xs text-gray-400 mt-0.5">{entity.props.length} 个自有属性{inheritedProps && inheritedProps.length > 0 ? ` + ${inheritedProps.length} 个继承属性` : ''}</div>
             </div>
-            <button onClick={onSparkles} className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors" title="概念预测">
-              <Sparkles size={15} />
-            </button>
+            {!hideSparkles && (
+              <button onClick={onSparkles} className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg transition-colors" title="概念预测">
+                <Sparkles size={15} />
+              </button>
+            )}
             <button onClick={() => { setEditing(true); setEditName(entity.name); setEditEnId(entity.enId); setEditDesc(entity.description); }} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors">
               <Edit2 size={15} />
             </button>
@@ -1171,7 +1174,14 @@ function OntologyExportPanel({ ontology, highlightModel }: { ontology: Ontology;
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function OntologyManagement({ initialModelFocus }: { initialModelFocus?: 'rdf' | 'rdfs' | 'owl' } = {}) {
+export default function OntologyManagement({
+  initialModelFocus,
+  variant = 'default',
+}: {
+  initialModelFocus?: 'rdf' | 'rdfs' | 'owl';
+  variant?: 'default' | 'schema-constraints';
+} = {}) {
+  const schemaConstraintsMode = variant === 'schema-constraints';
   const [ontologies, setOntologies] = useState<Ontology[]>(MOCK_ONTOLOGIES);
   const [selectedId, setSelectedId] = useState('o1');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -1295,6 +1305,7 @@ export default function OntologyManagement({ initialModelFocus }: { initialModel
           {saveStatus === 'saving' ? '保存中...' : saveStatus === 'saved' ? '已保存' : '保存修改'}
         </button>
         {/* Export dropdown */}
+        {!schemaConstraintsMode && (
         <div className="relative" ref={exportMenuRef}>
           <button
             onClick={() => setShowExportMenu(v => !v)}
@@ -1326,6 +1337,7 @@ export default function OntologyManagement({ initialModelFocus }: { initialModel
             </div>
           )}
         </div>
+        )}
         <button onClick={() => setShowDeleteModal(true)} className="text-sm px-4 py-2 border border-red-200 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5">
           <Trash2 size={14} /> 删除
         </button>
@@ -1335,10 +1347,18 @@ export default function OntologyManagement({ initialModelFocus }: { initialModel
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Import & Export */}
+          {!schemaConstraintsMode && (
           <div id="onto-io" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <FileUploadPanel highlightType={initialModelFocus} />
             <OntologyExportPanel ontology={current} highlightModel={initialModelFocus} />
           </div>
+          )}
+
+          {schemaConstraintsMode && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-800">
+              在本体编辑器中为各实体属性定义<strong className="mx-1">值域、基数限制、数据类型</strong>等 Schema 约束，供后续一致性扫描引擎校验全图数据。
+            </div>
+          )}
 
           {/* Basic Info */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
@@ -1384,6 +1404,7 @@ export default function OntologyManagement({ initialModelFocus }: { initialModel
                     onUpdate={ne => updateEntity(i, ne)}
                     onDelete={() => deleteEntity(i)}
                     onSparkles={() => setDrawerEntity(e)}
+                    hideSparkles={schemaConstraintsMode}
                     inheritedProps={inheritedProps.length > 0 ? inheritedProps : undefined}
                   />
                 );
@@ -1399,6 +1420,7 @@ export default function OntologyManagement({ initialModelFocus }: { initialModel
                 <Plus size={14} /> 新增关系类型
               </button>
             </div>
+            {!schemaConstraintsMode && (
             <HypernymPredictionPanel
               entities={current.entities}
               onAdopt={(rel) => {
@@ -1406,6 +1428,7 @@ export default function OntologyManagement({ initialModelFocus }: { initialModel
                 updateCurrent({ ...current, relations: [...current.relations, r] });
               }}
             />
+            )}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -1480,7 +1503,7 @@ export default function OntologyManagement({ initialModelFocus }: { initialModel
         </div>
 
         {/* Drawer */}
-        {drawerEntity && (
+        {drawerEntity && !schemaConstraintsMode && (
           <ConceptPredictionDrawer entity={drawerEntity} onClose={() => setDrawerEntity(null)} />
         )}
       </div>

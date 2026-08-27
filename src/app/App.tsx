@@ -23,6 +23,10 @@ import LiteratureProcessing from './components/LiteratureProcessing';
 import LiteratureReader from './components/LiteratureReader';
 import RelationAnalysis from './components/RelationAnalysis';
 import InferencePrediction from './components/InferencePrediction';
+import RelationReasoningPage from './components/RelationReasoningPage';
+import HumanMachineReviewPage from './components/HumanMachineReviewPage';
+import VerifiedKnowledgeWritePage from './components/VerifiedKnowledgeWritePage';
+import LlmApiIntegrationPage from './components/LlmApiIntegrationPage';
 import DecisionSupport from './components/DecisionSupport';
 import KnowledgeValidation from './components/KnowledgeValidation';
 import AcademicPoster from './components/AcademicPoster';
@@ -80,6 +84,9 @@ import GraphConstruction from './components/GraphConstruction';
 import GraphTasks from './components/GraphTasks';
 import GraphFusion from './components/GraphFusion';
 import PropertyManagement from './components/PropertyManagement';
+import SchemaConstraintRulesPage from './components/SchemaConstraintRulesPage';
+import DataConsistencyScan from './components/DataConsistencyScan';
+import ValidationReportPage from './components/ValidationReportPage';
 import HumanReview from './components/HumanReview';
 import { AuditFeaturePage } from './components/AuditFeaturePage';
 import type { AuditFeatureSelection } from './data/auditCatalogTypes';
@@ -109,6 +116,21 @@ import {
   resolveRepresentationSpaceFocus,
   resolveScoringFunctionFocus,
   resolveEncodingModelFocus,
+  resolveSupervisedSimilarityFocus,
+  resolveNodeSimilarityFocus,
+  resolveSemanticRetrievalFocus,
+  resolveCallLogsFocus,
+  resolveRelationReasoningFocus,
+  resolveHumanMachineReviewFocus,
+  resolveKnowledgeSearchFocus,
+  resolvePropertyManagementTab,
+  resolvePropertyManagementFocus,
+  resolveAppCenterFocus,
+  resolveAppCenterAssistantId,
+  resolveAssociationStrengthFocus,
+  resolveDatasetCategoryId,
+  resolveDatasetCategoryTab,
+  resolveDatasetCategoryFocus,
   resolveTemporalAuditMode,
   resolveLiteratureParseFocus,
   resolvePatentParseFocus,
@@ -168,6 +190,19 @@ import {
   type RepresentationSpaceFocus,
   type ScoringFunctionFocus,
   type EncodingModelFocus,
+  type SupervisedSimilarityFocus,
+  type NodeSimilarityFocus,
+  type SemanticRetrievalFocus,
+  type CallLogsFocus,
+  type RelationReasoningFocus,
+  type HumanMachineReviewFocus,
+  type KnowledgeSearchFocus,
+  type PropertyManagementTab,
+  type PropertyManagementFocus,
+  type AppCenterFocus,
+  type AssociationStrengthFocus,
+  type DatasetCategoryTab,
+  type DatasetCategoryFocus,
 } from './data/auditPageMap';
 
 function Placeholder({ title, desc }: { title: string; desc: string }) {
@@ -223,6 +258,7 @@ export default function App() {
   const [standardApiTab, setStandardApiTab] = useState<StandardApiTab | null>(null);
   const [upperToolTab, setUpperToolTab] = useState<UpperToolTab | null>(null);
   const [academicPosterTab, setAcademicPosterTab] = useState<AcademicPosterTab | null>(null);
+  const [academicPosterDocId, setAcademicPosterDocId] = useState<string | null>(null);
   const [multimodalBuildFocus, setMultimodalBuildFocus] = useState<MultimodalDatasetFocus | null>(null);
   const [graphFusionFocus, setGraphFusionFocus] = useState<GraphFusionFocus | null>(null);
   const [entityLinkJudgmentFocus, setEntityLinkJudgmentFocus] = useState<EntityLinkJudgmentFocus | null>(null);
@@ -236,6 +272,20 @@ export default function App() {
   const [representationSpaceFocus, setRepresentationSpaceFocus] = useState<RepresentationSpaceFocus | null>(null);
   const [scoringFunctionFocus, setScoringFunctionFocus] = useState<ScoringFunctionFocus | null>(null);
   const [encodingModelFocus, setEncodingModelFocus] = useState<EncodingModelFocus | null>(null);
+  const [supervisedSimilarityFocus, setSupervisedSimilarityFocus] = useState<SupervisedSimilarityFocus | null>(null);
+  const [nodeSimilarityFocus, setNodeSimilarityFocus] = useState<NodeSimilarityFocus | null>(null);
+  const [semanticRetrievalFocus, setSemanticRetrievalFocus] = useState<SemanticRetrievalFocus | null>(null);
+  const [callLogsFocus, setCallLogsFocus] = useState<CallLogsFocus | null>(null);
+  const [relationReasoningFocus, setRelationReasoningFocus] = useState<RelationReasoningFocus | null>(null);
+  const [humanMachineReviewFocus, setHumanMachineReviewFocus] = useState<HumanMachineReviewFocus | null>(null);
+  const [knowledgeSearchFocus, setKnowledgeSearchFocus] = useState<KnowledgeSearchFocus | null>(null);
+  const [propertyManagementTab, setPropertyManagementTab] = useState<PropertyManagementTab | null>(null);
+  const [propertyManagementFocus, setPropertyManagementFocus] = useState<PropertyManagementFocus | null>(null);
+  const [appCenterFocus, setAppCenterFocus] = useState<AppCenterFocus | null>(null);
+  const [appCenterAssistantId, setAppCenterAssistantId] = useState<string | null>(null);
+  const [associationStrengthFocus, setAssociationStrengthFocus] = useState<AssociationStrengthFocus | null>(null);
+  const [datasetCategoryTab, setDatasetCategoryTab] = useState<DatasetCategoryTab | null>(null);
+  const [datasetCategoryFocus, setDatasetCategoryFocus] = useState<DatasetCategoryFocus | null>(null);
 
   const resolveDataSourceView = (pagePath: string): DSMode => {
     if (pagePath.includes('外部词典导入')) return 'lexicon';
@@ -275,6 +325,7 @@ export default function App() {
     setStandardApiTab(null);
     setUpperToolTab(null);
     setAcademicPosterTab(null);
+    setAcademicPosterDocId(null);
     setMultimodalBuildFocus(null);
     setGraphFusionFocus(null);
     setEntityLinkJudgmentFocus(null);
@@ -288,11 +339,41 @@ export default function App() {
     setRepresentationSpaceFocus(null);
     setScoringFunctionFocus(null);
     setEncodingModelFocus(null);
+    setSupervisedSimilarityFocus(null);
+    setNodeSimilarityFocus(null);
+    setSemanticRetrievalFocus(null);
+    setCallLogsFocus(null);
+    setRelationReasoningFocus(null);
+    setHumanMachineReviewFocus(null);
+    setKnowledgeSearchFocus(null);
+    setPropertyManagementTab(null);
+    setPropertyManagementFocus(null);
+    setAppCenterFocus(null);
+    setAppCenterAssistantId(null);
+    setAssociationStrengthFocus(null);
+    setDatasetCategoryTab(null);
+    setDatasetCategoryFocus(null);
   };
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, options?: {
+    docId?: string;
+    literatureReaderFocus?: LiteratureReaderFocus;
+    academicPosterTab?: AcademicPosterTab;
+  }) => {
     if (page === 'kg-datasource') setDataSourceView('structured');
     if (page !== 'algorithm-detail') clearAlgorithmExtras();
+    setCallLogsFocus(null);
+    setRelationReasoningFocus(null);
+    setHumanMachineReviewFocus(null);
+    setKnowledgeSearchFocus(null);
+    setPropertyManagementTab(null);
+    setPropertyManagementFocus(null);
+    setAppCenterFocus(null);
+    setAppCenterAssistantId(null);
+    setMultimodalBuildFocus(null);
+    setLiteratureReaderFocus(options?.literatureReaderFocus ?? null);
+    setAcademicPosterTab(options?.academicPosterTab ?? null);
+    setAcademicPosterDocId(options?.docId ?? null);
     setCurrentPage(page);
   };
 
@@ -383,6 +464,21 @@ export default function App() {
           ? resolveEncodingModelFocus(feature.pagePath)
           : null,
       );
+      setSupervisedSimilarityFocus(
+        algorithmId === 'supervised-similarity'
+          ? resolveSupervisedSimilarityFocus(feature.pagePath)
+          : null,
+      );
+      setNodeSimilarityFocus(
+        algorithmId === 'node-similarity'
+          ? resolveNodeSimilarityFocus(feature.pagePath)
+          : null,
+      );
+      setSemanticRetrievalFocus(
+        algorithmId === 'semantic-retrieval'
+          ? resolveSemanticRetrievalFocus(feature.pagePath)
+          : null,
+      );
       setAutoStartDepTest(false);
       setCurrentPage('algorithm-detail');
       return;
@@ -422,12 +518,61 @@ export default function App() {
     }
     if (pageId === 'academic-poster') {
       setAcademicPosterTab(resolveAcademicPosterTab(feature.pagePath) ?? 'poster');
+      setAcademicPosterDocId(null);
       setCurrentPage('academic-poster');
       return;
     }
     if (pageId === 'multimodal-dataset') {
       setMultimodalBuildFocus(resolveMultimodalDatasetFocus(feature.pagePath));
       setCurrentPage('multimodal-dataset');
+      return;
+    }
+    if (pageId === 'dataset-category-detail') {
+      setSelectedDatasetCategoryId(resolveDatasetCategoryId(feature.pagePath) ?? 'entity-similarity');
+      setDatasetCategoryTab(resolveDatasetCategoryTab(feature.pagePath));
+      setDatasetCategoryFocus(resolveDatasetCategoryFocus(feature.pagePath));
+      setCurrentPage('dataset-category-detail');
+      return;
+    }
+    if (pageId === 'knowledge-graph-dashboard') {
+      setAssociationStrengthFocus(resolveAssociationStrengthFocus(feature.pagePath));
+      setCurrentPage('knowledge-graph-dashboard');
+      return;
+    }
+    if (pageId === 'call-logs') {
+      setCallLogsFocus(resolveCallLogsFocus(feature.pagePath));
+      setCurrentPage('call-logs');
+      return;
+    }
+    if (pageId === 'relation-reasoning') {
+      setRelationReasoningFocus(resolveRelationReasoningFocus(feature.pagePath));
+      setCurrentPage('relation-reasoning');
+      return;
+    }
+    if (pageId === 'human-machine-review') {
+      setHumanMachineReviewFocus(resolveHumanMachineReviewFocus(feature.pagePath));
+      setCurrentPage('human-machine-review');
+      return;
+    }
+    if (pageId === 'knowledge-search') {
+      setKnowledgeSearchFocus(resolveKnowledgeSearchFocus(feature.pagePath));
+      setCurrentPage('knowledge-search');
+      return;
+    }
+    if (pageId === 'property-management') {
+      setPropertyManagementTab(resolvePropertyManagementTab(feature.pagePath));
+      setPropertyManagementFocus(resolvePropertyManagementFocus(feature.pagePath));
+      setCurrentPage('property-management');
+      return;
+    }
+    if (pageId === 'llm-api-integration') {
+      setCurrentPage('llm-api-integration');
+      return;
+    }
+    if (pageId === 'app-center') {
+      setAppCenterFocus(resolveAppCenterFocus(feature.pagePath));
+      setAppCenterAssistantId(resolveAppCenterAssistantId(feature.pagePath));
+      setCurrentPage('app-center');
       return;
     }
     if (pageId === 'graph-fusion') {
@@ -531,7 +676,12 @@ export default function App() {
       case 'data-dashboard':
         return <DataDashboard />;
       case 'knowledge-graph-dashboard':
-        return <KnowledgeGraphDashboard />;
+        return (
+          <KnowledgeGraphDashboard
+            key={associationStrengthFocus ?? 'default'}
+            initialAssociationFocus={associationStrengthFocus ?? undefined}
+          />
+        );
       case 'graph-fusion':
         return (
           <GraphFusion
@@ -539,8 +689,20 @@ export default function App() {
             initialFocus={graphFusionFocus}
           />
         );
+      case 'schema-constraint-rules':
+        return <SchemaConstraintRulesPage />;
+      case 'data-consistency-scan':
+        return <DataConsistencyScan onNavigateTo={handleNavigate} />;
+      case 'validation-report':
+        return <ValidationReportPage />;
       case 'property-management':
-        return <PropertyManagement />;
+        return (
+          <PropertyManagement
+            key={`${propertyManagementTab ?? 'entity'}-${propertyManagementFocus ?? 'plain'}`}
+            initialTab={propertyManagementTab ?? undefined}
+            initialFocus={propertyManagementFocus ?? undefined}
+          />
+        );
       case 'rule-management':
         return (
           <RuleManagement
@@ -566,7 +728,7 @@ export default function App() {
       case 'algorithm-detail':
         return selectedAlgorithmId ? (
           <AlgorithmDetailPage
-            key={`${selectedAlgorithmId}-${representationSpaceFocus ?? scoringFunctionFocus ?? encodingModelFocus ?? 'all'}`}
+            key={`${selectedAlgorithmId}-${representationSpaceFocus ?? scoringFunctionFocus ?? encodingModelFocus ?? supervisedSimilarityFocus ?? nodeSimilarityFocus ?? semanticRetrievalFocus ?? 'all'}`}
             algorithmId={selectedAlgorithmId}
             onBack={handleBackToAlgorithmList}
             initialDemoTab={selectedAlgorithmId === 'candidate-term-generation' ? algorithmDemoTab ?? undefined : undefined}
@@ -585,6 +747,21 @@ export default function App() {
             initialEncodingModelFocus={
               selectedAlgorithmId === 'encoding-model' && encodingModelFocus
                 ? encodingModelFocus
+                : undefined
+            }
+            initialSupervisedSimilarityFocus={
+              selectedAlgorithmId === 'supervised-similarity' && supervisedSimilarityFocus
+                ? supervisedSimilarityFocus
+                : undefined
+            }
+            initialNodeSimilarityFocus={
+              selectedAlgorithmId === 'node-similarity' && nodeSimilarityFocus
+                ? nodeSimilarityFocus
+                : undefined
+            }
+            initialSemanticRetrievalFocus={
+              selectedAlgorithmId === 'semantic-retrieval' && semanticRetrievalFocus
+                ? semanticRetrievalFocus
                 : undefined
             }
             onNavigateToService={(algId) => {
@@ -607,8 +784,11 @@ export default function App() {
       case 'dataset-category-detail':
         return selectedDatasetCategoryId ? (
           <DatasetCategoryDetail
+            key={`${selectedDatasetCategoryId}-${datasetCategoryTab ?? 'list'}-${datasetCategoryFocus ?? 'all'}`}
             categoryId={selectedDatasetCategoryId}
             onBack={handleBackToDatasetCategories}
+            initialTab={datasetCategoryTab ?? undefined}
+            initialFocus={datasetCategoryFocus ?? undefined}
           />
         ) : (
           <DatasetCategories onSelectCategory={handleSelectDatasetCategory} />
@@ -631,7 +811,7 @@ export default function App() {
           <AlgorithmApiManagement onSelectService={handleSelectAlgorithmService} />
         );
       case 'call-logs':
-        return <ApiCallLogs />;
+        return <ApiCallLogs key={callLogsFocus ?? 'all'} focusContext={callLogsFocus ?? undefined} />;
       case 'term-review':
         return <TermReview />;
       case 'interactive-review-adoption':
@@ -847,6 +1027,8 @@ export default function App() {
             initialDashTab={
               graphTasksDashTab === 'candidates'
                 ? 'candidates'
+                : graphTasksDashTab === 'version-rollback'
+                  ? 'changeset'
                 : graphTasksDashTab === 'monitor' || graphTasksDashTab === 'logs'
                   ? 'monitor'
                   : undefined
@@ -864,8 +1046,11 @@ export default function App() {
             }
             initialOpenCustomUpload={graphTasksDashTab === 'custom-upload' || undefined}
             focusIncremental={graphTasksDashTab === 'incremental-update' || undefined}
+            focusVersionRollback={graphTasksDashTab === 'version-rollback' || undefined}
           />
         );
+      case 'verified-knowledge-write':
+        return <VerifiedKnowledgeWritePage />;
       case 'kg-construction':
         return <KGConstructionEngine onBack={() => setCurrentPage('data-dashboard')} />;
       case 'text-semantic-extraction':
@@ -903,9 +1088,14 @@ export default function App() {
           />
         );
       case 'knowledge-base':
-        return <KnowledgeBase onNavigate={setCurrentPage} />;
+        return <KnowledgeBase onNavigate={handleNavigate} />;
       case 'knowledge-search':
-        return <KnowledgeSearch />;
+        return (
+          <KnowledgeSearch
+            key={knowledgeSearchFocus ?? 'default'}
+            initialFocus={knowledgeSearchFocus ?? undefined}
+          />
+        );
       case 'knowledge-repository':
         return <KnowledgeRepository />;
       case 'literature-processing':
@@ -922,7 +1112,13 @@ export default function App() {
       case 'api-keys':
         return <ApiKeyManagement />;
       case 'app-center':
-        return <ApplicationCenter />;
+        return (
+          <ApplicationCenter
+            key={`${appCenterAssistantId ?? 'default'}-${appCenterFocus ?? 'all'}`}
+            initialAssistantId={appCenterAssistantId ?? undefined}
+            initialFocus={appCenterFocus ?? undefined}
+          />
+        );
       case 'graph-visualization':
         return <GraphVisualization />;
       case 'evolution-analysis':
@@ -933,6 +1129,22 @@ export default function App() {
         return <RelationAnalysis />;
       case 'inference-prediction':
         return <InferencePrediction />;
+      case 'relation-reasoning':
+        return (
+          <RelationReasoningPage
+            key={relationReasoningFocus ?? 'all'}
+            initialFocus={relationReasoningFocus ?? undefined}
+          />
+        );
+      case 'human-machine-review':
+        return (
+          <HumanMachineReviewPage
+            key={humanMachineReviewFocus ?? 'queue'}
+            initialFocus={humanMachineReviewFocus ?? undefined}
+          />
+        );
+      case 'llm-api-integration':
+        return <LlmApiIntegrationPage />;
       case 'decision-support':
         return <DecisionSupport />;
       case 'knowledge-validation':
@@ -940,8 +1152,9 @@ export default function App() {
       case 'academic-poster':
         return (
           <AcademicPoster
-            key={academicPosterTab ?? 'poster'}
+            key={`${academicPosterTab ?? 'poster'}-${academicPosterDocId ?? 'none'}`}
             initialTab={academicPosterTab ?? 'poster'}
+            initialDocId={academicPosterDocId ?? undefined}
           />
         );
       case 'audit-feature':
@@ -963,8 +1176,8 @@ export default function App() {
         selectedAuditFeatureId={selectedAuditFeature?.id}
         onAuditFeatureSelect={handleAuditFeatureSelect}
       />
-      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
-        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'graph-fusion', 'property-management', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
+      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
+        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
           {renderPage()}
         </div>
       </main>

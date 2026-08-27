@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Star, Activity, Copy, CheckCircle, Zap, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Star, Copy, CheckCircle, Zap } from 'lucide-react';
+import type { SemanticRetrievalFocus } from '../../data/auditPageMap';
 
 // ── demo data ────────────────────────────────────────────────────────────────
 
@@ -103,50 +104,10 @@ const RECOMMENDATION_RESULTS: Record<string, { id: string; label: string; type: 
   ],
 };
 
-// ── monitoring data ───────────────────────────────────────────────────────────
+// ── component ────────────────────────────────────────────────────────────────
 
-const TYPE_COLOR: Record<string, string> = {
-  org: 'bg-blue-100 text-blue-700',
-  person: 'bg-green-100 text-green-700',
-  concept: 'bg-purple-100 text-purple-700',
-  venue: 'bg-orange-100 text-orange-700',
-};
-
-// generate sparkline-style time series
-function makeTimeSeries(base: number, variance: number, len = 24) {
-  return Array.from({ length: len }, (_, i) => {
-    const trend = Math.sin(i / 4) * variance * 0.5;
-    const noise = (Math.random() - 0.5) * variance;
-    return Math.max(0, Math.round(base + trend + noise));
-  });
-}
-
-const MOCK_METRICS = {
-  retrieval: {
-    qps: makeTimeSeries(280, 60),
-    latency: makeTimeSeries(42, 12),
-    errors: makeTimeSeries(2, 3),
-  },
-  recommendation: {
-    qps: makeTimeSeries(180, 40),
-    latency: makeTimeSeries(68, 15),
-    errors: makeTimeSeries(1, 2),
-  },
-};
-
-function Sparkline({ data, color, height = 32 }: { data: number[]; color: string; height?: number }) {
-  const max = Math.max(...data, 1);
-  const w = 200; const h = height;
-  const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - (v / max) * h}`).join(' ');
-  return (
-    <svg width="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export function SemanticRetrievalDemo() {
-  const [activeSection, setActiveSection] = useState<'retrieval' | 'recommendation' | 'monitor'>('retrieval');
+export function SemanticRetrievalDemo({ initialSection = 'retrieval' }: { initialSection?: SemanticRetrievalFocus }) {
+  const [activeSection, setActiveSection] = useState<SemanticRetrievalFocus>(initialSection);
 
   // retrieval state
   const [sourceEntity, setSourceEntity] = useState('tsinghua');
@@ -161,13 +122,17 @@ export function SemanticRetrievalDemo() {
   const [recRunning, setRecRunning] = useState(false);
   const [recLatency, setRecLatency] = useState<number | null>(null);
 
-  // monitor state
-  const [monitorApi, setMonitorApi] = useState<'retrieval' | 'recommendation'>('retrieval');
-  const [refreshing, setRefreshing] = useState(false);
-  const [metrics, setMetrics] = useState(MOCK_METRICS);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  useEffect(() => { setActiveSection(initialSection); }, [initialSection]);
+
+  const TYPE_COLOR: Record<string, string> = {
+    org: 'bg-blue-100 text-blue-700',
+    person: 'bg-green-100 text-green-700',
+    concept: 'bg-purple-100 text-purple-700',
+    venue: 'bg-orange-100 text-orange-700',
+  };
 
   const entity = ENTITY_LIST.find(e => e.id === sourceEntity)!;
   const profile = USER_PROFILES.find(p => p.id === profileId)!;
@@ -190,29 +155,10 @@ export function SemanticRetrievalDemo() {
     }, 700);
   };
 
-  const refreshMetrics = () => {
-    setRefreshing(true);
-    timerRef.current = setTimeout(() => {
-      setMetrics({
-        retrieval: { qps: makeTimeSeries(280, 60), latency: makeTimeSeries(42, 12), errors: makeTimeSeries(2, 3) },
-        recommendation: { qps: makeTimeSeries(180, 40), latency: makeTimeSeries(68, 15), errors: makeTimeSeries(1, 2) },
-      });
-      setRefreshing(false);
-    }, 800);
-  };
-
   const SECTIONS = [
     { id: 'retrieval' as const, label: '① 语义检索接口' },
     { id: 'recommendation' as const, label: '② 推荐候选集接口' },
-    { id: 'monitor' as const, label: '③ 调用监控' },
   ];
-
-  const mon = metrics[monitorApi];
-  const avgQps = Math.round(mon.qps.reduce((a, b) => a + b, 0) / mon.qps.length);
-  const avgLatency = Math.round(mon.latency.reduce((a, b) => a + b, 0) / mon.latency.length);
-  const p99Latency = Math.round(Math.max(...mon.latency) * 1.2);
-  const totalErrors = mon.errors.reduce((a, b) => a + b, 0);
-  const totalCalls = mon.qps.reduce((a, b) => a + b, 0) * 3600;
 
   const retrievalApiJson = JSON.stringify({ entity: sourceEntity, top_n: topN, include_score: true, include_reason: false }, null, 2);
 
@@ -433,130 +379,6 @@ export function SemanticRetrievalDemo() {
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── ③ Monitor ── */}
-      {activeSection === 'monitor' && (
-        <div className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">应用调用监控仪表盘</h3>
-              <p className="text-sm text-gray-500 mt-0.5">实时追踪接口调用频率、响应时间、错误率等关键性能指标</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-                {(['retrieval', 'recommendation'] as const).map(api => (
-                  <button key={api} onClick={() => setMonitorApi(api)}
-                    className={`px-3 py-1.5 transition-colors ${monitorApi === api ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-                    {api === 'retrieval' ? '语义检索' : '推荐候选'}
-                  </button>
-                ))}
-              </div>
-              <button onClick={refreshMetrics} disabled={refreshing}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
-                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />刷新
-              </button>
-            </div>
-          </div>
-
-          {/* KPI cards */}
-          <div className="grid grid-cols-4 gap-3">
-            {[
-              { label: '平均 QPS', value: `${avgQps}`, sub: '请求/秒', icon: <Activity className="w-4 h-4" />, color: 'text-blue-700 bg-blue-50 border-blue-200' },
-              { label: 'P50 延迟', value: `${avgLatency}ms`, sub: '中位响应时间', icon: <Zap className="w-4 h-4" />, color: 'text-green-700 bg-green-50 border-green-200' },
-              { label: 'P99 延迟', value: `${p99Latency}ms`, sub: '长尾响应时间', icon: <TrendingUp className="w-4 h-4" />, color: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
-              { label: '24h 错误', value: `${totalErrors}`, sub: `总调用 ${(totalCalls / 10000).toFixed(0)}万次`, icon: <AlertCircle className="w-4 h-4" />, color: totalErrors > 10 ? 'text-red-700 bg-red-50 border-red-200' : 'text-gray-700 bg-gray-50 border-gray-200' },
-            ].map(m => (
-              <div key={m.label} className={`rounded-xl p-4 border ${m.color}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="opacity-60">{m.icon}</span>
-                  <span className="text-xs opacity-60">{m.sub}</span>
-                </div>
-                <p className="text-2xl font-bold">{m.value}</p>
-                <p className="text-xs font-semibold mt-0.5 opacity-80">{m.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Charts */}
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { title: '调用频率（QPS）', data: mon.qps, color: '#6366f1', unit: 'req/s', max: Math.max(...mon.qps) },
-              { title: '响应时间（ms）', data: mon.latency, color: '#22c55e', unit: 'ms', max: Math.max(...mon.latency) },
-              { title: '错误次数（次/小时）', data: mon.errors, color: '#ef4444', unit: '次', max: Math.max(...mon.errors, 1) },
-            ].map(chart => (
-              <div key={chart.title} className="border border-gray-200 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-semibold text-gray-700">{chart.title}</p>
-                  <span className="text-xs text-gray-400">近24小时</span>
-                </div>
-                <div className="flex items-end justify-between mb-2">
-                  <span className="text-lg font-bold text-gray-900">{chart.data[chart.data.length - 1]}</span>
-                  <span className="text-xs text-gray-400">{chart.unit}</span>
-                </div>
-                <Sparkline data={chart.data} color={chart.color} height={48} />
-                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                  <span>0 {chart.unit}</span><span>{chart.max} {chart.unit}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Recent call log */}
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-700">最近调用记录</span>
-              <span className="text-xs text-gray-400">最近 10 条</span>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {[
-                { time: '08:04:12.831', entity: '知识图谱', topN: 10, latency: 38, status: 200 },
-                { time: '08:04:11.204', entity: '清华大学', topN: 5, latency: 42, status: 200 },
-                { time: '08:04:09.776', entity: '人工智能', topN: 8, latency: 35, status: 200 },
-                { time: '08:04:08.312', entity: '张明', topN: 5, latency: 71, status: 200 },
-                { time: '08:04:06.891', entity: '机器学习', topN: 10, latency: 44, status: 200 },
-                { time: '08:04:05.203', entity: 'BERT', topN: 5, latency: 39, status: 200 },
-                { time: '08:04:03.897', entity: '北京大学', topN: 3, latency: 29, status: 200 },
-                { time: '08:04:02.445', entity: '自然语言处理', topN: 10, latency: 58, status: 200 },
-                { time: '08:04:00.913', entity: 'TransE', topN: 5, latency: 33, status: 200 },
-                { time: '08:03:59.201', entity: 'ACL', topN: 8, latency: 112, status: 500 },
-              ].map((row, i) => (
-                <div key={i} className="flex items-center gap-4 px-4 py-2.5 text-xs hover:bg-gray-50">
-                  <span className="font-mono text-gray-400 w-24 flex-shrink-0">{row.time}</span>
-                  <span className="text-gray-700 flex-1 font-medium">{row.entity}</span>
-                  <span className="text-gray-400">top_n={row.topN}</span>
-                  <span className={`font-mono w-12 text-right ${row.latency > 80 ? 'text-orange-600 font-semibold' : 'text-gray-600'}`}>{row.latency}ms</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold w-10 text-center ${row.status === 200 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{row.status}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Alert rules */}
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700">告警规则</div>
-            <div className="divide-y divide-gray-100">
-              {[
-                { name: 'P99 延迟超阈值', condition: 'P99 > 200ms', window: '5分钟', severity: 'warning', active: false },
-                { name: '错误率超阈值', condition: '错误率 > 1%', window: '1分钟', severity: 'critical', active: false },
-                { name: 'QPS 突增', condition: 'QPS > 1000', window: '1分钟', severity: 'info', active: true },
-                { name: '服务不可用', condition: '成功率 < 99%', window: '30秒', severity: 'critical', active: false },
-              ].map(rule => {
-                const colors = { warning: 'text-amber-600 bg-amber-50', critical: 'text-red-600 bg-red-50', info: 'text-blue-600 bg-blue-50' };
-                return (
-                  <div key={rule.name} className="flex items-center gap-4 px-4 py-3 text-sm">
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{rule.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">条件：{rule.condition} · 窗口：{rule.window}</p>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[rule.severity as keyof typeof colors]}`}>{rule.severity}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${rule.active ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-400'}`}>{rule.active ? '触发中' : '正常'}</span>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>

@@ -238,13 +238,14 @@ function KpiCard({
 export type GraphTasksDashTab = 'monitor' | 'changeset' | 'candidates';
 
 function RunDashboard({
-  graph, run, onClose, onNavigateTo, initialDashTab, focusTaskLogs,
+  graph, run, onClose, onNavigateTo, initialDashTab, focusTaskLogs, focusChangeset,
 }: {
   graph: GraphEntry; run: GraphRun;
   onClose: () => void;
   onNavigateTo?: (p: string) => void;
   initialDashTab?: GraphTasksDashTab;
   focusTaskLogs?: boolean;
+  focusChangeset?: boolean;
 }) {
   const [dashTab, setDashTab] = useState<GraphTasksDashTab>(initialDashTab ?? 'monitor');
   const [candidateFilter, setCandidateFilter] = useState<'all' | '实体' | '关系' | '属性'>('all');
@@ -263,6 +264,15 @@ function RunDashboard({
     }, 250);
     return () => window.clearTimeout(timer);
   }, [focusTaskLogs]);
+
+  useEffect(() => {
+    if (!focusChangeset) return;
+    setDashTab('changeset');
+    const timer = window.setTimeout(() => {
+      document.getElementById('graph-changelog-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [focusChangeset]);
 
   const isActive = ['extracting', 'merging', 'committing'].includes(run.status);
   const sc = RUN_STATUS_CONFIG[run.status];
@@ -312,7 +322,7 @@ function RunDashboard({
         <div className="flex gap-0.5 border border-gray-200 rounded-lg p-0.5 bg-white">
           {([
             ['monitor',   '仪表盘'],
-            ['changeset', 'Changeset'],
+            ['changeset', '变更日志'],
             ['candidates','实例生成预览'],
           ] as const).map(([key, label]) => (
             <button key={key} onClick={() => setDashTab(key)}
@@ -526,7 +536,7 @@ function RunDashboard({
 
       {/* ── Changeset tab ───────────────────────────────────────── */}
       {dashTab === 'changeset' && (
-        <div className="p-5">
+        <div id="graph-changelog-panel" className="p-5">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
@@ -1149,6 +1159,7 @@ export default function GraphTasks({
   exportFocus,
   initialOpenCustomUpload,
   focusIncremental,
+  focusVersionRollback,
 }: {
   onNavigateTo?: (page: string) => void;
   initialDashTab?: GraphTasksDashTab;
@@ -1160,12 +1171,19 @@ export default function GraphTasks({
   initialOpenCustomUpload?: boolean;
   /** 审计跳转：高亮增量更新按钮 */
   focusIncremental?: boolean;
+  /** 审计跳转：打开变更日志并高亮版本回滚 */
+  focusVersionRollback?: boolean;
 }) {
   const [graphs, setGraphs] = useState<GraphEntry[]>(MOCK_GRAPHS);
   const [expandedGraphId, setExpandedGraphId] = useState<string | null>(() =>
     focusIncremental && MOCK_GRAPHS[0] ? MOCK_GRAPHS[0].id : null,
   );
   const [openRunId, setOpenRunId] = useState<{ graphId: string; runId: string } | null>(() => {
+    if (focusVersionRollback && MOCK_GRAPHS[0]) {
+      const g = MOCK_GRAPHS[0];
+      const run = g.activeRun ?? g.runs[0];
+      return run ? { graphId: g.id, runId: run.id } : null;
+    }
     if (!initialDashTab && !focusTaskLogs) return null;
     const g = MOCK_GRAPHS[0];
     const run = g?.activeRun ?? g?.runs[0];
@@ -1180,6 +1198,15 @@ export default function GraphTasks({
   const [deleteTarget, setDeleteTarget] = useState<GraphEntry | null>(null);
   const [rollbackGraphId, setRollbackGraphId] = useState<string | null>(null);
   const [delayHours, setDelayHours] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!focusVersionRollback || !MOCK_GRAPHS[0]) return;
+    const timer = window.setTimeout(() => {
+      setRollbackGraphId(MOCK_GRAPHS[0].id);
+      document.getElementById('graph-version-rollback-btn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [focusVersionRollback]);
 
   const handleScan = (graphId: string) => {
     if (scanStates[graphId] === 'scanning') return;
@@ -1436,9 +1463,14 @@ export default function GraphTasks({
                               历史 {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                             </button>
                             <button
+                              id={g.id === graphs[0]?.id ? 'graph-version-rollback-btn' : undefined}
                               onClick={() => setRollbackGraphId(g.id)}
                               disabled={g.versions.filter(v => !v.isCurrent).length === 0}
-                              className="text-xs px-2.5 py-1 border border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-400 disabled:opacity-30 rounded-lg transition-colors flex items-center gap-0.5"
+                              className={`text-xs px-2.5 py-1 border rounded-lg transition-colors flex items-center gap-0.5 disabled:opacity-30 ${
+                                focusVersionRollback && g.id === graphs[0]?.id
+                                  ? 'border-amber-400 text-amber-700 bg-amber-50 ring-2 ring-amber-200'
+                                  : 'border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-400'
+                              }`}
                               title="版本回滚">
                               <RotateCcw className="w-3 h-3" />版本
                             </button>
@@ -1530,13 +1562,20 @@ export default function GraphTasks({
             {/* Run dashboard */}
             {openEntry && openRun && (
               <RunDashboard
-                key={`${openRun.id}-${initialDashTab ?? 'monitor'}-${focusTaskLogs ? 'logs' : 'plain'}`}
+                key={`${openRun.id}-${initialDashTab ?? 'monitor'}-${focusTaskLogs ? 'logs' : 'plain'}-${focusVersionRollback ? 'rollback' : 'plain'}`}
                 graph={openEntry}
                 run={openRun}
                 onClose={() => setOpenRunId(null)}
                 onNavigateTo={onNavigateTo}
-                initialDashTab={initialDashTab === 'candidates' ? 'candidates' : 'monitor'}
+                initialDashTab={
+                  initialDashTab === 'candidates'
+                    ? 'candidates'
+                    : initialDashTab === 'changeset'
+                      ? 'changeset'
+                      : 'monitor'
+                }
                 focusTaskLogs={focusTaskLogs}
+                focusChangeset={focusVersionRollback}
               />
             )}
       </div>

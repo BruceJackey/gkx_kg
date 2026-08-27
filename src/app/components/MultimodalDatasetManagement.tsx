@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
+import type { MultimodalDatasetFocus } from '../data/auditPageMap';
 import {
   Plus, GitBranch, GitCommit, Tag, Upload, Image, FileText, Search, Filter,
   MoreVertical, ChevronRight, CheckCircle, Clock, AlertCircle, RefreshCw,
@@ -13,19 +14,35 @@ import {
 type Modality = 'image' | 'text';
 type DatasetTab = 'overview' | 'metadata' | 'evaluation' | 'preprocess' | 'version';
 
-type MultimodalDatasetFocus =
-  | 'import'
-  | 'wizard'
-  | 'version'
-  | 'metadata-tags'
-  | 'metadata-form'
-  | 'catalog'
-  | 'eval-stats'
-  | 'eval-quality'
-  | 'eval-benchmark'
-  | 'representation'
-  | 'preprocess'
-  | 'index';
+const MULTIMODAL_FOCUS_LABELS: Partial<Record<MultimodalDatasetFocus, string>> = {
+  import: '数据导入与整合',
+  wizard: '可视化构建向导',
+  version: '数据集版本管理',
+  catalog: '分类目录与搜索',
+  'metadata-tags': '多维度标签分类',
+  'metadata-form': '数据集元数据管理',
+  'eval-stats': '统计特征自动评估',
+  'eval-quality': '数据质量与完整性报告',
+  'eval-benchmark': '评估基准对比',
+  representation: '跨模态表示学习 / 统一语义空间',
+  index: '表示模型管理与高效检索索引',
+  preprocess: '数据预处理与对齐工具',
+};
+
+const FOCUS_SECTION_IDS: Partial<Record<MultimodalDatasetFocus, string>> = {
+  catalog: 'mm-catalog',
+  version: 'mm-version-history',
+  'metadata-tags': 'mm-metadata-tags',
+  'metadata-form': 'mm-metadata-form',
+  'eval-stats': 'mm-eval-stats',
+  'eval-quality': 'mm-eval-quality',
+  'eval-benchmark': 'mm-eval-benchmark',
+  representation: 'mm-representation',
+  index: 'mm-retrieval-index',
+  preprocess: 'mm-preprocess',
+  import: 'mm-upload-dialog',
+  wizard: 'mm-upload-wizard',
+};
 
 function resolveDatasetTab(f: MultimodalDatasetFocus | null): DatasetTab {
   if (!f) return 'overview';
@@ -558,7 +575,13 @@ function UploadStepIndicator({
   );
 }
 
-function UploadDialog({ onClose }: { onClose: () => void }) {
+function UploadDialog({
+  onClose,
+  highlightWizard = false,
+}: {
+  onClose: () => void;
+  highlightWizard?: boolean;
+}) {
   const [uploadMode, setUploadMode] = useState<UploadMode>('pairs');
   const [wizardStep, setWizardStep] = useState<WizardStep>('source');
   const [dataOrigin, setDataOrigin] = useState<DataOrigin>('upload');
@@ -665,14 +688,29 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-2xl w-[760px] max-h-[90vh] flex flex-col overflow-hidden">
+      <div
+        id={highlightWizard ? 'mm-upload-wizard' : 'mm-upload-dialog'}
+        className={`bg-white rounded-2xl shadow-2xl w-[760px] max-h-[90vh] flex flex-col overflow-hidden ${highlightWizard ? 'ring-2 ring-violet-300' : ''}`}
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
-            <div className="font-semibold text-gray-800">导入数据到数据集</div>
-            <div className="text-xs text-gray-400 mt-0.5">支持直接上传、已配置数据库 / API 数据源</div>
+            <div className="font-semibold text-gray-800">
+              {highlightWizard ? '可视化构建向导' : '导入数据到数据集'}
+            </div>
+            <div className="text-xs text-gray-400 mt-0.5">
+              {highlightWizard
+                ? '分步完成数据指定、Schema 定义与数据集生成'
+                : '支持直接上传、已配置数据库 / API 数据源'}
+            </div>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors"><X size={16} /></button>
         </div>
+
+        {highlightWizard && (
+          <div className="px-6 py-2 bg-violet-50 border-b border-violet-100 text-xs text-violet-800">
+            向导模式：按步骤指定数据来源 → 定义 Schema → 确认导入，完成多模态数据集构建。
+          </div>
+        )}
 
         <div className="px-6 pt-4 pb-0">
           <div className="flex gap-0 border border-gray-200 rounded-xl overflow-hidden w-fit">
@@ -1187,7 +1225,7 @@ function NewDatasetDialog({ onClose, onCreate }: { onClose: () => void; onCreate
 
 // ─── Tab panels ───────────────────────────────────────────────────────────────
 
-function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
+function RetrievalPanel({ ds, highlightIndex }: { ds: MultimodalDataset; highlightIndex?: boolean }) {
   const [mode, setMode] = useState<RetrievalMode>('text2image');
   const [query, setQuery] = useState('transformer attention architecture');
   const [queryImage, setQueryImage] = useState<string | null>(null);
@@ -1283,7 +1321,7 @@ function RetrievalPanel({ ds }: { ds: MultimodalDataset }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div id="mm-retrieval-index" className={`space-y-4 ${highlightIndex ? 'ring-2 ring-violet-300 rounded-xl p-1' : ''}`}>
       <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -1495,10 +1533,12 @@ function OverviewPanel({
   ds,
   onUpload,
   highlightRetrieval,
+  highlightIndex,
 }: {
   ds: MultimodalDataset;
   onUpload: () => void;
   highlightRetrieval?: boolean;
+  highlightIndex?: boolean;
 }) {
   const [searchQ, setSearchQ] = useState('');
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
@@ -1522,7 +1562,10 @@ function OverviewPanel({
 
   return (
     <div className="space-y-4">
-      <div className={`bg-violet-50 border rounded-xl px-4 py-3 text-xs text-violet-800 ${highlightRetrieval ? 'border-violet-300 ring-2 ring-violet-200' : 'border-violet-100'}`}>
+      <div
+        id="mm-representation"
+        className={`bg-violet-50 border rounded-xl px-4 py-3 text-xs text-violet-800 ${highlightRetrieval ? 'border-violet-300 ring-2 ring-violet-200' : 'border-violet-100'}`}
+      >
         本数据集用于 <span className="font-semibold">CLIP 图文对比学习</span>（image encoder + text encoder + InfoNCE）。
         下列为样例图文对；完整字段与 JSONL 样例见 <span className="font-mono">samples/clip/</span>。
         {highlightRetrieval && (
@@ -1598,14 +1641,14 @@ function OverviewPanel({
           显示 {filtered.length} / {ds.pairCount.toLocaleString()} 条图文对
         </div>
       </div>
-      <div className={highlightRetrieval ? 'ring-2 ring-violet-200 rounded-xl' : ''}>
-        <RetrievalPanel ds={ds} />
+      <div className={highlightIndex ? 'ring-2 ring-violet-200 rounded-xl' : highlightRetrieval ? 'ring-2 ring-violet-200 rounded-xl' : ''}>
+        <RetrievalPanel ds={ds} highlightIndex={highlightIndex} />
       </div>
     </div>
   );
 }
 
-function PreprocessPanel({ ds }: { ds: MultimodalDataset }) {
+function PreprocessPanel({ ds, highlight }: { ds: MultimodalDataset; highlight?: boolean }) {
   const [jobs, setJobs] = useState(ds.preprocessJobs);
 
   const runJob = (id: string) => {
@@ -1630,7 +1673,7 @@ function PreprocessPanel({ ds }: { ds: MultimodalDataset }) {
   ];
 
   return (
-    <div className="space-y-4">
+    <div id="mm-preprocess" className={`space-y-4 ${highlight ? 'ring-2 ring-violet-200 rounded-xl p-1' : ''}`}>
       {/* Active jobs */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -1742,7 +1785,10 @@ function MetadataPanel({
 
   return (
     <div className="space-y-4">
-      <div className={`bg-white border rounded-xl p-5 ${highlight === 'tags' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}>
+      <div
+        id="mm-metadata-tags"
+        className={`bg-white border rounded-xl p-5 ${highlight === 'tags' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}
+      >
         <div className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Tag size={15} className="text-violet-500" /> 多维度标签分类
         </div>
@@ -1814,7 +1860,10 @@ function MetadataPanel({
         </div>
       </div>
 
-      <div className={`bg-white border rounded-xl p-5 ${highlight === 'form' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}>
+      <div
+        id="mm-metadata-form"
+        className={`bg-white border rounded-xl p-5 ${highlight === 'form' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}
+      >
         <div className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <ClipboardList size={15} className="text-violet-500" /> 数据集元数据
         </div>
@@ -1928,7 +1977,10 @@ function EvaluationPanel({
         </button>
       </div>
 
-      <div className={`grid grid-cols-4 gap-3 ${highlight === 'stats' ? 'ring-2 ring-violet-200 rounded-xl p-1' : ''}`}>
+      <div
+        id="mm-eval-stats"
+        className={`grid grid-cols-4 gap-3 ${highlight === 'stats' ? 'ring-2 ring-violet-200 rounded-xl p-1' : ''}`}
+      >
         {[
           { label: '图谱密度', value: ev.graphDensity.toFixed(3) },
           { label: '平均节点度', value: ev.avgDegree.toFixed(1) },
@@ -1976,7 +2028,10 @@ function EvaluationPanel({
         </div>
       </div>
 
-      <div className={`bg-white border rounded-xl p-5 ${highlight === 'quality' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}>
+      <div
+        id="mm-eval-quality"
+        className={`bg-white border rounded-xl p-5 ${highlight === 'quality' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}
+      >
         <div className="text-sm font-semibold text-gray-800 mb-4">数据质量与完整性报告</div>
         <div className="grid grid-cols-3 gap-3 mb-4">
           {[
@@ -2006,7 +2061,10 @@ function EvaluationPanel({
         </div>
       </div>
 
-      <div className={`bg-white border rounded-xl overflow-hidden ${highlight === 'benchmark' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}>
+      <div
+        id="mm-eval-benchmark"
+        className={`bg-white border rounded-xl overflow-hidden ${highlight === 'benchmark' ? 'border-violet-300 ring-2 ring-violet-200' : 'border-gray-200'}`}
+      >
         <div className="px-5 py-3 border-b border-gray-100">
           <div className="text-sm font-semibold text-gray-800">评估基准对比</div>
           <div className="text-xs text-gray-400 mt-0.5">与领域内公开基准数据集的关键指标对比</div>
@@ -2046,7 +2104,7 @@ function EvaluationPanel({
 function VersionHistoryPanel({ ds }: { ds: MultimodalDataset }) {
   const [current, setCurrent] = useState(ds.version);
   return (
-    <div className="space-y-4">
+    <div id="mm-version-history" className="space-y-4">
       <div className="bg-violet-50 border border-violet-100 rounded-xl px-4 py-3 text-xs text-violet-800">
         数据集版本管理：记录变更历史、支持版本标签回溯与差异比对，保障研究可复现性。
         当前版本 <span className="font-semibold">{current}</span> · 分支 <span className="font-mono">{ds.branch}</span>
@@ -2124,6 +2182,17 @@ export default function MultimodalDatasetManagement({
     setActiveTab(resolveDatasetTab(focus));
     setShowUpload(focus === 'import' || focus === 'wizard');
   }, [focus]);
+
+  useEffect(() => {
+    if (!focus) return;
+    const sectionId = FOCUS_SECTION_IDS[focus];
+    if (!sectionId) return;
+    const delay = focus === 'import' || focus === 'wizard' ? 450 : 250;
+    const timer = window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [focus, activeTab, showUpload]);
   const selected = datasets.find(d => d.id === selectedId) || datasets[0];
 
   const filteredDatasets = datasets.filter(ds => {
@@ -2200,10 +2269,18 @@ export default function MultimodalDatasetManagement({
   return (
     <div className="flex h-full overflow-hidden">
       {showNewDataset && <NewDatasetDialog onClose={() => setShowNewDataset(false)} onCreate={createDataset} />}
-      {showUpload && <UploadDialog onClose={() => setShowUpload(false)} />}
+      {showUpload && (
+        <UploadDialog
+          onClose={() => setShowUpload(false)}
+          highlightWizard={focus === 'wizard'}
+        />
+      )}
 
       {/* Left sidebar: catalog + search */}
-      <div className={`w-72 flex-shrink-0 border-r bg-white flex flex-col ${focus === 'catalog' ? 'border-violet-300 ring-2 ring-inset ring-violet-200' : 'border-gray-200'}`}>
+      <div
+        id="mm-catalog"
+        className={`w-72 flex-shrink-0 border-r bg-white flex flex-col ${focus === 'catalog' ? 'border-violet-300 ring-2 ring-inset ring-violet-200' : 'border-gray-200'}`}
+      >
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <div className="text-sm font-semibold text-gray-700">多模态数据集</div>
           <button onClick={() => setShowNewDataset(true)}
@@ -2253,7 +2330,7 @@ export default function MultimodalDatasetManagement({
             <div className="text-xs text-gray-400 text-center py-8 px-2">没有匹配的数据集，请调整分类或关键词</div>
           )}
           {filteredDatasets.map(ds => (
-            <div key={ds.id} onClick={() => { setSelectedId(ds.id); setActiveTab('overview'); }}
+            <div key={ds.id} onClick={() => setSelectedId(ds.id)}
               className={`rounded-xl p-3 cursor-pointer transition-colors border ${selectedId === ds.id ? 'border-violet-300 bg-violet-50' : 'border-transparent hover:bg-gray-50'}`}>
               <div className="flex items-start gap-2">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedId === ds.id ? 'bg-violet-100' : 'bg-gray-100'}`}>
@@ -2291,6 +2368,15 @@ export default function MultimodalDatasetManagement({
 
       {/* Right content area */}
       <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+        {focus && MULTIMODAL_FOCUS_LABELS[focus] && (
+          <div className="flex-shrink-0 px-4 py-2 bg-violet-50 border-b border-violet-100 text-xs text-violet-800 flex items-center gap-2">
+            <Sparkles size={14} className="flex-shrink-0 text-violet-600" />
+            <span>
+              审计聚焦：<strong>{MULTIMODAL_FOCUS_LABELS[focus]}</strong>
+              · 已跳转至多模态数据集对应模块
+            </span>
+          </div>
+        )}
         {selected ? (
           <>
             {/* Dataset header */}
@@ -2346,7 +2432,8 @@ export default function MultimodalDatasetManagement({
                 <OverviewPanel
                   ds={selected}
                   onUpload={() => setShowUpload(true)}
-                  highlightRetrieval={focus === 'representation' || focus === 'index'}
+                  highlightRetrieval={focus === 'representation'}
+                  highlightIndex={focus === 'index'}
                 />
               )}
               {activeTab === 'metadata' && (
@@ -2382,7 +2469,9 @@ export default function MultimodalDatasetManagement({
                   onEvaluated={evaluation => updateDataset(selected.id, { evaluation })}
                 />
               )}
-              {activeTab === 'preprocess' && <PreprocessPanel ds={selected} />}
+              {activeTab === 'preprocess' && (
+                <PreprocessPanel ds={selected} highlight={focus === 'preprocess'} />
+              )}
               {activeTab === 'version' && <VersionHistoryPanel ds={selected} />}
             </div>
           </>

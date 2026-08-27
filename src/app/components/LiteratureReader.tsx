@@ -997,6 +997,11 @@ export default function LiteratureReader({
   useEffect(() => {
     if (!initialFocus) return;
     setRightOpen(true);
+    if (initialFocus === 'generate-notes') {
+      setRightTab('notes');
+      window.setTimeout(() => setNoteDialogOpen(true), 350);
+      return;
+    }
     setRightTab('entities');
     setCurrentPage(1);
     if (initialFocus === 'highlight') {
@@ -1110,6 +1115,12 @@ export default function LiteratureReader({
           <span><strong>实体信息浮窗</strong>：悬停预览知识库信息，点击高亮实体可固定浮窗；已为您打开示例实体 TKGEmbed</span>
         </div>
       )}
+      {initialFocus === 'generate-notes' && (
+        <div className="flex-shrink-0 px-4 py-2 bg-emerald-50 border-b border-emerald-100 text-xs text-emerald-800 flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+          <span><strong>一键生成笔记</strong>：基于当前文献智能提取关键信息，生成结构化研究要点</span>
+        </div>
+      )}
       {/* ── Toolbar ── */}
       <div className="flex items-center gap-1 px-3 py-2 bg-white border-b border-gray-200 flex-shrink-0 flex-wrap">
         <div className="flex items-center gap-2 mr-2 min-w-0">
@@ -1197,6 +1208,14 @@ export default function LiteratureReader({
         <div className="w-px h-5 bg-gray-200 mx-1" />
 
         <button onClick={addBookmark} title="添加书签" className="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition-colors"><Bookmark className="w-4 h-4" /></button>
+        <button
+          id="reader-generate-notes"
+          onClick={() => { setRightOpen(true); setRightTab('notes'); setNoteDialogOpen(true); }}
+          title="一键生成笔记"
+          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-medium hover:bg-blue-700 transition-colors"
+        >
+          <Sparkles className="w-3.5 h-3.5" />一键生成笔记
+        </button>
         <button title="下载" className="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition-colors"><Download className="w-4 h-4" /></button>
 
         <div className="flex-1" />

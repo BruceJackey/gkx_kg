@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Play, CheckCircle, XCircle, X, Rocket } from 'lucide-react';
+import type { SupervisedSimilarityFocus } from '../../data/auditPageMap';
 
 const INIT_PAIRS = [
   { id: 'p1', a: '苹果公司', b: 'Apple Inc.', hint: '知名科技企业', label: null as null | 'similar' | 'dissimilar' },
@@ -34,13 +35,25 @@ const PR_POINTS = [
   { t: 0.9, p: 0.98, r: 0.74 }, { t: 0.95, p: 0.99, r: 0.61 },
 ];
 
-export function SupervisedSimilarityDemo() {
-  const [activeSection, setActiveSection] = useState<'annotate' | 'train' | 'evaluate'>('annotate');
+interface SupervisedSimilarityDemoProps {
+  initialSection?: SupervisedSimilarityFocus;
+  onRequestTrainingModal?: () => void;
+}
+
+export function SupervisedSimilarityDemo({
+  initialSection,
+  onRequestTrainingModal,
+}: SupervisedSimilarityDemoProps) {
+  const [activeSection, setActiveSection] = useState<'annotate' | 'train' | 'evaluate'>(
+    initialSection === 'evaluate' ? 'evaluate' : initialSection === 'train' ? 'train' : 'annotate',
+  );
   const [pairs, setPairs] = useState(INIT_PAIRS);
   const [trainConfig, setTrainConfig] = useState({ arch: 'siamese-bert', epochs: 10, lr: '2e-5', batchSize: 32 });
-  const [trainState, setTrainState] = useState<'idle' | 'running' | 'done'>('idle');
-  const [trainProgress, setTrainProgress] = useState(0);
-  const [trainLog, setTrainLog] = useState<string[]>([]);
+  const [trainState, setTrainState] = useState<'idle' | 'running' | 'done'>(
+    initialSection === 'evaluate' ? 'done' : 'idle',
+  );
+  const [trainProgress, setTrainProgress] = useState(initialSection === 'evaluate' ? 100 : 0);
+  const [trainLog, setTrainLog] = useState<string[]>(initialSection === 'evaluate' ? TRAIN_LOGS : []);
   const [threshold, setThreshold] = useState(0.75);
   const [published, setPublished] = useState(false);
   const trainTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -51,6 +64,20 @@ export function SupervisedSimilarityDemo() {
 
   const setLabel = (id: string, label: 'similar' | 'dissimilar' | null) =>
     setPairs(prev => prev.map(p => p.id === id ? { ...p, label } : p));
+
+  useEffect(() => {
+    if (!initialSection) return;
+    if (initialSection === 'train') {
+      setActiveSection('train');
+      return;
+    }
+    if (initialSection === 'evaluate') {
+      setActiveSection('evaluate');
+      setTrainState('done');
+      setTrainProgress(100);
+      setTrainLog(TRAIN_LOGS);
+    }
+  }, [initialSection]);
 
   const startTraining = () => {
     if (labeled < 4) return;
@@ -194,10 +221,20 @@ export function SupervisedSimilarityDemo() {
             </div>
           </div>
           {trainState === 'idle' && (
-            <button onClick={startTraining}
-              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
-              <Play className="w-4 h-4" />发起训练
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={startTraining}
+                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                <Play className="w-4 h-4" />发起训练
+              </button>
+              {onRequestTrainingModal && (
+                <button
+                  onClick={onRequestTrainingModal}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  完整训练配置
+                </button>
+              )}
+            </div>
           )}
           {(trainState === 'running' || trainState === 'done') && (
             <div className="space-y-3">

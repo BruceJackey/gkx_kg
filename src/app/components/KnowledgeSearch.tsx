@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, type ChangeEvent } from 'react';
+import { useState, useMemo, useRef, useEffect, type ChangeEvent } from 'react';
 import {
   Search, MessageSquare, BookmarkPlus, X, ChevronDown,
   ExternalLink, Quote, Loader2, FolderOpen, FileText, Check,
@@ -7,6 +7,7 @@ import {
   Image as ImageIcon, Table2, Sigma, Layers, Upload,
 } from 'lucide-react';
 import NoteGenerationDialog from './NoteGenerationDialog';
+import type { KnowledgeSearchFocus } from '../data/auditPageMap';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -488,7 +489,13 @@ export type KnowledgeSearchVariant = 'default' | 'cross-db-fusion';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function KnowledgeSearch({ variant = 'default' }: { variant?: KnowledgeSearchVariant }) {
+export default function KnowledgeSearch({
+  variant = 'default',
+  initialFocus,
+}: {
+  variant?: KnowledgeSearchVariant;
+  initialFocus?: KnowledgeSearchFocus;
+}) {
   const isCrossDbFusion = variant === 'cross-db-fusion';
   // Search
   const [searchMode, setSearchMode] = useState<'text' | 'multimodal'>('text');
@@ -520,6 +527,35 @@ export default function KnowledgeSearch({ variant = 'default' }: { variant?: Kno
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!initialFocus) return;
+    if (initialFocus === 'multimodal-reverse' || initialFocus === 'multimodal-hybrid') {
+      setSearchMode('multimodal');
+    }
+    if (initialFocus === 'chat') {
+      setSelectedIds(new Set(literatureIndex.slice(0, 2).map(p => p.id)));
+    }
+    const targetId =
+      initialFocus === 'input' ? 'ks-search-input'
+      : initialFocus === 'corpus' ? 'ks-search-corpus'
+      : initialFocus === 'results' ? 'ks-search-results'
+      : initialFocus === 'output' ? 'ks-search-output'
+      : initialFocus === 'filter' ? 'ks-search-filter'
+      : initialFocus === 'chat' ? 'ks-search-chat'
+      : initialFocus === 'save' ? 'ks-search-save'
+      : initialFocus === 'multimodal-reverse' ? 'ks-multimodal-reverse'
+      : initialFocus === 'multimodal-hybrid' ? 'ks-multimodal-hybrid'
+      : null;
+    if (!targetId) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [initialFocus]);
+
+  const focusRing = (focus: KnowledgeSearchFocus) =>
+    initialFocus === focus ? 'ring-2 ring-blue-300 ring-offset-2' : '';
 
   const PAGE_SIZE = 8;
   const activeModalities = useMemo(
@@ -683,7 +719,7 @@ export default function KnowledgeSearch({ variant = 'default' }: { variant?: Kno
         )}
 
         {/* Search bar */}
-        <div className="flex gap-2">
+        <div className={`flex gap-2 ${focusRing('input')}`} id="ks-search-input">
           <div className="flex-1 flex items-center bg-white border border-gray-300 rounded-xl shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
             <Search size={18} className="ml-4 text-gray-400 flex-shrink-0" />
             <input
@@ -714,13 +750,13 @@ export default function KnowledgeSearch({ variant = 'default' }: { variant?: Kno
         {!isCrossDbFusion && searchMode === 'multimodal' && (
           <div className="rounded-xl border border-violet-100 bg-violet-50/40 p-3 space-y-3">
             <div className="flex flex-wrap items-start gap-3">
-              <div className="min-w-0 flex-1">
+              <div id="ks-multimodal-reverse" className={`min-w-0 flex-1 ${focusRing('multimodal-reverse')}`}>
                 <div className="text-xs font-semibold text-violet-800 mb-1">多模态反向检索</div>
                 <p className="text-[11px] text-violet-700/80 leading-relaxed">
                   上传一张图片、一个表格或一个公式，在知识库中检索包含该内容或语义相关的文献与专利。
                 </p>
               </div>
-              <div className="min-w-0 flex-1">
+              <div id="ks-multimodal-hybrid" className={`min-w-0 flex-1 ${focusRing('multimodal-hybrid')}`}>
                 <div className="text-xs font-semibold text-violet-800 mb-1">跨资源混合检索</div>
                 <p className="text-[11px] text-violet-700/80 leading-relaxed">
                   一次查询可同时组合文本 + 多种模态附件（如图片+公式+关键词），联合召回。
@@ -784,7 +820,7 @@ export default function KnowledgeSearch({ variant = 'default' }: { variant?: Kno
         )}
 
         {/* Stats bar */}
-        <div className="flex items-center justify-between text-xs text-gray-500">
+        <div id="ks-search-corpus" className={`flex items-center justify-between text-xs text-gray-500 ${focusRing('corpus')}`}>
           <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
             <span>
               {isCrossDbFusion ? (
@@ -832,7 +868,7 @@ export default function KnowledgeSearch({ variant = 'default' }: { variant?: Kno
       <div className="flex flex-1 min-h-0">
         {/* ── LEFT SIDEBAR ── */}
         {!isCrossDbFusion && (
-          <aside className="w-60 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto px-4 py-4">
+          <aside id="ks-search-filter" className={`w-60 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto px-4 py-4 ${focusRing('filter')}`}>
             <div className="flex items-center gap-1.5 mb-3 text-gray-700">
               <SlidersHorizontal size={14} />
               <span className="text-sm font-semibold">筛选条件</span>
@@ -913,7 +949,7 @@ export default function KnowledgeSearch({ variant = 'default' }: { variant?: Kno
         )}
 
         {/* ── MAIN RESULTS ── */}
-        <main className="flex-1 overflow-y-auto px-6 py-4 pb-24">
+        <main id="ks-search-results" className={`flex-1 overflow-y-auto px-6 py-4 pb-24 ${focusRing('results')}`}>
           {isCrossDbFusion && (
             <div className="mb-3 flex items-center gap-2 text-sm font-medium text-teal-900">
               <Layers size={15} className="text-teal-600" />
@@ -1045,7 +1081,7 @@ export default function KnowledgeSearch({ variant = 'default' }: { variant?: Kno
                   </div>
 
                   {/* AI Summary */}
-                  <div className="px-5 pt-3">
+                  <div id={paper.id === pageItems[0]?.id ? 'ks-search-output' : undefined} className={`px-5 pt-3 ${paper.id === pageItems[0]?.id ? focusRing('output') : ''}`}>
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-3">
                       {/* Label row */}
                       <div className="flex items-center gap-2 mb-2">
@@ -1093,12 +1129,13 @@ export default function KnowledgeSearch({ variant = 'default' }: { variant?: Kno
                   {/* Action row */}
                   <div className="px-5 py-3 flex items-center gap-2 border-t border-gray-100 mt-3">
                     <button
+                      id={paper.id === pageItems[0]?.id ? 'ks-search-save' : undefined}
                       onClick={() => saveItem(paper.id)}
                       className={`inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                         saved
                           ? 'bg-blue-50 border-blue-200 text-blue-600'
                           : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
-                      }`}
+                      } ${paper.id === pageItems[0]?.id ? focusRing('save') : ''}`}
                     >
                       {saved ? <Check size={12} /> : <BookmarkPlus size={12} />}
                       {saved ? '已保存' : '保存到知识库'}
@@ -1157,8 +1194,9 @@ export default function KnowledgeSearch({ variant = 'default' }: { variant?: Kno
           <span className="text-gray-300">已选 <strong className="text-white">{selectedIds.size}</strong> 篇</span>
           <div className="w-px h-4 bg-gray-600" />
           <button
+            id="ks-search-chat"
             onClick={() => {}}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors font-medium text-sm"
+            className={`flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors font-medium text-sm ${focusRing('chat')}`}
           >
             <MessageSquare size={14} /> 深入对话
           </button>

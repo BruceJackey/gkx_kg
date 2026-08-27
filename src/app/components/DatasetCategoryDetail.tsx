@@ -243,13 +243,17 @@ function DatasetListPanel({
   versionsMap,
   onViewSample,
   onDeleteVersion,
+  initialExpandedId,
+  highlightVersionControl,
 }: {
   datasets: Dataset[];
   versionsMap: Record<string, VersionEntry[]>;
   onViewSample: (s: string) => void;
   onDeleteVersion: (datasetId: string, version: string) => void;
+  initialExpandedId?: string | null;
+  highlightVersionControl?: boolean;
 }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(initialExpandedId ?? null);
   const [detailVersion, setDetailVersion] = useState<{ dataset: Dataset; version: VersionEntry } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ dataset: Dataset; version: VersionEntry; remaining: number } | null>(null);
 
@@ -265,6 +269,11 @@ function DatasetListPanel({
 
   return (
     <div className="space-y-4">
+      {highlightVersionControl && (
+        <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+          标注数据版本控制：展开下方数据集可查看标注修正历史，支持版本回溯、差异比对与删除
+        </div>
+      )}
       {datasets.map(dataset => {
         const gradeCfg = GRADE_CONFIG[dataset.confidenceGrade];
         const versions = getDatasetVersions(dataset, versionsMap);
@@ -341,7 +350,7 @@ function DatasetListPanel({
                   onClick={() => setExpandedId(expanded ? null : dataset.id)}
                   className="w-full flex items-center justify-between px-5 py-2.5 bg-gray-50 border-t border-gray-100 text-xs text-gray-600 hover:bg-gray-100 transition-colors"
                 >
-                  <span>{expanded ? '收起历史版本' : `展开其他版本（${older.length}）`}</span>
+                  <span>{expanded ? '收起标注数据版本' : `标注数据版本控制（${older.length} 个历史版本）`}</span>
                   {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 </button>
 
@@ -394,7 +403,7 @@ function DatasetListPanel({
           <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h4 className="text-base font-semibold text-gray-900">版本管理 · {detailVersion.version.version}</h4>
+                <h4 className="text-base font-semibold text-gray-900">标注数据版本控制 · {detailVersion.version.version}</h4>
                 <p className="text-xs text-gray-500 mt-0.5">{detailVersion.dataset.name}</p>
               </div>
               <button onClick={() => setDetailVersion(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
@@ -611,7 +620,9 @@ function DatasetSplitPanel({ datasets, grades }: { datasets: Dataset[]; grades: 
     <div className="space-y-5">
       <div>
         <h3 className="text-base font-semibold text-gray-900">数据集构建与划分</h3>
-        <p className="text-sm text-gray-500 mt-0.5">按置信度等级筛选数据源，配置划分比例，一键构建训练集、验证集和测试集</p>
+        <p className="text-sm text-gray-500 mt-0.5">
+          按置信度等级筛选数据源，配置划分比例，构建训练集、验证集和测试集；算法发起训练时将引用此处划分结果
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-5">
@@ -1103,6 +1114,8 @@ function SimilarityAnnotationPanel({ datasets }: { datasets: Dataset[] }) {
 interface DatasetCategoryDetailProps {
   categoryId: string;
   onBack: () => void;
+  initialTab?: 'list' | 'confidence' | 'split' | 'annotation';
+  initialFocus?: 'version-control';
 }
 
 function seedVersionsMap(list: Dataset[]): Record<string, VersionEntry[]> {
@@ -1113,8 +1126,8 @@ function seedVersionsMap(list: Dataset[]): Record<string, VersionEntry[]> {
   return map;
 }
 
-export function DatasetCategoryDetail({ categoryId, onBack }: DatasetCategoryDetailProps) {
-  const [activeTab, setActiveTab] = useState<'list' | 'confidence' | 'split' | 'annotation'>('list');
+export function DatasetCategoryDetail({ categoryId, onBack, initialTab, initialFocus }: DatasetCategoryDetailProps) {
+  const [activeTab, setActiveTab] = useState<'list' | 'confidence' | 'split' | 'annotation'>(initialTab ?? 'list');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSampleModal, setShowSampleModal] = useState(false);
   const [selectedSample, setSelectedSample] = useState('');
@@ -1128,9 +1141,9 @@ export function DatasetCategoryDetail({ categoryId, onBack }: DatasetCategoryDet
     const list = datasetsByCategory[categoryId] ?? [];
     setDatasets(list);
     setVersionsMap(seedVersionsMap(list));
-    setActiveTab('list');
+    setActiveTab(initialTab ?? 'list');
     setGrades({});
-  }, [categoryId]);
+  }, [categoryId, initialTab]);
 
   const category = categoryInfo[categoryId];
 
@@ -1162,10 +1175,14 @@ export function DatasetCategoryDetail({ categoryId, onBack }: DatasetCategoryDet
     setVersionsMap(prev => ({ ...prev, [datasetId]: next }));
   };
 
+  const versionExpandId = initialFocus === 'version-control'
+    ? (datasets.find(d => (versionsMap[d.id]?.length ?? getDatasetVersions(d, versionsMap).length) > 1)?.id ?? datasets[0]?.id ?? null)
+    : null;
+
   const TABS = [
     { id: 'list' as const, label: '数据集列表' },
-    { id: 'confidence' as const, label: '置信度评级' },
-    { id: 'split' as const, label: '构建与划分' },
+    { id: 'confidence' as const, label: '数据源置信度评级' },
+    { id: 'split' as const, label: '数据集构建与划分' },
     ...(categoryId === 'entity-similarity' ? [{ id: 'annotation' as const, label: '相似度标注' }] : []),
   ];
 
@@ -1216,6 +1233,8 @@ export function DatasetCategoryDetail({ categoryId, onBack }: DatasetCategoryDet
               versionsMap={versionsMap}
               onViewSample={s => { setSelectedSample(s); setShowSampleModal(true); }}
               onDeleteVersion={onDeleteVersion}
+              initialExpandedId={versionExpandId}
+              highlightVersionControl={initialFocus === 'version-control'}
             />
           )}
           {activeTab === 'confidence' && (
