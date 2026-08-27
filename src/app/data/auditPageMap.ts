@@ -403,9 +403,6 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '多模态知识图谱相关数据集/数据集评估/统计特征自动评估': 'multimodal-dataset',
   '多模态知识图谱相关数据集/数据集评估/数据质量与完整性报告': 'multimodal-dataset',
   '多模态知识图谱相关数据集/数据集评估/评估基准对比': 'multimodal-dataset',
-  '多模态知识图谱相关数据集/多模态完备表示/跨模态表示学习模型': 'multimodal-dataset',
-  '多模态知识图谱相关数据集/多模态完备表示/统一语义空间映射': 'multimodal-dataset',
-  '多模态知识图谱相关数据集/多模态完备表示/表示模型管理与训练': 'multimodal-dataset',
   '数据导入与整合': 'multimodal-dataset',
   '可视化构建向导': 'multimodal-dataset',
   '数据集版本管理': 'multimodal-dataset',
@@ -415,15 +412,21 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '统计特征自动评估': 'multimodal-dataset',
   '数据质量与完整性报告': 'multimodal-dataset',
   '评估基准对比': 'multimodal-dataset',
-  '跨模态表示学习模型': 'multimodal-dataset',
-  '统一语义空间映射': 'multimodal-dataset',
-  '表示模型管理与训练': 'multimodal-dataset',
+  '多模态知识图谱相关数据集/多模态数据集管理/数据版本控制': 'multimodal-dataset',
+  '多模态知识图谱相关数据集/多模态数据集管理/数据预处理与对齐工具': 'multimodal-dataset',
+  '多模态知识图谱相关数据集/多模态数据集管理/高效数据存储与索引': 'multimodal-dataset',
   '多模态数据集管理/数据版本控制': 'multimodal-dataset',
   '多模态数据集管理/数据预处理与对齐工具': 'multimodal-dataset',
   '多模态数据集管理/高效数据存储与索引': 'multimodal-dataset',
   '数据版本控制': 'multimodal-dataset',
   '数据预处理与对齐工具': 'multimodal-dataset',
   '高效数据存储与索引': 'multimodal-dataset',
+  '跨模态链接构建': 'multimodal-dataset',
+  '关联关系推理与补全': 'multimodal-dataset',
+  '多模态知识图谱相关数据集/知识点关联/跨模态链接构建': 'multimodal-dataset',
+  '数据的统一建模与表示融合/知识点关联/跨模态链接构建': 'multimodal-dataset',
+  '多模态知识图谱相关数据集/知识点关联/关联关系推理与补全': 'multimodal-dataset',
+  '数据的统一建模与表示融合/知识点关联/关联关系推理与补全': 'multimodal-dataset',
   '实例属性关系抽取/实体的属性提取接口/单实体属性查询API': 'entity-attr-api',
   '实例属性关系抽取/实体的属性提取接口/批量文档属性抽取API': 'entity-attr-api',
   '单实体属性查询API': 'entity-attr-api',
@@ -495,9 +498,36 @@ export const AUDIT_ALGORITHM_MAP: Record<string, string> = {
   '知识相关性计算/语义检索与推荐应用支持/推荐候选集生成接口': 'semantic-retrieval',
   '算法管理/算法仓库/知识推理/语义检索与推荐应用支持/语义检索服务接口': 'semantic-retrieval',
   '算法管理/算法仓库/知识推理/语义检索与推荐应用支持/推荐候选集生成接口': 'semantic-retrieval',
+  '算法管理/算法仓库/图嵌入/多模态完备表示/跨模态表示学习模型': 'multimodal-representation',
+  '算法管理/算法仓库/图嵌入/多模态完备表示/统一语义空间映射': 'multimodal-representation',
+  '算法管理/算法仓库/图嵌入/多模态完备表示/表示模型管理与训练': 'multimodal-representation',
+  '多模态知识图谱相关数据集/多模态完备表示/跨模态表示学习模型': 'multimodal-representation',
+  '多模态知识图谱相关数据集/多模态完备表示/统一语义空间映射': 'multimodal-representation',
+  '多模态知识图谱相关数据集/多模态完备表示/表示模型管理与训练': 'multimodal-representation',
+  '跨模态表示学习模型': 'multimodal-representation',
+  '统一语义空间映射': 'multimodal-representation',
+  '表示模型管理与训练': 'multimodal-representation',
+  '算法管理/算法仓库/图嵌入/Open CLIP/关联关系学习': 'open-clip',
+  '算法管理/算法仓库/图嵌入/Open CLIP/对比学习训练': 'open-clip',
+  '数据的统一建模与表示融合/知识点关联/关联关系学习': 'open-clip',
+  '关联关系学习': 'open-clip',
 };
 
 export type SemanticRetrievalFocus = 'retrieval' | 'recommendation';
+
+export type MultimodalRepresentationFocus = 'models' | 'semantic-space' | 'model-mgmt';
+
+/** 多模态完备表示：跨模态模型 / 统一语义空间 / 模型管理与训练聚焦 */
+export function resolveMultimodalRepresentationFocus(
+  pagePath: string | undefined,
+): MultimodalRepresentationFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('跨模态表示学习模型') || path.includes('跨模态表示学习')) return 'models';
+  if (path.includes('统一语义空间映射') || path.includes('统一语义空间')) return 'semantic-space';
+  if (path.includes('表示模型管理与训练') || path.includes('模型管理与训练')) return 'model-mgmt';
+  return null;
+}
 
 /** 语义检索与推荐应用：检索 API 或推荐 API 聚焦 */
 export function resolveSemanticRetrievalFocus(pagePath: string | undefined): SemanticRetrievalFocus | null {
@@ -1083,7 +1113,9 @@ export type MultimodalDatasetFocus =
   | 'eval-benchmark'
   | 'representation'
   | 'preprocess'
-  | 'index';
+  | 'index'
+  | 'cross-modal-link'
+  | 'link-inference';
 
 /** @deprecated 使用 MultimodalDatasetFocus */
 export type MultimodalBuildFocus = MultimodalDatasetFocus;
@@ -1099,19 +1131,13 @@ export function resolveMultimodalDatasetFocus(
   if (path.includes('统计特征')) return 'eval-stats';
   if (path.includes('质量与完整性') || path.includes('完整性报告')) return 'eval-quality';
   if (path.includes('评估基准') || path.includes('基准对比')) return 'eval-benchmark';
-  if (path.includes('表示模型管理与训练') || path.includes('模型管理与训练')) return 'index';
   if (path.includes('存储与索引') || path.includes('高效数据')) return 'index';
-  if (
-    path.includes('跨模态表示') ||
-    path.includes('统一语义') ||
-    path.includes('完备表示')
-  ) {
-    return 'representation';
-  }
   if (path.includes('预处理') || path.includes('对齐工具')) return 'preprocess';
   if (path.includes('版本管理') || path.includes('版本控制')) return 'version';
   if (path.includes('可视化构建') || path.includes('构建向导')) return 'wizard';
   if (path.includes('数据导入') || path.includes('导入与整合')) return 'import';
+  if (path.includes('跨模态链接构建') || path.includes('跨模态链接')) return 'cross-modal-link';
+  if (path.includes('关联关系推理与补全') || path.includes('关联关系推理')) return 'link-inference';
   return null;
 }
 
@@ -1119,6 +1145,12 @@ export function resolveMultimodalBuildFocus(
   pagePath: string | undefined,
 ): MultimodalDatasetFocus | null {
   return resolveMultimodalDatasetFocus(pagePath);
+}
+
+/** Open CLIP：审计跳转时自动启动对比学习训练演示 */
+export function resolveOpenClipAutoStartTraining(pagePath: string | undefined): boolean {
+  const path = (pagePath ?? '').trim();
+  return path.includes('关联关系学习');
 }
 
 /** 专利技术要素解构：审计目录跳转到结果区块 */
@@ -1271,6 +1303,17 @@ export function resolveAuditAlgorithmId(pagePath: string | undefined): string | 
   if (path.includes('语义检索服务接口') || path.includes('推荐候选集生成接口')) {
     return 'semantic-retrieval';
   }
+  if (
+    path.includes('多模态完备表示')
+    || path.includes('跨模态表示学习模型')
+    || path.includes('统一语义空间映射')
+    || (path.includes('表示模型管理与训练') && !path.includes('数据集'))
+  ) {
+    return 'multimodal-representation';
+  }
+  if (path.includes('关联关系学习') || (path.includes('Open CLIP') && path.includes('对比学习'))) {
+    return 'open-clip';
+  }
   return null;
 }
 
@@ -1328,6 +1371,17 @@ export function resolveAuditAlgorithmTab(pagePath: string | undefined): AuditAlg
     return 'demo';
   }
   if (path.includes('语义检索服务接口') || path.includes('推荐候选集生成接口')) {
+    return 'demo';
+  }
+  if (
+    path.includes('多模态完备表示')
+    || path.includes('跨模态表示学习模型')
+    || path.includes('统一语义空间映射')
+    || path.includes('表示模型管理与训练')
+  ) {
+    return 'demo';
+  }
+  if (path.includes('关联关系学习') || path.includes('Open CLIP')) {
     return 'demo';
   }
   return null;

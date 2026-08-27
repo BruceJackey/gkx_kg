@@ -29,7 +29,9 @@ import { RGATDemo } from './demos/RGATDemo';
 import { TermVectorDemo } from './demos/TermVectorDemo';
 import { DependencyTreeDemo } from './demos/DependencyTreeDemo';
 import { CandidateTermGenerationDemo, type CandidateTermDemoTab } from './demos/CandidateTermGenerationDemo';
-import type { EncodingModelFocus, SupervisedSimilarityFocus, NodeSimilarityFocus, SemanticRetrievalFocus } from '../data/auditPageMap';
+import { MultimodalRepresentationDemo } from './demos/MultimodalRepresentationDemo';
+import { OpenCLIPDemo } from './demos/OpenCLIPDemo';
+import type { EncodingModelFocus, SupervisedSimilarityFocus, NodeSimilarityFocus, SemanticRetrievalFocus, MultimodalRepresentationFocus } from '../data/auditPageMap';
 
 interface AlgorithmDetailProps {
   algorithmId: string;
@@ -52,6 +54,10 @@ interface AlgorithmDetailProps {
   initialNodeSimilarityFocus?: NodeSimilarityFocus;
   /** 语义检索与推荐：检索 API 或推荐 API 聚焦 */
   initialSemanticRetrievalFocus?: SemanticRetrievalFocus;
+  /** 多模态完备表示：跨模态模型 / 统一语义空间 / 模型管理聚焦 */
+  initialMultimodalRepresentationFocus?: MultimodalRepresentationFocus;
+  /** Open CLIP：审计跳转时自动启动对比学习训练演示 */
+  autoStartOpenClipTraining?: boolean;
 }
 
 const algorithmDetails: Record<string, any> = {
@@ -1181,6 +1187,102 @@ const algorithmDetails: Record<string, any> = {
       },
     ],
   },
+  'open-clip': {
+    name: 'Open CLIP',
+    englishName: 'OpenCLIP Contrastive Learning',
+    category: '图嵌入',
+    type: '跨模态对比学习',
+    algorithmType: 'deep-learning',
+    trainable: true,
+    version: 'v2.24.0',
+    status: '已部署',
+    owner: '张明',
+    createdAt: '2026-07-15 09:00:00',
+    updatedAt: '2026-08-04 10:00:00',
+    id: 'ALG_OPEN_CLIP_001',
+    description: '基于 OpenCLIP 实现对称 InfoNCE 对比学习，联合训练 ViT 图像编码器与文本编码器。已链接的跨模态知识点（figure↔caption、图表↔正文引用）在向量空间中彼此靠近，batch 内未链接对相互推远，是关联关系学习的核心训练算法。',
+    intro: {
+      summary: 'Open CLIP 采用双塔架构与对称交叉熵对比损失（InfoNCE），在 batch 内构造正负样本对：正样本为数据集中已标注的跨模态链接，负样本为随机配对的图文组合。训练完成后，链接对的 cosine 相似度显著高于非链接对，支撑跨模态检索与知识图谱多模态实体对齐。',
+      scenarios: [
+        '科学论文 figure 与正文段落的跨模态关联关系学习',
+        '专利附图与权利要求文本的对比预训练',
+        '医学影像与临床报告的对齐向量学习',
+        '基于已链接图文对的零样本跨模态检索',
+      ],
+      inputFormat: 'JSONL 格式，每行包含 image、caption 及 split 字段；正样本对来自「跨模态链接构建」标注结果',
+      outputFormat: 'JSON格式，返回 image_encoder、text_encoder 权重及 embedding_dim、训练指标（Recall@K、InfoNCE loss）',
+      performance: {
+        f1: '—',
+        precision: 'Recall@1: 58–65%',
+        recall: 'Recall@5: 78–86%',
+        speed: '~900 对/秒（ViT-B/32）',
+      },
+      notes: [
+        '训练数据须先经「跨模态链接构建」完成图文链接标注',
+        '损失函数：symmetric InfoNCE / OpenCLIP 惯例',
+        '推荐 batch size ≥ 256 以获得足够负样本',
+        '温度 τ 默认 0.07，可在训练配置中调整',
+      ],
+    },
+    features: [
+      {
+        title: '关联关系学习',
+        description: '利用对比学习使已链接跨模态知识点在向量空间靠近、未链接的远离。支持 ViT-B/32、ViT-L/14 等骨干，配置 batch size、学习率与 InfoNCE 温度后一键发起训练。',
+      },
+    ],
+  },
+  'multimodal-representation': {
+    name: '多模态完备表示',
+    englishName: 'Multimodal Complete Representation',
+    category: '图嵌入',
+    type: '跨模态向量学习',
+    algorithmType: 'deep-learning',
+    trainable: true,
+    version: 'v1.0.0',
+    status: '已部署',
+    owner: '张明',
+    createdAt: '2026-07-01 09:00:00',
+    updatedAt: '2026-08-04 10:00:00',
+    id: 'ALG_MM_REPR_001',
+    description: '内置多种先进的跨模态表示学习模型（CLIP、BLIP-2、SigLIP 等），联合学习文本、图像等模态的向量表示，将它们映射到统一的语义空间。提供中央模型仓库，用于管理、训练、评估和版本化所有跨模态表示学习模型，并与图嵌入流水线无缝集成。',
+    intro: {
+      summary: '多模态完备表示模块将跨模态对比学习与知识图谱嵌入统一在同一平台：通过双塔编码器将图像与文本映射到共享高维空间，语义相近的内容在空间距离上也相近；中央模型仓库支持从数据集选择、训练配置到版本发布与 FAISS 索引构建的完整生命周期管理。',
+      scenarios: [
+        '科学论文图表与摘要的跨模态检索与对齐',
+        '专利附图与权利要求文本的统一语义表示',
+        '医学影像与临床报告的联合向量编码',
+        '多模态实体在知识图谱中的向量化入库与相似度计算',
+      ],
+      inputFormat: 'JSON格式，包含 image（图像路径/URL）、caption（文本描述）及可选 split、tags 等字段；训练配置含 base_model、batch_size、learning_rate',
+      outputFormat: 'JSON格式，返回 image_embedding、text_embedding（统一语义空间向量）及 model_version、index_config 等元信息',
+      performance: {
+        f1: '—',
+        precision: 'Recall@1: 55–68%',
+        recall: 'Recall@5: 78–89%',
+        speed: '~1200 对/秒（编码）',
+      },
+      notes: [
+        '统一语义空间维度与所选基座模型一致（通常 512 或 768）',
+        '训练完成后需构建向量索引方可启用跨模态检索服务',
+        'Chinese-CLIP 等中文模型适合专利、医学等中文领域图文对',
+        '模型版本与多模态数据集版本可关联追溯',
+      ],
+    },
+    features: [
+      {
+        title: '跨模态表示学习模型',
+        description: '内置 CLIP ViT-B/32、ViT-L/14、Chinese-CLIP、BLIP-2、SigLIP 等多种先进跨模态模型，支持对比学习联合训练文本与图像编码器，一键切换基座模型并预览向量效果。',
+      },
+      {
+        title: '统一语义空间映射',
+        description: '确保不同模态信息的向量表示在同一高维空间中，通过 cosine 相似度实现以文搜图、以图搜文，语义相近内容在空间距离上也相近，并提供可视化检索验证界面。',
+      },
+      {
+        title: '表示模型管理与训练',
+        description: '中央模型仓库统一管理所有跨模态表示学习模型的版本、训练记录与评估指标，支持发起训练、查看日志、评估 Recall@K 及发布部署，并与 FAISS 向量索引联动。',
+      },
+    ],
+  },
   'representation-space': {
     name: '表示空间',
     englishName: 'Representation Space Embedding',
@@ -1707,6 +1809,8 @@ export function AlgorithmDetailPage({
   initialSupervisedSimilarityFocus,
   initialNodeSimilarityFocus,
   initialSemanticRetrievalFocus,
+  initialMultimodalRepresentationFocus,
+  autoStartOpenClipTraining,
 }: AlgorithmDetailProps) {
   const resolveInitialTab = (): 'intro' | 'demo' | 'models' | 'training' | 'deployment' => {
     if (initialTab) return initialTab;
@@ -2136,6 +2240,30 @@ export function AlgorithmDetailPage({
                 <Cpu className="w-3.5 h-3.5" />空间类型配置
               </button>
             )}
+            {algorithmId === 'multimodal-representation' && (
+              <button
+                onClick={() => setActiveTab('demo')}
+                className={`py-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'demo'
+                    ? 'border-indigo-600 text-indigo-600 font-medium'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />跨模态表示
+              </button>
+            )}
+            {algorithmId === 'open-clip' && (
+              <button
+                onClick={() => setActiveTab('demo')}
+                className={`py-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'demo'
+                    ? 'border-indigo-600 text-indigo-600 font-medium'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Play className="w-3.5 h-3.5" />对比学习训练
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('models')}
               className={`py-3 border-b-2 transition-colors ${
@@ -2227,6 +2355,20 @@ export function AlgorithmDetailPage({
           <RepresentationSpaceDemo
             key={initialEmbeddingSpace ?? 'default'}
             initialSpace={initialEmbeddingSpace}
+            onRequestTrainingModal={() => setShowTrainingModal(true)}
+          />
+        )}
+        {activeTab === 'demo' && algorithmId === 'multimodal-representation' && (
+          <MultimodalRepresentationDemo
+            key={initialMultimodalRepresentationFocus ?? 'default'}
+            initialFocus={initialMultimodalRepresentationFocus}
+            onRequestTrainingModal={() => setShowTrainingModal(true)}
+          />
+        )}
+        {activeTab === 'demo' && algorithmId === 'open-clip' && (
+          <OpenCLIPDemo
+            key={autoStartOpenClipTraining ? 'auto' : 'default'}
+            autoStartTraining={autoStartOpenClipTraining}
             onRequestTrainingModal={() => setShowTrainingModal(true)}
           />
         )}

@@ -119,6 +119,8 @@ import {
   resolveSupervisedSimilarityFocus,
   resolveNodeSimilarityFocus,
   resolveSemanticRetrievalFocus,
+  resolveMultimodalRepresentationFocus,
+  resolveOpenClipAutoStartTraining,
   resolveCallLogsFocus,
   resolveRelationReasoningFocus,
   resolveHumanMachineReviewFocus,
@@ -193,6 +195,7 @@ import {
   type SupervisedSimilarityFocus,
   type NodeSimilarityFocus,
   type SemanticRetrievalFocus,
+  type MultimodalRepresentationFocus,
   type CallLogsFocus,
   type RelationReasoningFocus,
   type HumanMachineReviewFocus,
@@ -230,6 +233,7 @@ export default function App() {
   const [algorithmDemoTab, setAlgorithmDemoTab] = useState<AuditAlgorithmDemoTab | null>(null);
   const [algorithmInitialTab, setAlgorithmInitialTab] = useState<AuditAlgorithmTab | null>(null);
   const [autoStartDepTest, setAutoStartDepTest] = useState(false);
+  const [autoStartOpenClipTraining, setAutoStartOpenClipTraining] = useState(false);
   const [graphConstructionTab, setGraphConstructionTab] = useState<GraphConstructionTab | null>(null);
   const [graphStrategyFocus, setGraphStrategyFocus] = useState<GraphStrategyFocus | null>(null);
   const [graphConstructionAutoTask, setGraphConstructionAutoTask] = useState(false);
@@ -275,6 +279,7 @@ export default function App() {
   const [supervisedSimilarityFocus, setSupervisedSimilarityFocus] = useState<SupervisedSimilarityFocus | null>(null);
   const [nodeSimilarityFocus, setNodeSimilarityFocus] = useState<NodeSimilarityFocus | null>(null);
   const [semanticRetrievalFocus, setSemanticRetrievalFocus] = useState<SemanticRetrievalFocus | null>(null);
+  const [multimodalRepresentationFocus, setMultimodalRepresentationFocus] = useState<MultimodalRepresentationFocus | null>(null);
   const [callLogsFocus, setCallLogsFocus] = useState<CallLogsFocus | null>(null);
   const [relationReasoningFocus, setRelationReasoningFocus] = useState<RelationReasoningFocus | null>(null);
   const [humanMachineReviewFocus, setHumanMachineReviewFocus] = useState<HumanMachineReviewFocus | null>(null);
@@ -297,7 +302,7 @@ export default function App() {
     setAlgorithmDemoTab(null);
     setAlgorithmInitialTab(null);
     setAutoStartDepTest(false);
-    setGraphConstructionTab(null);
+    setAutoStartOpenClipTraining(false);
     setGraphStrategyFocus(null);
     setGraphConstructionAutoTask(false);
     setRuleEditorMode(null);
@@ -342,6 +347,7 @@ export default function App() {
     setSupervisedSimilarityFocus(null);
     setNodeSimilarityFocus(null);
     setSemanticRetrievalFocus(null);
+    setMultimodalRepresentationFocus(null);
     setCallLogsFocus(null);
     setRelationReasoningFocus(null);
     setHumanMachineReviewFocus(null);
@@ -478,6 +484,16 @@ export default function App() {
         algorithmId === 'semantic-retrieval'
           ? resolveSemanticRetrievalFocus(feature.pagePath)
           : null,
+      );
+      setMultimodalRepresentationFocus(
+        algorithmId === 'multimodal-representation'
+          ? resolveMultimodalRepresentationFocus(feature.pagePath)
+          : null,
+      );
+      setAutoStartOpenClipTraining(
+        algorithmId === 'open-clip'
+          ? resolveOpenClipAutoStartTraining(feature.pagePath)
+          : false,
       );
       setAutoStartDepTest(false);
       setCurrentPage('algorithm-detail');
@@ -728,7 +744,7 @@ export default function App() {
       case 'algorithm-detail':
         return selectedAlgorithmId ? (
           <AlgorithmDetailPage
-            key={`${selectedAlgorithmId}-${representationSpaceFocus ?? scoringFunctionFocus ?? encodingModelFocus ?? supervisedSimilarityFocus ?? nodeSimilarityFocus ?? semanticRetrievalFocus ?? 'all'}`}
+            key={`${selectedAlgorithmId}-${representationSpaceFocus ?? scoringFunctionFocus ?? encodingModelFocus ?? supervisedSimilarityFocus ?? nodeSimilarityFocus ?? semanticRetrievalFocus ?? multimodalRepresentationFocus ?? (autoStartOpenClipTraining ? 'open-clip-auto' : 'all')}`}
             algorithmId={selectedAlgorithmId}
             onBack={handleBackToAlgorithmList}
             initialDemoTab={selectedAlgorithmId === 'candidate-term-generation' ? algorithmDemoTab ?? undefined : undefined}
@@ -763,6 +779,14 @@ export default function App() {
               selectedAlgorithmId === 'semantic-retrieval' && semanticRetrievalFocus
                 ? semanticRetrievalFocus
                 : undefined
+            }
+            initialMultimodalRepresentationFocus={
+              selectedAlgorithmId === 'multimodal-representation' && multimodalRepresentationFocus
+                ? multimodalRepresentationFocus
+                : undefined
+            }
+            autoStartOpenClipTraining={
+              selectedAlgorithmId === 'open-clip' ? autoStartOpenClipTraining : false
             }
             onNavigateToService={(algId) => {
               setSelectedAlgorithmServiceId(algId);

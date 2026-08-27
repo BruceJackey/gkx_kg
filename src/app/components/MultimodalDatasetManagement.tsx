@@ -17,7 +17,7 @@ type DatasetTab = 'overview' | 'metadata' | 'evaluation' | 'preprocess' | 'versi
 const MULTIMODAL_FOCUS_LABELS: Partial<Record<MultimodalDatasetFocus, string>> = {
   import: '数据导入与整合',
   wizard: '可视化构建向导',
-  version: '数据集版本管理',
+  version: '数据版本控制',
   catalog: '分类目录与搜索',
   'metadata-tags': '多维度标签分类',
   'metadata-form': '数据集元数据管理',
@@ -25,9 +25,45 @@ const MULTIMODAL_FOCUS_LABELS: Partial<Record<MultimodalDatasetFocus, string>> =
   'eval-quality': '数据质量与完整性报告',
   'eval-benchmark': '评估基准对比',
   representation: '跨模态表示学习 / 统一语义空间',
-  index: '表示模型管理与高效检索索引',
+  index: '高效数据存储与索引',
   preprocess: '数据预处理与对齐工具',
+  'cross-modal-link': '跨模态链接构建',
+  'link-inference': '关联关系推理与补全',
 };
+
+const MGMT_CAPABILITIES: {
+  focus: MultimodalDatasetFocus;
+  label: string;
+  desc: string;
+  tab: DatasetTab;
+  sectionId: string;
+  icon: typeof GitBranch;
+}[] = [
+  {
+    focus: 'version',
+    label: '数据版本控制',
+    desc: 'Git 式变更记录、版本标签与回溯',
+    tab: 'version',
+    sectionId: 'mm-version-history',
+    icon: GitBranch,
+  },
+  {
+    focus: 'preprocess',
+    label: '数据预处理与对齐工具',
+    desc: '清洗、格式转换与跨模态对齐',
+    tab: 'preprocess',
+    sectionId: 'mm-preprocess',
+    icon: Cpu,
+  },
+  {
+    focus: 'index',
+    label: '高效数据存储与索引',
+    desc: '优化存储方案与多模态检索引擎',
+    tab: 'overview',
+    sectionId: 'mm-storage-index',
+    icon: Database,
+  },
+];
 
 const FOCUS_SECTION_IDS: Partial<Record<MultimodalDatasetFocus, string>> = {
   catalog: 'mm-catalog',
@@ -38,10 +74,12 @@ const FOCUS_SECTION_IDS: Partial<Record<MultimodalDatasetFocus, string>> = {
   'eval-quality': 'mm-eval-quality',
   'eval-benchmark': 'mm-eval-benchmark',
   representation: 'mm-representation',
-  index: 'mm-retrieval-index',
+  index: 'mm-storage-index',
   preprocess: 'mm-preprocess',
   import: 'mm-upload-dialog',
   wizard: 'mm-upload-wizard',
+  'cross-modal-link': 'mm-cross-modal-link',
+  'link-inference': 'mm-link-inference',
 };
 
 function resolveDatasetTab(f: MultimodalDatasetFocus | null): DatasetTab {
@@ -578,11 +616,15 @@ function UploadStepIndicator({
 function UploadDialog({
   onClose,
   highlightWizard = false,
+  initialUploadMode = 'pairs',
+  highlightCrossModalLink = false,
 }: {
   onClose: () => void;
   highlightWizard?: boolean;
+  initialUploadMode?: UploadMode;
+  highlightCrossModalLink?: boolean;
 }) {
-  const [uploadMode, setUploadMode] = useState<UploadMode>('pairs');
+  const [uploadMode, setUploadMode] = useState<UploadMode>(initialUploadMode);
   const [wizardStep, setWizardStep] = useState<WizardStep>('source');
   const [dataOrigin, setDataOrigin] = useState<DataOrigin>('upload');
   const [selectedSourceId, setSelectedSourceId] = useState<string>('db1');
@@ -609,7 +651,7 @@ function UploadDialog({
           { id: 'source', label: '数据指定' },
           { id: 'schema', label: 'Schema 定义' },
           { id: 'content', label: '获取数据' },
-          { id: 'label', label: '打标' },
+          { id: 'label', label: '链接标注' },
         ];
 
   const filteredSources = CONFIGURED_DATA_SOURCES.filter(s =>
@@ -689,22 +731,30 @@ function UploadDialog({
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
       <div
-        id={highlightWizard ? 'mm-upload-wizard' : 'mm-upload-dialog'}
-        className={`bg-white rounded-2xl shadow-2xl w-[760px] max-h-[90vh] flex flex-col overflow-hidden ${highlightWizard ? 'ring-2 ring-violet-300' : ''}`}
+        id={highlightWizard ? 'mm-upload-wizard' : highlightCrossModalLink ? 'mm-cross-modal-link' : 'mm-upload-dialog'}
+        className={`bg-white rounded-2xl shadow-2xl w-[760px] max-h-[90vh] flex flex-col overflow-hidden ${highlightWizard || highlightCrossModalLink ? 'ring-2 ring-violet-300' : ''}`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <div className="font-semibold text-gray-800">
-              {highlightWizard ? '可视化构建向导' : '导入数据到数据集'}
+              {highlightCrossModalLink ? '跨模态链接构建' : highlightWizard ? '可视化构建向导' : '导入数据到数据集'}
             </div>
             <div className="text-xs text-gray-400 mt-0.5">
-              {highlightWizard
-                ? '分步完成数据指定、Schema 定义与数据集生成'
-                : '支持直接上传、已配置数据库 / API 数据源'}
+              {highlightCrossModalLink
+                ? '标注或自动发现图表与正文等跨模态内容间的链接关系'
+                : highlightWizard
+                  ? '分步完成数据指定、Schema 定义与数据集生成'
+                  : '支持直接上传、已配置数据库 / API 数据源'}
             </div>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg transition-colors"><X size={16} /></button>
         </div>
+
+        {highlightCrossModalLink && (
+          <div className="px-6 py-2 bg-violet-50 border-b border-violet-100 text-xs text-violet-800">
+            在数据预处理阶段，为图像/图表与正文段落建立跨模态链接（如 figure ↔ 正文引用、caption ↔ 段落）。
+          </div>
+        )}
 
         {highlightWizard && (
           <div className="px-6 py-2 bg-violet-50 border-b border-violet-100 text-xs text-violet-800">
@@ -720,7 +770,7 @@ function UploadDialog({
             </button>
             <button onClick={() => resetWizard('label')}
               className={`text-sm px-5 py-2 transition-colors flex items-center gap-1.5 ${uploadMode === 'label' ? 'bg-violet-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-              <Tag size={13} /> 上传图片并打标
+              <Link2 size={13} /> 跨模态链接构建
             </button>
           </div>
         </div>
@@ -993,7 +1043,7 @@ function UploadDialog({
           {wizardStep === 'label' && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500 flex-1">为每张图片填写描述（可 AI 自动生成）</span>
+                <span className="text-sm text-gray-500 flex-1">为图像建立与正文/描述的跨模态链接（可 AI 自动发现）</span>
                 <span className="text-xs text-gray-400">{completedCount}/{labeledImages.length} 已填写</span>
               </div>
 
@@ -1224,6 +1274,82 @@ function NewDatasetDialog({ onClose, onCreate }: { onClose: () => void; onCreate
 }
 
 // ─── Tab panels ───────────────────────────────────────────────────────────────
+
+function StorageIndexPanel({ ds, highlight }: { ds: MultimodalDataset; highlight?: boolean }) {
+  const idx = ds.indexConfig;
+  const shardCount = Math.max(1, Math.ceil(ds.pairCount / 50000));
+  return (
+    <div
+      id="mm-storage-index"
+      className={`space-y-4 ${highlight ? 'ring-2 ring-violet-300 rounded-xl p-1' : ''}`}
+    >
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+          <Database size={14} className="text-violet-600" />
+          <span className="text-sm font-semibold text-gray-800">高效数据存储</span>
+          <span className="text-[11px] text-gray-400 ml-auto">{ds.size}</span>
+        </div>
+        <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { label: '存储格式', value: 'Parquet + WebDataset', sub: '列式存储 · 流式读取' },
+            { label: '对象存储', value: 's3://kg-mm/' + ds.name.toLowerCase(), sub: `${shardCount} 分片 · zstd 压缩` },
+            { label: '元数据索引', value: 'PostgreSQL + 倒排', sub: 'caption / tags / split 可检索' },
+          ].map(item => (
+            <div key={item.label} className="border border-gray-100 rounded-xl px-4 py-3 bg-gray-50/50">
+              <div className="text-[11px] text-gray-400 mb-1">{item.label}</div>
+              <div className="text-sm font-medium text-gray-800 font-mono truncate">{item.value}</div>
+              <div className="text-[11px] text-gray-400 mt-0.5">{item.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Layers size={14} className="text-violet-600" />
+            <span className="text-sm font-semibold text-gray-800">多模态检索索引</span>
+          </div>
+          {idx?.built ? (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-100 flex items-center gap-1">
+              <CheckCircle size={11} /> {idx.type.toUpperCase()} · {idx.vectorCount.toLocaleString()} 向量
+            </span>
+          ) : (
+            <span className="text-[11px] px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+              未构建索引
+            </span>
+          )}
+        </div>
+        <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div className="border border-gray-100 rounded-lg px-3 py-2">
+            <div className="text-gray-400">引擎</div>
+            <div className="font-medium text-gray-800 mt-0.5">{idx?.type ?? 'FAISS'} · IVF-PQ</div>
+          </div>
+          <div className="border border-gray-100 rounded-lg px-3 py-2">
+            <div className="text-gray-400">维度</div>
+            <div className="font-medium text-gray-800 mt-0.5">{idx?.dim ?? 512}-d</div>
+          </div>
+          <div className="border border-gray-100 rounded-lg px-3 py-2">
+            <div className="text-gray-400">度量</div>
+            <div className="font-medium text-gray-800 mt-0.5">{idx?.metric ?? 'cosine'}</div>
+          </div>
+          <div className="border border-gray-100 rounded-lg px-3 py-2">
+            <div className="text-gray-400">构建时间</div>
+            <div className="font-medium text-gray-800 mt-0.5">{idx?.buildAt ?? '—'}</div>
+          </div>
+        </div>
+        <div className="px-5 pb-4 flex gap-2">
+          <button type="button" className="text-xs px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg flex items-center gap-1">
+            <Play size={11} /> 重建索引
+          </button>
+          <button type="button" className="text-xs px-3 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg">
+            导出索引元数据
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function RetrievalPanel({ ds, highlightIndex }: { ds: MultimodalDataset; highlightIndex?: boolean }) {
   const [mode, setMode] = useState<RetrievalMode>('text2image');
@@ -1534,18 +1660,20 @@ function OverviewPanel({
   onUpload,
   highlightRetrieval,
   highlightIndex,
+  highlightLinkInference,
 }: {
   ds: MultimodalDataset;
   onUpload: () => void;
   highlightRetrieval?: boolean;
   highlightIndex?: boolean;
+  highlightLinkInference?: boolean;
 }) {
   const [searchQ, setSearchQ] = useState('');
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
   const [pairs, setPairs] = useState(ds.pairs);
   const filtered = pairs.filter(p => p.caption.toLowerCase().includes(searchQ.toLowerCase()) || p.tags.some(t => t.includes(searchQ)));
 
-  const autoCaption = (pairId: string) => {
+  const inferAndCompleteLink = (pairId: string) => {
     setGeneratingIds(prev => new Set([...prev, pairId]));
     const mockCaptions = [
       'A detailed scientific visualization showing transformer attention patterns across multiple heads, with color-coded attention weights and positional encoding representations.',
@@ -1574,8 +1702,16 @@ function OverviewPanel({
           </span>
         )}
       </div>
-      {/* Sample pairs */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      {/* Sample pairs · 关联关系推理与补全 */}
+      <div
+        id="mm-link-inference"
+        className={`bg-white border border-gray-200 rounded-xl overflow-hidden ${highlightLinkInference ? 'ring-2 ring-violet-300' : ''}`}
+      >
+        {highlightLinkInference && (
+          <div className="px-5 py-2.5 bg-violet-50 border-b border-violet-100 text-xs text-violet-800">
+            <span className="font-semibold">关联关系推理与补全</span>：基于已学习的跨模态表示，推理并预测数据集中可能缺失的图文链接，自动补全 caption 与跨模态关联。
+          </div>
+        )}
         <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3">
           <div className="text-sm font-semibold text-gray-800 flex-1">CLIP 图文对样本</div>
           <div className="relative">
@@ -1598,7 +1734,7 @@ function OverviewPanel({
                   {isGenerating ? (
                     <div className="flex items-center gap-2 text-sm text-violet-600 mb-1.5">
                       <RefreshCw size={12} className="animate-spin" />
-                      <span className="text-xs">AI 正在生成描述…</span>
+                      <span className="text-xs">正在推理跨模态链接并补全…</span>
                       <span className="inline-block w-1 h-3.5 bg-violet-400 animate-pulse rounded-sm" />
                     </div>
                   ) : (
@@ -1623,13 +1759,13 @@ function OverviewPanel({
                 <div className="flex-shrink-0 flex flex-col items-end justify-between gap-1">
                   <button className="p-1 hover:bg-gray-100 rounded text-gray-400"><Eye size={13} /></button>
                   <button
-                    onClick={() => autoCaption(pair.id)}
+                    onClick={() => inferAndCompleteLink(pair.id)}
                     disabled={isGenerating}
-                    title="AI自动生成描述"
-                    className="flex items-center gap-1 text-xs px-2 py-1 border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-40 rounded-lg transition-colors"
+                    title="基于跨模态表示推理缺失链接并补全描述"
+                    className="flex items-center gap-1 text-[10px] px-2 py-1 border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-40 rounded-lg transition-colors max-w-[7.5rem] text-center leading-tight"
                   >
-                    {isGenerating ? <RefreshCw size={10} className="animate-spin" /> : <Sparkles size={10} />}
-                    {isGenerating ? '生成中' : 'AI描述'}
+                    {isGenerating ? <RefreshCw size={10} className="animate-spin flex-shrink-0" /> : <Sparkles size={10} className="flex-shrink-0" />}
+                    {isGenerating ? '推理中' : '关联关系推理与补全'}
                   </button>
                   <span className="text-xs text-gray-400">{pair.addedAt}</span>
                 </div>
@@ -1641,9 +1777,8 @@ function OverviewPanel({
           显示 {filtered.length} / {ds.pairCount.toLocaleString()} 条图文对
         </div>
       </div>
-      <div className={highlightIndex ? 'ring-2 ring-violet-200 rounded-xl' : highlightRetrieval ? 'ring-2 ring-violet-200 rounded-xl' : ''}>
-        <RetrievalPanel ds={ds} highlightIndex={highlightIndex} />
-      </div>
+      <StorageIndexPanel ds={ds} highlight={highlightIndex} />
+      <RetrievalPanel ds={ds} highlightIndex={highlightIndex} />
     </div>
   );
 }
@@ -1674,6 +1809,9 @@ function PreprocessPanel({ ds, highlight }: { ds: MultimodalDataset; highlight?:
 
   return (
     <div id="mm-preprocess" className={`space-y-4 ${highlight ? 'ring-2 ring-violet-200 rounded-xl p-1' : ''}`}>
+      <div className="bg-violet-50 border border-violet-100 rounded-xl px-4 py-3 text-xs text-violet-800">
+        <span className="font-semibold">数据预处理与对齐工具</span>：提供标准化清洗、格式转换与跨模态数据对齐预处理流水线。
+      </div>
       {/* Active jobs */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -2101,12 +2239,12 @@ function EvaluationPanel({
   );
 }
 
-function VersionHistoryPanel({ ds }: { ds: MultimodalDataset }) {
+function VersionHistoryPanel({ ds, highlight }: { ds: MultimodalDataset; highlight?: boolean }) {
   const [current, setCurrent] = useState(ds.version);
   return (
-    <div id="mm-version-history" className="space-y-4">
+    <div id="mm-version-history" className={`space-y-4 ${highlight ? 'ring-2 ring-violet-300 rounded-xl p-1' : ''}`}>
       <div className="bg-violet-50 border border-violet-100 rounded-xl px-4 py-3 text-xs text-violet-800">
-        数据集版本管理：记录变更历史、支持版本标签回溯与差异比对，保障研究可复现性。
+        <span className="font-semibold">数据版本控制</span>：集成 Git 式版本管理，对多模态数据集每一次变更进行记录。
         当前版本 <span className="font-semibold">{current}</span> · 分支 <span className="font-mono">{ds.branch}</span>
       </div>
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -2171,7 +2309,9 @@ export default function MultimodalDatasetManagement({
   const [selectedId, setSelectedId] = useState('ds1');
   const [activeTab, setActiveTab] = useState<DatasetTab>(resolveDatasetTab(focus));
   const [showNewDataset, setShowNewDataset] = useState(false);
-  const [showUpload, setShowUpload] = useState(focus === 'import' || focus === 'wizard');
+  const [showUpload, setShowUpload] = useState(
+    focus === 'import' || focus === 'wizard' || focus === 'cross-modal-link',
+  );
   const [catalogQuery, setCatalogQuery] = useState('');
   const [filterDomain, setFilterDomain] = useState<string>('全部');
   const [filterTask, setFilterTask] = useState<string>('全部');
@@ -2180,14 +2320,14 @@ export default function MultimodalDatasetManagement({
   useEffect(() => {
     if (!focus) return;
     setActiveTab(resolveDatasetTab(focus));
-    setShowUpload(focus === 'import' || focus === 'wizard');
+    setShowUpload(focus === 'import' || focus === 'wizard' || focus === 'cross-modal-link');
   }, [focus]);
 
   useEffect(() => {
     if (!focus) return;
     const sectionId = FOCUS_SECTION_IDS[focus];
     if (!sectionId) return;
-    const delay = focus === 'import' || focus === 'wizard' ? 450 : 250;
+    const delay = focus === 'import' || focus === 'wizard' || focus === 'cross-modal-link' ? 450 : 250;
     const timer = window.setTimeout(() => {
       document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, delay);
@@ -2254,16 +2394,25 @@ export default function MultimodalDatasetManagement({
     setActiveTab('metadata');
   };
 
-  const updateDataset = (id: string, patch: Partial<MultimodalDataset>) => {
-    setDatasets(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
+  const scrollToSection = (sectionId: string) => {
+    setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
   };
+
+  const jumpToMgmt = (cap: typeof MGMT_CAPABILITIES[number]) => {
+    setActiveTab(cap.tab);
+    scrollToSection(cap.sectionId);
+  };
+
+  const isMgmtFocus = focus === 'version' || focus === 'preprocess' || focus === 'index';
 
   const tabs: { id: DatasetTab; label: string; icon: any }[] = [
     { id: 'overview', label: '数据概览', icon: BarChart3 },
     { id: 'metadata', label: '分类与元数据', icon: ClipboardList },
     { id: 'evaluation', label: '数据集评估', icon: Gauge },
-    { id: 'preprocess', label: '预处理与对齐', icon: Cpu },
-    { id: 'version', label: '数据集版本管理', icon: GitBranch },
+    { id: 'preprocess', label: '数据预处理与对齐', icon: Cpu },
+    { id: 'version', label: '数据版本控制', icon: GitBranch },
   ];
 
   return (
@@ -2273,6 +2422,8 @@ export default function MultimodalDatasetManagement({
         <UploadDialog
           onClose={() => setShowUpload(false)}
           highlightWizard={focus === 'wizard'}
+          initialUploadMode={focus === 'cross-modal-link' ? 'label' : 'pairs'}
+          highlightCrossModalLink={focus === 'cross-modal-link'}
         />
       )}
 
@@ -2417,12 +2568,49 @@ export default function MultimodalDatasetManagement({
 
               {/* Tabs */}
               <div className="flex gap-0 mt-4 border-b -mb-px overflow-x-auto">
-                {tabs.map(tab => (
-                  <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 text-sm px-4 py-2.5 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id ? 'border-violet-600 text-violet-700 font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                    <tab.icon size={14} /> {tab.label}
-                  </button>
-                ))}
+                {tabs.map(tab => {
+                  const tabFocused =
+                    (tab.id === 'version' && focus === 'version')
+                    || (tab.id === 'preprocess' && focus === 'preprocess')
+                    || (tab.id === 'overview' && focus === 'index');
+                  return (
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-1.5 text-sm px-4 py-2.5 border-b-2 transition-colors whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? 'border-violet-600 text-violet-700 font-medium'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      } ${tabFocused ? 'ring-2 ring-violet-200 ring-inset rounded-t-lg' : ''}`}>
+                      <tab.icon size={14} /> {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 多模态数据集管理 */}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="text-[11px] font-medium text-gray-500 mb-2 flex items-center gap-1.5">
+                  <Package size={12} /> 多模态数据集管理
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {MGMT_CAPABILITIES.map(cap => (
+                    <button
+                      key={cap.focus}
+                      type="button"
+                      onClick={() => jumpToMgmt(cap)}
+                      className={`text-left border rounded-xl px-3 py-2.5 transition-colors ${
+                        focus === cap.focus || (isMgmtFocus && activeTab === cap.tab && focus === cap.focus)
+                          ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-200'
+                          : 'border-gray-200 hover:border-violet-200 hover:bg-violet-50/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <cap.icon size={12} className="text-violet-600" />
+                        <span className="text-xs font-semibold text-gray-800">{cap.label}</span>
+                      </div>
+                      <p className="text-[10px] text-gray-400 leading-snug">{cap.desc}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -2434,6 +2622,7 @@ export default function MultimodalDatasetManagement({
                   onUpload={() => setShowUpload(true)}
                   highlightRetrieval={focus === 'representation'}
                   highlightIndex={focus === 'index'}
+                  highlightLinkInference={focus === 'link-inference'}
                 />
               )}
               {activeTab === 'metadata' && (
@@ -2472,7 +2661,9 @@ export default function MultimodalDatasetManagement({
               {activeTab === 'preprocess' && (
                 <PreprocessPanel ds={selected} highlight={focus === 'preprocess'} />
               )}
-              {activeTab === 'version' && <VersionHistoryPanel ds={selected} />}
+              {activeTab === 'version' && (
+                <VersionHistoryPanel ds={selected} highlight={focus === 'version'} />
+              )}
             </div>
           </>
         ) : (
