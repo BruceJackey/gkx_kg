@@ -33,6 +33,18 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/algorithm-api': {
+        target: process.env.VERTICAL_DOMAIN_PROXY_TARGET || 'http://60.165.238.47:8000',
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/algorithm-api/, ''),
+        headers: process.env.VERTICAL_DOMAIN_GATEWAY_TOKEN
+          ? { Authorization: `Bearer ${process.env.VERTICAL_DOMAIN_GATEWAY_TOKEN}` }
+          : undefined,
+      },
+    },
+  },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],

@@ -87,6 +87,14 @@ import PropertyManagement from './components/PropertyManagement';
 import SchemaConstraintRulesPage from './components/SchemaConstraintRulesPage';
 import DataConsistencyScan from './components/DataConsistencyScan';
 import ValidationReportPage from './components/ValidationReportPage';
+import CompletionResultReviewPage from './components/CompletionResultReviewPage';
+import TextEntityLocalizationPage from './components/TextEntityLocalizationPage';
+import VisualEntityLocalizationPage from './components/VisualEntityLocalizationPage';
+import TextConceptLocalizationPage from './components/TextConceptLocalizationPage';
+import VisualConceptLocalizationPage from './components/VisualConceptLocalizationPage';
+import RelationLocalizationPage from './components/RelationLocalizationPage';
+import TextRelationLocalizationPage from './components/TextRelationLocalizationPage';
+import VisualRelationLocalizationPage from './components/VisualRelationLocalizationPage';
 import HumanReview from './components/HumanReview';
 import { AuditFeaturePage } from './components/AuditFeaturePage';
 import type { AuditFeatureSelection } from './data/auditCatalogTypes';
@@ -711,6 +719,22 @@ export default function App() {
         return <DataConsistencyScan onNavigateTo={handleNavigate} />;
       case 'validation-report':
         return <ValidationReportPage />;
+      case 'completion-result-review':
+        return <CompletionResultReviewPage />;
+      case 'text-entity-localization':
+        return <TextEntityLocalizationPage />;
+      case 'visual-entity-localization':
+        return <VisualEntityLocalizationPage />;
+      case 'text-concept-localization':
+        return <TextConceptLocalizationPage />;
+      case 'visual-concept-localization':
+        return <VisualConceptLocalizationPage />;
+      case 'relation-localization':
+        return <RelationLocalizationPage />;
+      case 'text-relation-localization':
+        return <TextRelationLocalizationPage />;
+      case 'visual-relation-localization':
+        return <VisualRelationLocalizationPage />;
       case 'property-management':
         return (
           <PropertyManagement
@@ -1200,8 +1224,8 @@ export default function App() {
         selectedAuditFeatureId={selectedAuditFeature?.id}
         onAuditFeatureSelect={handleAuditFeatureSelect}
       />
-      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
-        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
+      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
+        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
           {renderPage()}
         </div>
       </main>

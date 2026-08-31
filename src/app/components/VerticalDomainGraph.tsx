@@ -5,10 +5,16 @@ import {
   ZoomIn, ZoomOut, RotateCcw, AlertTriangle, MessageSquare,
   Sparkles, ArrowUpRight, ArrowDownRight, Lightbulb, TrendingUp,
   FileText, Download, Printer, CheckSquare, Square, LayoutGrid,
+  AlertCircle, Loader2, RefreshCw,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts';
+import {
+  getVerticalDomainCompanies,
+  getVerticalDomainDashboard,
+  type CompanyListItem,
+} from '../api/verticalDomain';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,9 +27,13 @@ interface GraphNode {
 }
 
 interface GraphEdge {
+  id?: string;
   from: string;
   to: string;
   label: string;
+  relationType?: string;
+  weight?: number;
+  inferred?: boolean;
 }
 
 interface CompanyData {
@@ -35,16 +45,33 @@ interface CompanyData {
   legalRep: string;
   creditCode: string;
   financialSummary: string;
-  news: { date: string; title: string }[];
-  associates: { name: string; relation: string }[];
-  riskEvents: { date: string; desc: string }[];
+  financialTrend?: { year: string; revenue: number; profit: number; rd: number }[];
+  news: { id?: string; date: string; title: string; content?: string; sourceUrl?: string }[];
+  associates: { id?: string; name: string; relation: string; weight?: number }[];
+  riskEvents: {
+    id?: string;
+    date: string;
+    desc: string;
+    severity?: 'high' | 'medium' | 'low';
+    sourceUrl?: string;
+  }[];
   sentiment: string;
+  sentimentStats?: { positive: number; neutral: number; negative: number };
   nodes: GraphNode[];
   edges: GraphEdge[];
   inference: {
     relations: { from: string; rel: string; to: string; confidence: number; basis: string }[];
     trends: { tech: string; direction: 'up' | 'down'; confidence: number; desc: string }[];
     opportunities: { title: string; tag: string; desc: string; score: number }[];
+  };
+  meta?: {
+    graphSpace: string;
+    dataBatch: string;
+    asOf: string;
+    modelName: string;
+    modelVersion: string;
+    dataSources?: string[];
+    warnings?: string[];
   };
 }
 
@@ -508,7 +535,7 @@ function RightPanel({ data }: { data: CompanyData }) {
         <Section id="news" title="近期动态" icon={Newspaper}>
           <div className="flex flex-col gap-2.5">
             {data.news.map((n, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={n.id ?? i} className="flex gap-2">
                 <span className="text-[10px] text-gray-400 flex-shrink-0 mt-0.5">{n.date}</span>
                 <p className="text-[11px] text-gray-700 leading-snug">{n.title}</p>
               </div>
@@ -520,7 +547,7 @@ function RightPanel({ data }: { data: CompanyData }) {
         <Section id="associates" title="关联方" icon={Link2}>
           <div className="flex flex-col gap-2">
             {data.associates.map((a, i) => (
-              <div key={i} className="flex items-start justify-between gap-2">
+              <div key={a.id ?? i} className="flex items-start justify-between gap-2">
                 <p className="text-[11px] text-gray-700 leading-tight flex-1">{a.name}</p>
                 <span className="text-[10px] text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 flex-shrink-0 whitespace-nowrap">{a.relation}</span>
               </div>
@@ -557,7 +584,7 @@ function LeftPanel({ data }: { data: CompanyData }) {
       </div>
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5">
         {data.riskEvents.map((ev, i) => (
-          <div key={i} className="bg-orange-50 border border-orange-100 rounded-lg p-3">
+          <div key={ev.id ?? i} className="bg-orange-50 border border-orange-100 rounded-lg p-3">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Calendar className="w-3 h-3 text-orange-400 flex-shrink-0" />
               <span className="text-[10px] text-orange-500">{ev.date}</span>
@@ -700,7 +727,7 @@ function GraphCanvas({ data, selectedNode, onSelectNode }: {
             const x2 = tgt.x - ux * (NODE_R + 6), y2 = tgt.y - uy * (NODE_R + 6);
             const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
             return (
-              <g key={i} opacity={selectedNode && !isHighlighted ? 0.2 : 1}>
+              <g key={edge.id ?? i} opacity={selectedNode && !isHighlighted ? 0.2 : 1}>
                 <line
                   x1={x1} y1={y1} x2={x2} y2={y2}
                   stroke={isHighlighted ? '#2563eb' : '#cbd5e1'}
@@ -868,32 +895,23 @@ const SECTION_CONFIG = [
 
 type SectionId = typeof SECTION_CONFIG[number]['id'];
 
-const FINANCIAL_TREND: Record<string, { year: string; revenue: number; profit: number; rd: number }[]> = {
-  '华为技术有限公司':       [{ year: '2021', revenue: 6368, profit: 564, rd: 1427 }, { year: '2022', revenue: 6423, profit: 356, rd: 1615 }, { year: '2023', revenue: 7042, profit: 627, rd: 1647 }],
-  '比亚迪股份有限公司':     [{ year: '2021', revenue: 2161, profit: 30, rd: 106 }, { year: '2022', revenue: 4241, profit: 166, rd: 202 }, { year: '2023', revenue: 6023, profit: 300, rd: 408 }],
-  '腾讯控股有限公司':       [{ year: '2021', revenue: 5601, profit: 2248, rd: 518 }, { year: '2022', revenue: 5546, profit: 1882, rd: 614 }, { year: '2023', revenue: 6090, profit: 1579, rd: 624 }],
-  '宁德时代新能源科技':     [{ year: '2021', revenue: 1304, profit: 160, rd: 77 }, { year: '2022', revenue: 3286, profit: 307, rd: 155 }, { year: '2023', revenue: 4009, profit: 441, rd: 184 }],
-  '小米集团':               [{ year: '2021', revenue: 3283, profit: 220, rd: 132 }, { year: '2022', revenue: 2800, profit: 85, rd: 160 }, { year: '2023', revenue: 2710, profit: 193, rd: 191 }],
-};
-
-const DEFAULT_FINANCIAL = [
-  { year: '2021', revenue: 1200, profit: 80, rd: 60 },
-  { year: '2022', revenue: 1800, profit: 140, rd: 95 },
-  { year: '2023', revenue: 2400, profit: 200, rd: 130 },
-];
-
 // ─── ReportPreview ────────────────────────────────────────────────────────────
 
 function ReportPreview({ data, sections }: { data: CompanyData; sections: Set<SectionId> }) {
-  const financial = FINANCIAL_TREND[data.name] ?? DEFAULT_FINANCIAL;
+  const financial = data.financialTrend ?? [];
   const latest = financial[financial.length - 1];
   const prev = financial[financial.length - 2];
-  const revenueGrowth = prev ? (((latest.revenue - prev.revenue) / prev.revenue) * 100).toFixed(1) : '–';
+  const revenueGrowth = latest && prev && prev.revenue
+    ? (((latest.revenue - prev.revenue) / prev.revenue) * 100).toFixed(1)
+    : null;
+  const rdRatio = latest?.revenue ? (latest.rd / latest.revenue * 100).toFixed(1) : null;
+  const profitMargin = latest?.revenue ? (latest.profit / latest.revenue * 100).toFixed(1) : null;
 
   const today = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
-  const sentimentPos = data.name.includes('比亚迪') ? 72 : data.name.includes('腾讯') ? 61 : data.name.includes('华为') ? 68 : data.name.includes('宁德') ? 65 : 70;
-  const sentimentNeg = 100 - sentimentPos - 8;
+  const sentimentPos = data.sentimentStats?.positive ?? 0;
+  const sentimentNeutral = data.sentimentStats?.neutral ?? 100;
+  const sentimentNeg = data.sentimentStats?.negative ?? 0;
 
   const SectionHeading = ({ title, sub }: { title: string; sub?: string }) => (
     <div className="flex items-baseline gap-3 mb-4">
@@ -923,9 +941,9 @@ function ReportPreview({ data, sections }: { data: CompanyData; sections: Set<Se
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: '营业收入', value: `${latest.revenue.toLocaleString()} 亿元`, sub: `同比 +${revenueGrowth}%` },
-              { label: '净利润', value: `${latest.profit.toLocaleString()} 亿元`, sub: `${latest.year}年` },
-              { label: '研发投入', value: `${latest.rd.toLocaleString()} 亿元`, sub: `占营收 ${(latest.rd / latest.revenue * 100).toFixed(1)}%` },
+              { label: '营业收入', value: latest ? `${latest.revenue.toLocaleString()} 亿元` : '暂无数据', sub: revenueGrowth ? `同比 ${Number(revenueGrowth) >= 0 ? '+' : ''}${revenueGrowth}%` : '同比暂无' },
+              { label: '净利润', value: latest ? `${latest.profit.toLocaleString()} 亿元` : '暂无数据', sub: latest ? `${latest.year}年` : '—' },
+              { label: '研发投入', value: latest ? `${latest.rd.toLocaleString()} 亿元` : '暂无数据', sub: rdRatio ? `占营收 ${rdRatio}%` : '占比暂无' },
             ].map((kpi, i) => (
               <div key={i} className="bg-white/10 backdrop-blur rounded-xl px-4 py-3">
                 <div className="text-xs text-blue-200 mb-0.5">{kpi.label}</div>
@@ -959,7 +977,7 @@ function ReportPreview({ data, sections }: { data: CompanyData; sections: Set<Se
                 <div className="text-xs font-semibold text-blue-700 mb-1">关联方概览</div>
                 <div className="flex flex-wrap gap-2">
                   {data.associates.map((a, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-100 rounded-full text-xs text-gray-700">
+                    <span key={a.id ?? i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-blue-100 rounded-full text-xs text-gray-700">
                       <span>{a.name}</span>
                       <span className="text-blue-400">·</span>
                       <span className="text-blue-600">{a.relation}</span>
@@ -975,25 +993,31 @@ function ReportPreview({ data, sections }: { data: CompanyData; sections: Set<Se
             <section>
               <SectionHeading title="财务概况" sub="近三年营收、利润与研发投入（亿元）" />
               <p className="text-sm text-gray-600 mb-4 leading-relaxed">{data.financialSummary}</p>
-              <div className="rounded-xl border border-gray-100 overflow-hidden">
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={financial} barGap={4} margin={{ top: 16, right: 16, left: 0, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} unit="亿" />
-                    <Tooltip formatter={(v: number, name: string) => [`${v.toLocaleString()} 亿元`, name === 'revenue' ? '营业收入' : name === 'profit' ? '净利润' : '研发投入']} />
-                    <Legend formatter={(v) => v === 'revenue' ? '营业收入' : v === 'profit' ? '净利润' : '研发投入'} wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} />
-                    <Bar dataKey="profit"  fill="#22c55e" radius={[4, 4, 0, 0]} barSize={28} />
-                    <Bar dataKey="rd"      fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={28} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {financial.length > 0 ? (
+                <div className="rounded-xl border border-gray-100 overflow-hidden">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={financial} barGap={4} margin={{ top: 16, right: 16, left: 0, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} unit="亿" />
+                      <Tooltip formatter={(v: number, name: string) => [`${v.toLocaleString()} 亿元`, name === 'revenue' ? '营业收入' : name === 'profit' ? '净利润' : '研发投入']} />
+                      <Legend formatter={(v) => v === 'revenue' ? '营业收入' : v === 'profit' ? '净利润' : '研发投入'} wrapperStyle={{ fontSize: 11 }} />
+                      <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} />
+                      <Bar dataKey="profit"  fill="#22c55e" radius={[4, 4, 0, 0]} barSize={28} />
+                      <Bar dataKey="rd"      fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={28} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-32 rounded-xl border border-dashed border-gray-200 flex items-center justify-center text-sm text-gray-400">
+                  暂无财务趋势数据
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-3 mt-3">
                 {[
-                  { label: '2023 营收增速', value: `+${revenueGrowth}%`, color: 'text-emerald-600' },
-                  { label: '研发投入占比', value: `${(latest.rd / latest.revenue * 100).toFixed(1)}%`, color: 'text-blue-600' },
-                  { label: '净利率', value: `${(latest.profit / latest.revenue * 100).toFixed(1)}%`, color: 'text-purple-600' },
+                  { label: '最近年度营收增速', value: revenueGrowth ? `${Number(revenueGrowth) >= 0 ? '+' : ''}${revenueGrowth}%` : '—', color: 'text-emerald-600' },
+                  { label: '研发投入占比', value: rdRatio ? `${rdRatio}%` : '—', color: 'text-blue-600' },
+                  { label: '净利率', value: profitMargin ? `${profitMargin}%` : '—', color: 'text-purple-600' },
                 ].map((m, i) => (
                   <div key={i} className="border border-gray-100 rounded-xl p-3 text-center">
                     <div className={`text-xl font-bold ${m.color}`}>{m.value}</div>
@@ -1056,11 +1080,13 @@ function ReportPreview({ data, sections }: { data: CompanyData; sections: Set<Se
               <SectionHeading title="风险事件清单" sub={`共 ${data.riskEvents.length} 条已识别风险`} />
               <div className="space-y-2.5">
                 {data.riskEvents.map((ev, i) => {
-                  const severity = i < 2 ? { label: '高', bg: 'bg-red-50', border: 'border-red-200', badge: 'bg-red-100 text-red-700' }
-                    : i < 4 ? { label: '中', bg: 'bg-amber-50', border: 'border-amber-200', badge: 'bg-amber-100 text-amber-700' }
-                    : { label: '低', bg: 'bg-gray-50', border: 'border-gray-200', badge: 'bg-gray-100 text-gray-600' };
+                  const severity = ev.severity === 'high'
+                    ? { label: '高', bg: 'bg-red-50', border: 'border-red-200', badge: 'bg-red-100 text-red-700' }
+                    : ev.severity === 'medium'
+                      ? { label: '中', bg: 'bg-amber-50', border: 'border-amber-200', badge: 'bg-amber-100 text-amber-700' }
+                      : { label: '低', bg: 'bg-gray-50', border: 'border-gray-200', badge: 'bg-gray-100 text-gray-600' };
                   return (
-                    <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border ${severity.bg} ${severity.border}`}>
+                    <div key={ev.id ?? i} className={`flex items-start gap-3 p-3 rounded-xl border ${severity.bg} ${severity.border}`}>
                       <div className="flex-shrink-0 pt-0.5 flex flex-col items-center gap-1">
                         <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${severity.badge}`}>{severity.label}</span>
                         <span className="text-[10px] text-gray-400">{ev.date.slice(5)}</span>
@@ -1084,12 +1110,12 @@ function ReportPreview({ data, sections }: { data: CompanyData; sections: Set<Se
                 </div>
                 <div className="h-5 rounded-full overflow-hidden flex">
                   <div className="bg-emerald-400 transition-all" style={{ width: `${sentimentPos}%` }} />
-                  <div className="bg-gray-200 transition-all" style={{ width: `${100 - sentimentPos - sentimentNeg}%` }} />
+                  <div className="bg-gray-200 transition-all" style={{ width: `${sentimentNeutral}%` }} />
                   <div className="bg-red-300 transition-all" style={{ width: `${sentimentNeg}%` }} />
                 </div>
                 <div className="flex justify-between text-xs text-gray-500 mt-2">
                   <span className="text-emerald-600 font-medium">{sentimentPos}%</span>
-                  <span>{100 - sentimentPos - sentimentNeg}%</span>
+                  <span>{sentimentNeutral}%</span>
                   <span className="text-red-500 font-medium">{sentimentNeg}%</span>
                 </div>
               </div>
@@ -1321,18 +1347,64 @@ function ReportView({ data }: { data: CompanyData }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-const COMPANIES = Object.keys(COMPANY_DATA);
-
 export default function VerticalDomainGraph() {
-  const [selectedCompany, setSelectedCompany] = useState(COMPANIES[0]);
+  const [companies, setCompanies] = useState<CompanyListItem[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState('');
+  const [data, setData] = useState<CompanyData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [view, setView] = useState<'graph' | 'report'>('graph');
 
-  const data = COMPANY_DATA[selectedCompany];
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    getVerticalDomainCompanies(controller.signal)
+      .then(result => {
+        setCompanies(result.items);
+        setSelectedCompany(current =>
+          result.items.some(company => company.id === current) ? current : (result.items[0]?.id ?? '')
+        );
+        if (result.items.length === 0) {
+          setData(null);
+          setError('算法服务未返回可展示的企业。');
+          setLoading(false);
+        }
+      })
+      .catch(reason => {
+        if (reason instanceof DOMException && reason.name === 'AbortError') return;
+        setData(null);
+        setError(reason instanceof Error ? reason.message : '企业列表加载失败。');
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  useEffect(() => {
+    if (!selectedCompany) return;
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    getVerticalDomainDashboard(selectedCompany, controller.signal)
+      .then(result => {
+        setData(result);
+        setLoading(false);
+      })
+      .catch(reason => {
+        if (reason instanceof DOMException && reason.name === 'AbortError') return;
+        setData(null);
+        setError(reason instanceof Error ? reason.message : '企业图谱加载失败。');
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [selectedCompany, reloadKey]);
 
   const handleCompanyChange = (company: string) => {
     setSelectedCompany(company);
     setSelectedNode(null);
+    setData(null);
   };
 
   return (
@@ -1345,9 +1417,13 @@ export default function VerticalDomainGraph() {
         <select
           value={selectedCompany}
           onChange={e => handleCompanyChange(e.target.value)}
+          disabled={companies.length === 0}
           className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-blue-400 min-w-48"
         >
-          {COMPANIES.map(c => <option key={c}>{c}</option>)}
+          {companies.length === 0 && <option value="">暂无企业</option>}
+          {companies.map(company => (
+            <option key={company.id} value={company.id}>{company.name}</option>
+          ))}
         </select>
 
         {/* View toggle */}
@@ -1363,7 +1439,7 @@ export default function VerticalDomainGraph() {
         </div>
 
         {/* Legend (graph mode only) */}
-        {view === 'graph' && (
+        {view === 'graph' && data && (
           <div className="ml-auto flex items-center gap-3">
             <span className="text-xs text-gray-400">点击节点查看关系详情</span>
             <div className="w-px h-4 bg-gray-200" />
@@ -1377,8 +1453,35 @@ export default function VerticalDomainGraph() {
         )}
       </div>
 
+      {data?.meta?.warnings && data.meta.warnings.length > 0 && (
+        <div className="flex-shrink-0 px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">
+          数据源降级：{data.meta.warnings.join('；')}
+        </div>
+      )}
+
       {/* Content */}
-      {view === 'graph' ? (
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-gray-500">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+          <span className="text-sm">正在加载企业知识图谱…</span>
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+          <AlertCircle className="w-8 h-8 text-red-400" />
+          <div>
+            <p className="text-sm font-medium text-gray-800">真实接口数据加载失败</p>
+            <p className="text-xs text-gray-500 mt-1">{error}</p>
+          </div>
+          <button
+            onClick={() => setReloadKey(key => key + 1)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />重新加载
+          </button>
+        </div>
+      ) : !data ? (
+        <div className="flex-1 flex items-center justify-center text-sm text-gray-400">暂无企业图谱数据</div>
+      ) : view === 'graph' ? (
         <div className="flex-1 min-h-0 flex overflow-hidden">
           <LeftPanel data={data} />
           <div className="flex-1 min-w-0 flex flex-col overflow-hidden">

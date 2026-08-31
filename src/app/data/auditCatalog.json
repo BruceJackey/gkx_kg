@@ -4813,9 +4813,9 @@
                           "name": "补全结果审核",
                           "type": "feature",
                           "reqId": "167",
-                          "pagePath": "",
+                          "pagePath": "数据的统一建模与表示融合/基于对抗迁移学习的知识图谱补全/补全结果审核",
                           "featureDesc": "将模型补全的三元组放入待审核列表，供人工校验。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应补全结果审核页 · 待审核三元组列表 · 通过/拒绝"
                         }
                       ]
                     }
@@ -4870,18 +4870,18 @@
                           "name": "文本实体定位",
                           "type": "feature",
                           "reqId": "169",
-                          "pagePath": "",
+                          "pagePath": "语义理解模型/实体定位/文本实体定位",
                           "featureDesc": "在文本中进行命名实体识别。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应文本实体定位页 · 输入文本 · 输出实体列表"
                         },
                         {
                           "id": "fp-169-392",
                           "name": "视觉实体定位",
                           "type": "feature",
                           "reqId": "169",
-                          "pagePath": "",
+                          "pagePath": "语义理解模型/实体定位/视觉实体定位",
                           "featureDesc": "在图像或视频中，通过目标检测或视觉定位技术，框出实体对应的区域。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应视觉实体定位页 · 输入图像 · 输出框选结果"
                         }
                       ]
                     }
@@ -4902,18 +4902,18 @@
                           "name": "文本概念定位",
                           "type": "feature",
                           "reqId": "170",
-                          "pagePath": "",
+                          "pagePath": "复杂多样的知识定位/概念定位/文本概念定位",
                           "featureDesc": "从文本中识别出抽象的概念。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应文本概念定位页 · 输入文本 · 输出抽象概念"
                         },
                         {
                           "id": "fp-170-394",
                           "name": "视觉概念定位",
                           "type": "feature",
                           "reqId": "170",
-                          "pagePath": "",
+                          "pagePath": "复杂多样的知识定位/概念定位/视觉概念定位",
                           "featureDesc": "对图像进行场景分类。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应视觉概念定位页 · 输入图像 · 输出场景分类"
                         }
                       ]
                     },
@@ -4927,27 +4927,27 @@
                           "name": "关系定位",
                           "type": "feature",
                           "reqId": "171",
-                          "pagePath": "",
+                          "pagePath": "复杂多样的知识定位/关系定位/关系定位",
                           "featureDesc": "识别并定位不同实体或概念之间的语义关系。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应关系定位页 · 实体/概念语义关系"
                         },
                         {
                           "id": "fp-171-396",
                           "name": "文本关系定位",
                           "type": "feature",
                           "reqId": "171",
-                          "pagePath": "",
+                          "pagePath": "复杂多样的知识定位/关系定位/文本关系定位",
                           "featureDesc": "从文本中进行关系抽取。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应文本关系定位页 · 输入文本 · 输出三元组"
                         },
                         {
                           "id": "fp-171-397",
                           "name": "视觉关系定位",
                           "type": "feature",
                           "reqId": "171",
-                          "pagePath": "",
+                          "pagePath": "复杂多样的知识定位/关系定位/视觉关系定位",
                           "featureDesc": "在图像中进行视觉关系检测。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应视觉关系定位页 · 输入图像 · 输出视觉关系"
                         }
                       ]
                     },

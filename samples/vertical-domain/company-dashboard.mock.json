@@ -1,0 +1,350 @@
+{
+  "code": "OK",
+  "message": "success",
+  "requestId": "req_vertical_mock_med001",
+  "data": {
+    "id": "PROTO_ORG_MED001",
+    "name": "华研精准医疗科技有限公司",
+    "industry": "精准医疗",
+    "founded": "2012年",
+    "type": "其他有限责任公司",
+    "location": "广东省深圳市科技创新园1号",
+    "legalRep": "陈明远",
+    "creditCode": "PROTO20260828MED001",
+    "financialSummary": "2025年营业收入16.40亿元，净利润1.33亿元，研发投入2.95亿元，占营业收入18.0%。",
+    "financialTrend": [
+      {
+        "year": "2023",
+        "revenue": 13.2,
+        "profit": 1.07,
+        "rd": 2.38
+      },
+      {
+        "year": "2024",
+        "revenue": 14.8,
+        "profit": 1.2,
+        "rd": 2.66
+      },
+      {
+        "year": "2025",
+        "revenue": 16.4,
+        "profit": 1.33,
+        "rd": 2.95
+      }
+    ],
+    "news": [
+      {
+        "id": "NEWS::PROTO_ORG_MED001::2025-06-15",
+        "date": "2025-06-15",
+        "title": "华研精准医疗科技有限公司2025年多组学分析研发里程碑",
+        "content": "原型数据：基因检测平台完成第4阶段验证，展示企业技术演进时间轴。",
+        "sourceUrl": "https://prototype.example/MED001/news/2025"
+      },
+      {
+        "id": "NEWS::PROTO_ORG_MED001::2024-05-15",
+        "date": "2024-05-15",
+        "title": "华研精准医疗科技有限公司2024年医学影像AI研发里程碑",
+        "content": "原型数据：基因检测平台完成第3阶段验证，展示企业技术演进时间轴。",
+        "sourceUrl": "https://prototype.example/MED001/news/2024"
+      },
+      {
+        "id": "NEWS::PROTO_ORG_MED001::2023-04-15",
+        "date": "2023-04-15",
+        "title": "华研精准医疗科技有限公司2023年临床决策支持研发里程碑",
+        "content": "原型数据：基因检测平台完成第2阶段验证，展示企业技术演进时间轴。",
+        "sourceUrl": "https://prototype.example/MED001/news/2023"
+      }
+    ],
+    "associates": [
+      {
+        "id": "PROTO_ORG_INV001",
+        "name": "湾区科技产业投资有限公司",
+        "relation": "股东",
+        "weight": 0.29
+      },
+      {
+        "id": "PROTO_ORG_MED001SUB",
+        "name": "华研精准医疗科技应用技术有限公司",
+        "relation": "控股子公司",
+        "weight": 0.66
+      }
+    ],
+    "riskEvents": [
+      {
+        "id": "PROTO_PENALTY_MED001",
+        "date": "2025-03-20",
+        "desc": "原型模拟：研发项目资料归档不完整。该记录仅用于风险面板展示，不代表真实处罚。",
+        "severity": "low"
+      }
+    ],
+    "sentiment": "原型资讯以研发里程碑为主，整体舆情偏正面；样本量有限，本结果仅用于页面联调。",
+    "sentimentStats": {
+      "positive": 75,
+      "neutral": 25,
+      "negative": 0
+    },
+    "nodes": [
+      {
+        "id": "PROTO_ORG_MED001",
+        "label": "华研精准医疗",
+        "type": "company",
+        "x": 350,
+        "y": 240,
+        "properties": {
+          "industry": "精准医疗",
+          "domain": "医疗专题"
+        }
+      },
+      {
+        "id": "PERSON::PROTO_ORG_MED001::陈明远",
+        "label": "陈明远",
+        "type": "person",
+        "x": 160,
+        "y": 120,
+        "properties": {
+          "position": "董事长兼总经理"
+        }
+      },
+      {
+        "id": "PERSON::PROTO_ORG_MED001::精准诊疗专家1",
+        "label": "精准诊疗专家1",
+        "type": "person",
+        "x": 540,
+        "y": 120,
+        "properties": {
+          "position": "首席科学家"
+        }
+      },
+      {
+        "id": "PRODUCT::PROTO_ORG_MED001::基因检测平台",
+        "label": "基因检测平台",
+        "type": "product",
+        "x": 80,
+        "y": 240,
+        "properties": {
+          "industryLink": "上游核心技术"
+        }
+      },
+      {
+        "id": "PRODUCT::PROTO_ORG_MED001::精准诊疗数据平台",
+        "label": "精准诊疗数据平台",
+        "type": "product",
+        "x": 620,
+        "y": 240,
+        "properties": {
+          "industryLink": "下游应用服务"
+        }
+      },
+      {
+        "id": "TECH::医疗专题",
+        "label": "医疗专题",
+        "type": "technology",
+        "x": 230,
+        "y": 55
+      },
+      {
+        "id": "TECH::精准诊疗",
+        "label": "精准诊疗",
+        "type": "technology",
+        "x": 350,
+        "y": 50
+      },
+      {
+        "id": "TECH::多组学分析",
+        "label": "多组学分析",
+        "type": "technology",
+        "x": 470,
+        "y": 55
+      },
+      {
+        "id": "PROTO_ORG_INV001",
+        "label": "湾区科技产业投资",
+        "type": "partner",
+        "x": 180,
+        "y": 410,
+        "properties": {
+          "relation": "股东"
+        }
+      },
+      {
+        "id": "PROTO_ORG_MED001SUB",
+        "label": "华研精准医疗科技应用技术",
+        "type": "partner",
+        "x": 520,
+        "y": 410,
+        "properties": {
+          "relation": "控股子公司"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "employment::PROTO_ORG_MED001::陈明远",
+        "from": "PROTO_ORG_MED001",
+        "to": "PERSON::PROTO_ORG_MED001::陈明远",
+        "label": "董事长兼总经理",
+        "relationType": "任职",
+        "inferred": false
+      },
+      {
+        "id": "employment::PROTO_ORG_MED001::精准诊疗专家1",
+        "from": "PROTO_ORG_MED001",
+        "to": "PERSON::PROTO_ORG_MED001::精准诊疗专家1",
+        "label": "首席科学家",
+        "relationType": "任职",
+        "inferred": false
+      },
+      {
+        "id": "launch::PROTO_ORG_MED001::基因检测平台",
+        "from": "PROTO_ORG_MED001",
+        "to": "PRODUCT::PROTO_ORG_MED001::基因检测平台",
+        "label": "企业产品",
+        "relationType": "推出",
+        "inferred": false
+      },
+      {
+        "id": "launch::PROTO_ORG_MED001::精准诊疗数据平台",
+        "from": "PROTO_ORG_MED001",
+        "to": "PRODUCT::PROTO_ORG_MED001::精准诊疗数据平台",
+        "label": "企业产品",
+        "relationType": "推出",
+        "inferred": false
+      },
+      {
+        "id": "research::PROTO_ORG_MED001::医疗专题",
+        "from": "PROTO_ORG_MED001",
+        "to": "TECH::医疗专题",
+        "label": "技术布局",
+        "relationType": "研发",
+        "inferred": false
+      },
+      {
+        "id": "research::PROTO_ORG_MED001::精准诊疗",
+        "from": "PROTO_ORG_MED001",
+        "to": "TECH::精准诊疗",
+        "label": "技术布局",
+        "relationType": "研发",
+        "inferred": false
+      },
+      {
+        "id": "research::PROTO_ORG_MED001::多组学分析",
+        "from": "PROTO_ORG_MED001",
+        "to": "TECH::多组学分析",
+        "label": "技术布局",
+        "relationType": "研发",
+        "inferred": false
+      },
+      {
+        "id": "shareholding::PROTO_ORG_INV001::PROTO_ORG_MED001",
+        "from": "PROTO_ORG_INV001",
+        "to": "PROTO_ORG_MED001",
+        "label": "股东",
+        "relationType": "持股",
+        "weight": 0.29,
+        "inferred": false
+      },
+      {
+        "id": "subsidiary::PROTO_ORG_MED001::PROTO_ORG_MED001SUB",
+        "from": "PROTO_ORG_MED001",
+        "to": "PROTO_ORG_MED001SUB",
+        "label": "子公司",
+        "relationType": "控股",
+        "inferred": false
+      }
+    ],
+    "inference": {
+      "relations": [
+        {
+          "id": "inferred-relation-med001-med003",
+          "from": "华研精准医疗科技有限公司",
+          "fromId": "PROTO_ORG_MED001",
+          "rel": "潜在合作",
+          "relationType": "potential_cooperation",
+          "to": "康图医学影像科技有限公司",
+          "toId": "PROTO_ORG_MED003",
+          "confidence": 78,
+          "basis": "两家企业同属医疗专题并共享精准诊疗技术标签，基因检测与医学影像能力具有互补性。",
+          "evidence": [
+            {
+              "modality": "graph",
+              "sourceId": "TECH::精准诊疗",
+              "sourceName": "精准诊疗",
+              "snippet": "两家企业均通过“研发”关系连接到精准诊疗技术节点。",
+              "score": 0.86
+            },
+            {
+              "modality": "industry",
+              "sourceId": "MEDICAL-CAPABILITY-COMPLEMENT",
+              "sourceName": "医疗能力互补",
+              "snippet": "华研提供基因检测能力，康图提供医学影像诊断能力。",
+              "score": 0.74
+            }
+          ]
+        }
+      ],
+      "trends": [
+        {
+          "id": "trend-multiomics-2026",
+          "tech": "多组学分析",
+          "technologyId": "TECH::多组学分析",
+          "direction": "up",
+          "confidence": 82,
+          "desc": "企业研发投入连续增长，且多组学分析相关研发里程碑持续出现。",
+          "horizonMonths": 12,
+          "evidence": [
+            {
+              "modality": "financial",
+              "sourceId": "SNAPSHOT::PROTO_ORG_MED001::2025",
+              "sourceName": "2025年度快照",
+              "eventTime": "2025-12-31",
+              "snippet": "研发投入由2023年的2.38亿元增长至2025年的2.95亿元。",
+              "score": 0.8
+            },
+            {
+              "modality": "news",
+              "sourceId": "NEWS::PROTO_ORG_MED001::2025-06-15",
+              "sourceName": "2025年多组学分析研发里程碑",
+              "sourceUrl": "https://prototype.example/MED001/news/2025",
+              "eventTime": "2025-06-15",
+              "snippet": "基因检测平台完成第4阶段验证。",
+              "score": 0.84
+            }
+          ]
+        }
+      ],
+      "opportunities": [
+        {
+          "id": "opportunity-medical-data-platform",
+          "title": "多组学与影像联合诊疗平台",
+          "tag": "跨模态医疗",
+          "desc": "结合企业的基因检测、多组学分析能力与领域内医学影像合作方，形成联合诊疗数据产品。",
+          "score": 84,
+          "evidence": [
+            {
+              "modality": "graph",
+              "sourceId": "PRODUCT::PROTO_ORG_MED001::精准诊疗数据平台",
+              "sourceName": "精准诊疗数据平台",
+              "snippet": "企业已具备精准诊疗数据平台产品节点。",
+              "score": 0.88
+            },
+            {
+              "modality": "industry",
+              "sourceId": "PROTO_ORG_MED003",
+              "sourceName": "康图医学影像科技有限公司",
+              "snippet": "同领域企业具备医学影像诊断系统能力，可形成能力互补。",
+              "score": 0.76
+            }
+          ]
+        }
+      ]
+    },
+    "meta": {
+      "graphSpace": "prototype_enterprise_graph",
+      "dataBatch": "prototype_seed_20260828",
+      "asOf": "2026-08-30",
+      "modelName": "vertical-domain-mock",
+      "modelVersion": "mock-v1",
+      "mock": true
+    }
+  }
+}
