@@ -148,6 +148,9 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '算法任务/训练任务/查看日志': 'algorithm-tasks',
   '图谱应用中心/图谱可视化': 'graph-visualization',
   '图谱应用中心/图谱可视化/分析/路径溯源': 'graph-visualization',
+  '图谱应用中心/图谱可视化/技术演进路径展示': 'graph-visualization',
+  '图谱应用中心/图谱可视化/学派关联与学术交叉点分析': 'graph-visualization',
+  '图谱应用中心/图谱可视化/动态主题追踪': 'graph-visualization',
   '图谱应用中心/应用中心': 'app-center',
   '图谱应用中心/应用中心/文献智能推荐': 'app-center',
   '图谱应用中心/应用中心/文献智能推荐/检索输入': 'app-center',
@@ -231,10 +234,14 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '图谱构造引擎/规则管理/推理过程可视化': 'rule-management',
   '图谱构造引擎/规则管理/推理结果溯源': 'rule-management',
   '约束规则建模与校验/知识一致性自动校验': 'knowledge-consistency-validation',
+  '条件驱动结果推理/高性能推理内核': 'high-performance-inference-kernel',
+  '条件驱动结果推理/事实变更监听': 'fact-change-listening',
+  '规则执行与推理引擎集成/推理任务管理': 'inference-task-management',
   '规则执行与推理引擎集成/API集成接口': 'api-integration-inference',
   '时空建模/时序信息嵌入/时间实体识别与标准化': 'time-entity-normalization',
   '时空建模/时序关系依赖/时序关系抽取': 'temporal-relation-audit',
   '时空建模/时序关系依赖/时序依赖分析': 'temporal-relation-audit',
+  '时空建模/时序逻辑推理/未来状态预测': 'future-state-prediction',
   '文献知识建模/多维度解析引擎/核心要素抽取': 'literature-multidim-parse',
   '文献知识建模/多维度解析引擎/实验步骤解析': 'literature-multidim-parse',
   '文献知识建模/多维度解析引擎/图表内容结构化': 'literature-multidim-parse',
@@ -1194,6 +1201,18 @@ export function resolveTemporalAuditMode(pagePath: string | undefined): Temporal
   if (!path) return null;
   if (path.includes('时序依赖分析')) return 'dependency';
   if (path.includes('时序关系抽取')) return 'extraction';
+  return null;
+}
+
+/** 图谱可视化底部模块：技术演进 / 学派关联 / 动态主题 */
+export type GraphVizDockFocus = 'timeline' | 'schools' | 'topic';
+
+export function resolveGraphVizDockFocus(pagePath: string | undefined): GraphVizDockFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('学派关联') || path.includes('学术交叉')) return 'schools';
+  if (path.includes('动态主题追踪')) return 'topic';
+  if (path.includes('技术演进路径') || path.includes('时间轴播放器')) return 'timeline';
   return null;
 }
 

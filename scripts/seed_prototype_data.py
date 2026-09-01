@@ -345,6 +345,13 @@ def build_rows() -> dict[str, list[dict[str, Any]]]:
                 revenue = round(base_revenue * growth)
                 profit = round(revenue * (0.08 + company_index / 1000))
                 employees = 260 + company_index * 35 + (year - 2021) * 28
+                # 故意植入可被 rolling_zscore(window=4, z=2.5) 检出的突变，供时序可视化演示。
+                # MED001: 2023 营收/研发异常跳高；QUANT001: 2024 员工人数异常腰斩。
+                if code == "MED001" and year == 2023:
+                    revenue = round(base_revenue * growth * 3.2)
+                    profit = round(revenue * (0.08 + company_index / 1000))
+                if code == "QUANT001" and year == 2024:
+                    employees = max(80, round(employees * 0.35))
                 common_finance = {
                     "org_id": oid, "name_cn": name, "external_id": credit(code),
                     "total_assets": revenue * 1.65, "fixed_assets": revenue * 0.42,
@@ -626,6 +633,18 @@ def verify(cur: Any) -> None:
         ("企业年度时序点", "SELECT COUNT(*) AS value FROM dwd_org_annual_financial_info WHERE table_data_source=%s", (SEED,)),
         ("行业演变记录", "SELECT COUNT(*) AS value FROM dwd_corp_his_sw_ic WHERE table_data_source=%s", (SEED,)),
         ("领域事件时间轴", "SELECT COUNT(*) AS value FROM dwd_event WHERE table_data_source=%s", (SEED,)),
+        (
+            "MED001-2023营收突变",
+            """SELECT operating_revenue AS value FROM dwd_org_annual_financial_info
+               WHERE table_data_source=%s AND org_id=%s AND year=2023""",
+            (SEED, "PROTO_ORG_MED001"),
+        ),
+        (
+            "QUANT001-2024员工突变",
+            """SELECT employees_number AS value FROM dwd_org_annual_financial_info
+               WHERE table_data_source=%s AND org_id=%s AND year=2024""",
+            (SEED, "PROTO_ORG_QUANT001"),
+        ),
     ]
     for label, sql, params in checks:
         cur.execute(sql, params)

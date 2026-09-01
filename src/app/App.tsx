@@ -38,7 +38,11 @@ import ConceptCooccurrenceIndex from './components/ConceptCooccurrenceIndex';
 import HypernymGenerationAudit from './components/HypernymGenerationAudit';
 import KnowledgeConsistencyValidation from './components/KnowledgeConsistencyValidation';
 import ApiIntegrationInference from './components/ApiIntegrationInference';
+import HighPerformanceInferenceKernel from './components/HighPerformanceInferenceKernel';
+import FactChangeListening from './components/FactChangeListening';
+import InferenceTaskManagement from './components/InferenceTaskManagement';
 import TimeEntityNormalization from './components/TimeEntityNormalization';
+import FutureStatePrediction from './components/FutureStatePrediction';
 import TemporalRelationAudit from './components/TemporalRelationAudit';
 import LiteratureMultidimensionalParse from './components/LiteratureMultidimensionalParse';
 import PatentTechnicalElementParse from './components/PatentTechnicalElementParse';
@@ -142,6 +146,7 @@ import {
   resolveDatasetCategoryTab,
   resolveDatasetCategoryFocus,
   resolveTemporalAuditMode,
+  resolveGraphVizDockFocus,
   resolveLiteratureParseFocus,
   resolvePatentParseFocus,
   resolveLocalLearningTab,
@@ -172,6 +177,7 @@ import {
   type EventReviewSubTab,
   type RecognitionFocus,
   type TemporalAuditMode,
+  type GraphVizDockFocus,
   type LiteratureParseFocus,
   type PatentParseFocus,
   type LocalLearningTab,
@@ -254,6 +260,7 @@ export default function App() {
   const [kgReviewConsensusFocus, setKgReviewConsensusFocus] = useState(false);
   const [recognitionFocus, setRecognitionFocus] = useState<RecognitionFocus | null>(null);
   const [temporalAuditMode, setTemporalAuditMode] = useState<TemporalAuditMode | null>(null);
+  const [graphVizDockFocus, setGraphVizDockFocus] = useState<GraphVizDockFocus | null>(null);
   const [literatureParseFocus, setLiteratureParseFocus] = useState<LiteratureParseFocus | null>(null);
   const [patentParseFocus, setPatentParseFocus] = useState<PatentParseFocus | null>(null);
   const [localLearningTab, setLocalLearningTab] = useState<LocalLearningTab | null>(null);
@@ -322,6 +329,7 @@ export default function App() {
     setKgReviewConsensusFocus(false);
     setRecognitionFocus(null);
     setTemporalAuditMode(null);
+    setGraphVizDockFocus(null);
     setLiteratureParseFocus(null);
     setPatentParseFocus(null);
     setLocalLearningTab(null);
@@ -394,7 +402,7 @@ export default function App() {
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
     // 审计专用独立页优先（不与产品页共用）
-    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation') {
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'high-performance-inference-kernel' || pageId === 'fact-change-listening' || pageId === 'inference-task-management' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'future-state-prediction' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation') {
       if (pageId === 'temporal-relation-audit') {
         setTemporalAuditMode(resolveTemporalAuditMode(feature.pagePath) ?? 'extraction');
       }
@@ -602,6 +610,11 @@ export default function App() {
     if (pageId === 'graph-fusion') {
       setGraphFusionFocus(resolveGraphFusionFocus(feature.pagePath));
       setCurrentPage('graph-fusion');
+      return;
+    }
+    if (pageId === 'graph-visualization') {
+      setGraphVizDockFocus(resolveGraphVizDockFocus(feature.pagePath));
+      setCurrentPage('graph-visualization');
       return;
     }
     if (pageId === 'kg-mapping') {
@@ -870,10 +883,18 @@ export default function App() {
         return <HypernymGenerationAudit />;
       case 'knowledge-consistency-validation':
         return <KnowledgeConsistencyValidation />;
+      case 'high-performance-inference-kernel':
+        return <HighPerformanceInferenceKernel />;
+      case 'fact-change-listening':
+        return <FactChangeListening />;
+      case 'inference-task-management':
+        return <InferenceTaskManagement />;
       case 'api-integration-inference':
         return <ApiIntegrationInference />;
       case 'time-entity-normalization':
         return <TimeEntityNormalization />;
+      case 'future-state-prediction':
+        return <FutureStatePrediction />;
       case 'temporal-relation-audit':
         return (
           <TemporalRelationAudit
@@ -1168,7 +1189,12 @@ export default function App() {
           />
         );
       case 'graph-visualization':
-        return <GraphVisualization />;
+        return (
+          <GraphVisualization
+            key={graphVizDockFocus ?? 'default'}
+            initialDockTab={graphVizDockFocus}
+          />
+        );
       case 'evolution-analysis':
         return <EvolutionAnalysis />;
       case 'vertical-domain-graph':
@@ -1224,8 +1250,8 @@ export default function App() {
         selectedAuditFeatureId={selectedAuditFeature?.id}
         onAuditFeatureSelect={handleAuditFeatureSelect}
       />
-      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
-        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
+      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'fact-change-listening', 'inference-task-management', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
+        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'fact-change-listening', 'inference-task-management', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
           {renderPage()}
         </div>
       </main>

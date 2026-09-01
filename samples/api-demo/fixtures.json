@@ -1,0 +1,931 @@
+{
+  "version": "2026-09-01",
+  "description": "全量接口演示页联调夹具：catalog 覆盖 39 个独立演示页；pages 含 B0 完整 expected + B1/B3 关键请求样例。详见 docs/新增接口演示页算法需求.md",
+  "pages": [
+    {
+      "pageId": "text-entity-localization",
+      "api": "POST /api/v1/mmkg/text/entities:locate",
+      "request": {
+        "text": "清华大学张明教授在 ACL 2024 上发表了关于知识图谱与 GraphSAGE 嵌入的研究成果，合作单位包括北京大学与中科院计算所。",
+        "lang": "zh",
+        "entityTypes": [
+          "ORG",
+          "PER",
+          "EVENT",
+          "CONCEPT"
+        ]
+      },
+      "expectedData": {
+        "modelName": "demo-ner",
+        "modelVersion": "v0.1.0",
+        "entities": [
+          {
+            "text": "清华大学",
+            "type": "ORG",
+            "start": 0,
+            "end": 4,
+            "score": 0.97
+          },
+          {
+            "text": "张明",
+            "type": "PER",
+            "start": 4,
+            "end": 6,
+            "score": 0.95
+          },
+          {
+            "text": "ACL 2024",
+            "type": "EVENT",
+            "start": 10,
+            "end": 18,
+            "score": 0.93
+          },
+          {
+            "text": "知识图谱",
+            "type": "CONCEPT",
+            "start": 25,
+            "end": 29,
+            "score": 0.91
+          },
+          {
+            "text": "GraphSAGE",
+            "type": "CONCEPT",
+            "start": 31,
+            "end": 40,
+            "score": 0.94
+          },
+          {
+            "text": "北京大学",
+            "type": "ORG",
+            "start": 55,
+            "end": 59,
+            "score": 0.96
+          },
+          {
+            "text": "中科院计算所",
+            "type": "ORG",
+            "start": 60,
+            "end": 66,
+            "score": 0.92
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "visual-entity-localization",
+      "api": "POST /api/v1/mmkg/vision/entities:locate",
+      "request": {
+        "image": {
+          "url": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=640&h=480&fit=crop"
+        },
+        "topK": 10
+      },
+      "expectedData": {
+        "modelName": "demo-od",
+        "modelVersion": "v0.1.0",
+        "imageWidth": 640,
+        "imageHeight": 480,
+        "entities": [
+          {
+            "id": "e1",
+            "label": "图表区域",
+            "x": 8,
+            "y": 12,
+            "w": 52,
+            "h": 38,
+            "score": 0.91
+          },
+          {
+            "id": "e2",
+            "label": "坐标轴",
+            "x": 10,
+            "y": 48,
+            "w": 48,
+            "h": 8,
+            "score": 0.84
+          },
+          {
+            "id": "e3",
+            "label": "图例",
+            "x": 58,
+            "y": 14,
+            "w": 28,
+            "h": 22,
+            "score": 0.8
+          },
+          {
+            "id": "e4",
+            "label": "标注文字",
+            "x": 62,
+            "y": 58,
+            "w": 30,
+            "h": 12,
+            "score": 0.76
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "text-concept-localization",
+      "api": "POST /api/v1/mmkg/text/concepts:locate",
+      "request": {
+        "text": "本研究提出一种基于元学习的少样本知识图谱补全框架，通过对抗迁移学习提升跨领域泛化能力，并在链接预测与关系推理任务上验证了方法的有效性。"
+      },
+      "expectedData": {
+        "modelName": "demo-concept",
+        "modelVersion": "v0.1.0",
+        "concepts": [
+          {
+            "text": "元学习",
+            "label": "元学习",
+            "start": 9,
+            "end": 12,
+            "score": 0.91
+          },
+          {
+            "text": "少样本",
+            "label": "少样本学习",
+            "start": 13,
+            "end": 16,
+            "score": 0.88
+          },
+          {
+            "text": "知识图谱补全",
+            "label": "知识图谱补全",
+            "start": 16,
+            "end": 22,
+            "score": 0.94
+          },
+          {
+            "text": "对抗迁移学习",
+            "label": "对抗迁移学习",
+            "start": 27,
+            "end": 33,
+            "score": 0.9
+          },
+          {
+            "text": "跨领域泛化",
+            "label": "领域泛化",
+            "start": 35,
+            "end": 40,
+            "score": 0.86
+          },
+          {
+            "text": "链接预测",
+            "label": "链接预测",
+            "start": 45,
+            "end": 49,
+            "score": 0.89
+          },
+          {
+            "text": "关系推理",
+            "label": "关系推理",
+            "start": 50,
+            "end": 54,
+            "score": 0.87
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "visual-concept-localization",
+      "api": "POST /api/v1/mmkg/vision/concepts:locate",
+      "request": {
+        "image": {
+          "url": "https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?w=640&h=480&fit=crop"
+        },
+        "topK": 4
+      },
+      "expectedData": {
+        "modelName": "demo-scene",
+        "modelVersion": "v0.1.0",
+        "topLabel": "实验室 / 科研场景",
+        "scenes": [
+          {
+            "label": "实验室 / 科研场景",
+            "score": 0.91
+          },
+          {
+            "label": "显微镜 / 精密仪器",
+            "score": 0.76
+          },
+          {
+            "label": "工业检测场景",
+            "score": 0.42
+          },
+          {
+            "label": "医疗影像场景",
+            "score": 0.28
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "relation-localization",
+      "api": "POST /api/v1/mmkg/relations:locate",
+      "request": {
+        "text": "清华大学张明教授研究知识图谱补全，与北京大学合作开展 GraphSAGE 嵌入与关系推理方法对比实验。"
+      },
+      "expectedData": {
+        "modelName": "demo-rel",
+        "modelVersion": "v0.1.0",
+        "relations": [
+          {
+            "head": "张明",
+            "headKind": "entity",
+            "relation": "就职于",
+            "tail": "清华大学",
+            "tailKind": "entity",
+            "score": 0.94
+          },
+          {
+            "head": "清华大学",
+            "headKind": "entity",
+            "relation": "合作研究",
+            "tail": "北京大学",
+            "tailKind": "entity",
+            "score": 0.89
+          },
+          {
+            "head": "张明",
+            "headKind": "entity",
+            "relation": "研究领域",
+            "tail": "知识图谱补全",
+            "tailKind": "concept",
+            "score": 0.87
+          },
+          {
+            "head": "GraphSAGE",
+            "headKind": "concept",
+            "relation": "应用于",
+            "tail": "知识图谱补全",
+            "tailKind": "concept",
+            "score": 0.82
+          },
+          {
+            "head": "GraphSAGE",
+            "headKind": "concept",
+            "relation": "对比方法",
+            "tail": "关系推理",
+            "tailKind": "concept",
+            "score": 0.76
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "text-relation-localization",
+      "api": "POST /api/v1/mmkg/text/relations:locate",
+      "request": {
+        "text": "LiFePO₄ 正极材料在 3.4V 平台下可逆容量达 170 mAh/g，经 GraphSAGE 嵌入后可与电解液体系进行链接预测。"
+      },
+      "expectedData": {
+        "modelName": "demo-re",
+        "modelVersion": "v0.1.0",
+        "relations": [
+          {
+            "head": "LiFePO₄",
+            "relation": "理论容量",
+            "tail": "170 mAh/g",
+            "headStart": 0,
+            "headEnd": 7,
+            "tailStart": 28,
+            "tailEnd": 37,
+            "score": 0.92
+          },
+          {
+            "head": "LiFePO₄",
+            "relation": "工作电压",
+            "tail": "3.4V",
+            "headStart": 0,
+            "headEnd": 7,
+            "tailStart": 14,
+            "tailEnd": 18,
+            "score": 0.88
+          },
+          {
+            "head": "GraphSAGE",
+            "relation": "用于",
+            "tail": "链接预测",
+            "headStart": 40,
+            "headEnd": 49,
+            "tailStart": 62,
+            "tailEnd": 66,
+            "score": 0.85
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "visual-relation-localization",
+      "api": "POST /api/v1/mmkg/vision/relations:locate",
+      "request": {
+        "image": {
+          "url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=640&h=480&fit=crop"
+        },
+        "topK": 10
+      },
+      "expectedData": {
+        "modelName": "demo-vrd",
+        "modelVersion": "v0.1.0",
+        "relations": [
+          {
+            "id": "vr1",
+            "subject": "主图表",
+            "object": "坐标轴",
+            "predicate": "above",
+            "predicateZh": "位于上方",
+            "subjectBox": {
+              "x": 12,
+              "y": 10,
+              "w": 45,
+              "h": 35
+            },
+            "objectBox": {
+              "x": 15,
+              "y": 52,
+              "w": 40,
+              "h": 10
+            },
+            "score": 0.91
+          },
+          {
+            "id": "vr2",
+            "subject": "图例",
+            "object": "主图表",
+            "predicate": "describes",
+            "predicateZh": "描述",
+            "subjectBox": {
+              "x": 62,
+              "y": 12,
+              "w": 28,
+              "h": 20
+            },
+            "objectBox": {
+              "x": 30,
+              "y": 25,
+              "w": 20,
+              "h": 15
+            },
+            "score": 0.84
+          },
+          {
+            "id": "vr3",
+            "subject": "标注文字",
+            "object": "主图表",
+            "predicate": "labels",
+            "predicateZh": "标注",
+            "subjectBox": {
+              "x": 58,
+              "y": 58,
+              "w": 32,
+              "h": 12
+            },
+            "objectBox": {
+              "x": 35,
+              "y": 38,
+              "w": 15,
+              "h": 10
+            },
+            "score": 0.78
+          }
+        ]
+      }
+    },
+    {
+      "pageId": "completion-result-review",
+      "apis": [
+        "GET /api/v1/mmkg/completion-candidates?status=pending&page=1&pageSize=20",
+        "POST /api/v1/mmkg/completion-candidates/{candidateId}:decide"
+      ],
+      "listExpectedData": {
+        "total": 6,
+        "page": 1,
+        "pageSize": 20,
+        "items": [
+          {
+            "id": "t1",
+            "head": "GraphSAGE",
+            "relation": "适用于",
+            "tail": "大规模异质图谱节点分类",
+            "status": "pending"
+          },
+          {
+            "id": "t2",
+            "head": "清华大学",
+            "relation": "合作研究",
+            "tail": "北京大学",
+            "status": "pending"
+          },
+          {
+            "id": "t3",
+            "head": "TransE",
+            "relation": "嵌入空间",
+            "tail": "实数空间 ℝᵈ",
+            "status": "pending"
+          },
+          {
+            "id": "t4",
+            "head": "LiFePO₄",
+            "relation": "理论容量",
+            "tail": "170 mAh/g",
+            "status": "pending"
+          },
+          {
+            "id": "t5",
+            "head": "CLIP ViT-B/32",
+            "relation": "训练损失",
+            "tail": "对称 InfoNCE",
+            "status": "pending"
+          },
+          {
+            "id": "t6",
+            "head": "知识图谱补全",
+            "relation": "评估指标",
+            "tail": "MRR / Hits@10",
+            "status": "pending"
+          }
+        ]
+      },
+      "decideRequestExample": {
+        "decision": "approve"
+      },
+      "decideExpectedDataExample": {
+        "id": "t1",
+        "status": "approved",
+        "decidedAt": "2026-08-31T08:00:00.000Z"
+      }
+    },
+    {
+      "pageId": "time-entity-normalization",
+      "api": "POST /api/v1/temporal/entities:normalize",
+      "request": {
+        "text": "苹果公司于2024年3月15日在北京发布了新款芯片",
+        "outputFormat": "iso8601",
+        "referenceTime": "2026-08-24T17:00:00+08:00"
+      },
+      "expectedData": {
+        "modelName": "demo-timex",
+        "modelVersion": "v0.1.0",
+        "entities": [
+          {
+            "rawSpan": "2024年3月15日",
+            "normalized": "2024-03-15T00:00:00+08:00",
+            "type": "绝对日期",
+            "start": 6,
+            "end": 16,
+            "score": 0.96
+          }
+        ]
+      },
+      "sampleInputs": [
+        "苹果公司于2024年3月15日在北京发布了新款芯片",
+        "会议定于下周三下午两点半举行",
+        "该项目启动于2023年第二季度",
+        "2026-07-04 09:12:03",
+        "三天前",
+        "last Friday at 3pm"
+      ]
+    },
+    {
+      "pageId": "entity-attr-api",
+      "apis": [
+        "POST /api/v1/entities/attributes/query",
+        "POST /api/v1/entities/attributes/extract-batch"
+      ],
+      "singleRequest": {
+        "entity": "Geoffrey Hinton",
+        "text": "Geoffrey Hinton 就职于多伦多大学，出生于1947年，长期从事深度学习研究，曾获图灵奖。",
+        "lang": "auto"
+      },
+      "batchRequest": {
+        "documents": [
+          {
+            "docId": "doc-001",
+            "text": "Geoffrey Hinton 就职于多伦多大学，出生于1947年，长期从事深度学习研究。"
+          },
+          {
+            "docId": "doc-002",
+            "text": "Yoshua Bengio 创立了 MILA（蒙特利尔学习算法研究所），研究方向为深度学习与表示学习。"
+          },
+          {
+            "docId": "doc-003",
+            "text": "卷积神经网络由 Yann LeCun 等人提出，广泛应用于图像识别领域。"
+          }
+        ],
+        "maxEntities": 50
+      }
+    },
+    {
+      "pageId": "api-integration-inference",
+      "api": "POST /api/v1/rules/inference:run",
+      "request": {
+        "facts": [
+          {
+            "subject": "作者:张三",
+            "predicate": "WRITTEN_BY",
+            "object": "论文:深度学习新进展",
+            "properties": {
+              "order": 1
+            }
+          },
+          {
+            "subject": "作者:李四",
+            "predicate": "WRITTEN_BY",
+            "object": "论文:深度学习新进展",
+            "properties": {
+              "order": 2
+            }
+          },
+          {
+            "subject": "作者:王五",
+            "predicate": "WRITTEN_BY",
+            "object": "论文:图神经网络综述",
+            "properties": {
+              "order": 1
+            }
+          },
+          {
+            "subject": "作者:张三",
+            "predicate": "WRITTEN_BY",
+            "object": "论文:图神经网络综述",
+            "properties": {
+              "order": 2
+            }
+          }
+        ],
+        "ruleIds": [
+          "coauthor_relation_infer"
+        ]
+      }
+    },
+    {
+      "pageId": "patent-technical-parse",
+      "api": "POST /api/v1/patent/technical-elements:parse",
+      "request": {
+        "fileName": "一种基于图注意力的知识抽取方法及装置.pdf"
+      },
+      "expectedDataKeys": [
+        "claimsText",
+        "matrixText",
+        "annotationText",
+        "modulesText"
+      ]
+    },
+    {
+      "pageId": "standard-graph-api",
+      "apis": [
+        "POST /api/v1/graph/query",
+        "POST /api/v1/graph/path",
+        "POST /api/v1/semantic/match"
+      ],
+      "queryRequest": {
+        "space": "kg:sci-paper-v3",
+        "language": "cypher",
+        "query": "MATCH (a:作者)-[:就职于]->(o:机构) RETURN a,o LIMIT 50",
+        "limit": 50
+      },
+      "pathRequest": {
+        "space": "kg:sci-paper-v3",
+        "source": "Geoffrey Hinton",
+        "target": "深度学习",
+        "maxHops": 3
+      },
+      "semanticRequest": {
+        "mode": "mixed",
+        "query": "图神经网络",
+        "candidates": [],
+        "topK": 5
+      }
+    },
+    {
+      "pageId": "text-instance-matching",
+      "api": "POST /api/v1/matching/text:compare",
+      "request": {
+        "left": "清华大学",
+        "right": "Tsinghua University",
+        "methods": [
+          "string",
+          "vector"
+        ]
+      },
+      "samplePairs": [
+        [
+          "清华大学",
+          "Tsinghua University"
+        ],
+        [
+          "北京大学",
+          "Peking University"
+        ],
+        [
+          "腾讯",
+          "Alibaba Group"
+        ],
+        [
+          "中科院自动化研究所",
+          "Institute of Automation, CAS"
+        ]
+      ]
+    },
+    {
+      "pageId": "llm-api-integration",
+      "api": "POST /api/v1/llm/chat/completions",
+      "request": {
+        "model": "gpt-4o",
+        "messages": [
+          {
+            "role": "user",
+            "content": "ping"
+          }
+        ],
+        "maxTokens": 16
+      }
+    }
+  ],
+  "catalog": [
+    {
+      "pageId": "text-entity-localization",
+      "batch": "B0",
+      "apis": [
+        "POST /api/v1/mmkg/text/entities:locate"
+      ]
+    },
+    {
+      "pageId": "visual-entity-localization",
+      "batch": "B0",
+      "apis": [
+        "POST /api/v1/mmkg/vision/entities:locate"
+      ]
+    },
+    {
+      "pageId": "text-concept-localization",
+      "batch": "B0",
+      "apis": [
+        "POST /api/v1/mmkg/text/concepts:locate"
+      ]
+    },
+    {
+      "pageId": "visual-concept-localization",
+      "batch": "B0",
+      "apis": [
+        "POST /api/v1/mmkg/vision/concepts:locate"
+      ]
+    },
+    {
+      "pageId": "relation-localization",
+      "batch": "B0",
+      "apis": [
+        "POST /api/v1/mmkg/relations:locate"
+      ]
+    },
+    {
+      "pageId": "text-relation-localization",
+      "batch": "B0",
+      "apis": [
+        "POST /api/v1/mmkg/text/relations:locate"
+      ]
+    },
+    {
+      "pageId": "visual-relation-localization",
+      "batch": "B0",
+      "apis": [
+        "POST /api/v1/mmkg/vision/relations:locate"
+      ]
+    },
+    {
+      "pageId": "completion-result-review",
+      "batch": "B0",
+      "apis": [
+        "GET /api/v1/mmkg/completion-candidates",
+        "POST /api/v1/mmkg/completion-candidates/{id}:decide"
+      ]
+    },
+    {
+      "pageId": "concept-cooccurrence-index",
+      "batch": "B4",
+      "apis": [
+        "POST /api/v1/concept/cooccurrence:index"
+      ]
+    },
+    {
+      "pageId": "hypernym-generation-audit",
+      "batch": "B4",
+      "apis": [
+        "POST /api/v1/taxonomy/hypernyms:generate"
+      ]
+    },
+    {
+      "pageId": "knowledge-consistency-validation",
+      "batch": "B1",
+      "apis": [
+        "POST /api/v1/kg/consistency:validate"
+      ]
+    },
+    {
+      "pageId": "api-integration-inference",
+      "batch": "B1",
+      "apis": [
+        "POST /api/v1/rules/inference:run"
+      ]
+    },
+    {
+      "pageId": "time-entity-normalization",
+      "batch": "B1",
+      "apis": [
+        "POST /api/v1/temporal/entities:normalize"
+      ]
+    },
+    {
+      "pageId": "temporal-relation-audit",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/temporal/relations:extract",
+        "POST /api/v1/temporal/relations:analyze"
+      ]
+    },
+    {
+      "pageId": "literature-multidim-parse",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/literature/multidim:parse"
+      ]
+    },
+    {
+      "pageId": "patent-technical-parse",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/patent/technical-elements:parse"
+      ]
+    },
+    {
+      "pageId": "local-learning-annotator",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/annotation/local-learning:bootstrap",
+        "POST /api/v1/events:recognize",
+        "POST /api/v1/annotation/sentences:select"
+      ]
+    },
+    {
+      "pageId": "entity-attr-api",
+      "batch": "B1",
+      "apis": [
+        "POST /api/v1/entities/attributes/query",
+        "POST /api/v1/entities/attributes/extract-batch"
+      ]
+    },
+    {
+      "pageId": "text-highlight-seed",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/annotation/seed-highlights:extract"
+      ]
+    },
+    {
+      "pageId": "mapping-transform-fn",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/mapping/transforms:apply"
+      ]
+    },
+    {
+      "pageId": "attribute-precise-extract",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/entities/attributes:precise-extract"
+      ]
+    },
+    {
+      "pageId": "multi-format-lit-parse",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/literature/formats:parse"
+      ]
+    },
+    {
+      "pageId": "multimodal-content-transcribe",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/mmkg/content:transcribe"
+      ]
+    },
+    {
+      "pageId": "llm-semantic-refine",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/nlp/semantic:refine"
+      ]
+    },
+    {
+      "pageId": "sci-core-tuple-extract",
+      "batch": "B2",
+      "apis": [
+        "POST /api/v1/science/core-tuples:extract"
+      ]
+    },
+    {
+      "pageId": "standard-graph-api",
+      "batch": "B1",
+      "apis": [
+        "POST /api/v1/graph/query",
+        "POST /api/v1/graph/path",
+        "POST /api/v1/semantic/match"
+      ]
+    },
+    {
+      "pageId": "upper-intelligent-tools",
+      "batch": "B4",
+      "apis": [
+        "POST /api/v1/tools/analogy:search",
+        "POST /api/v1/tools/research-questions:generate"
+      ]
+    },
+    {
+      "pageId": "text-instance-matching",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/matching/text:compare"
+      ]
+    },
+    {
+      "pageId": "structure-instance-matching",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/matching/structure:compare"
+      ]
+    },
+    {
+      "pageId": "instance-feature-engineering",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/matching/features:extract"
+      ]
+    },
+    {
+      "pageId": "candidate-entity-generation",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/linking/candidates:generate"
+      ]
+    },
+    {
+      "pageId": "entity-link-judgment",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/linking/judgment:score"
+      ]
+    },
+    {
+      "pageId": "cross-lingual-instance-matching",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/xling/instances:match"
+      ]
+    },
+    {
+      "pageId": "cross-lingual-query-fusion",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/xling/query:fuse"
+      ]
+    },
+    {
+      "pageId": "cross-lingual-attribute-alignment",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/xling/attributes:align"
+      ]
+    },
+    {
+      "pageId": "cross-lingual-kb-alignment",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/xling/kb:align"
+      ]
+    },
+    {
+      "pageId": "entity-matching-disambiguation",
+      "batch": "B3",
+      "apis": [
+        "GET /api/v1/matching/disambiguation/candidates",
+        "POST /api/v1/matching/disambiguation/candidates/{id}:decide"
+      ]
+    },
+    {
+      "pageId": "verified-knowledge-write",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/kg/verified-triples:write"
+      ]
+    },
+    {
+      "pageId": "llm-api-integration",
+      "batch": "B3",
+      "apis": [
+        "POST /api/v1/llm/chat/completions"
+      ]
+    }
+  ],
+  "pageCount": 39
+}

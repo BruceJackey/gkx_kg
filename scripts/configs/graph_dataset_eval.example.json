@@ -1,0 +1,59 @@
+{
+  "datasetId": "ds_graph_demo",
+  "datasetName": "prototype_enterprise_graph",
+  "space": "prototype_enterprise_graph",
+  "refreshStats": false,
+  "nameField": "name",
+  "topRelationTypes": 5,
+  "trs": {
+    "host": "http://114.117.127.200:7001",
+    "user": "root",
+    "password": "trsadmin",
+    "addr": "127.0.0.1",
+    "port": 9669,
+    "timeout": 120
+  },
+  "requiredVertexProps": {
+    "*": ["name"]
+  },
+  "requiredEdgeProps": {
+    "*": []
+  },
+  "scoreWeights": {
+    "completenessMissing": 1.0,
+    "completenessIsolate": 0.5,
+    "qualityMissing": 0.6,
+    "qualityInconsistency": 1.2,
+    "qualityDuplicate": 0.8
+  },
+  "benchmarks": [
+    {
+      "name": "MS-COCO Captions",
+      "density": 0.008,
+      "avgDegree": 3.2,
+      "completeness": 96,
+      "quality": 91
+    },
+    {
+      "name": "Flickr30k",
+      "density": 0.006,
+      "avgDegree": 2.9,
+      "completeness": 94,
+      "quality": 90
+    },
+    {
+      "name": "Conceptual Captions",
+      "density": 0.004,
+      "avgDegree": 2.1,
+      "completeness": 89,
+      "quality": 84
+    },
+    {
+      "name": "LAION-400M subset",
+      "density": 0.003,
+      "avgDegree": 1.8,
+      "completeness": 81,
+      "quality": 76
+    }
+  ]
+}

@@ -3,12 +3,31 @@ import {
   Search, Edit2, Save, X, ChevronLeft, ChevronRight, Tag, Hash, FileText,
   Calendar, ChevronDown, Database, Plus, Trash2, AlertTriangle, Link,
   Filter, Clock, Info, RotateCcw, CheckCircle2, ArrowRight,
+  Loader2, RefreshCw, AlertCircle,
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, BarChart, Bar, Cell,
 } from 'recharts';
 import type { PropertyManagementTab, PropertyManagementFocus } from '../data/auditPageMap';
+import {
+  PROPERTY_GRAPH_SPACES,
+  attributeOptionKey,
+  attributeOptionLabel,
+  buildDistributionRequest,
+  buildTimeseriesRequest,
+  canRunTimeseries,
+  getPropertyAttributes,
+  getTimeseriesEntities,
+  postPropertyDistribution,
+  postPropertyTimeseries,
+  timeseriesPathFromAttribute,
+  type AnalyticsAttribute,
+  type DistributionResult,
+  type TimeseriesEntity,
+  type TimeseriesPoint,
+  type TimeseriesResult,
+} from '../api/propertyAnalytics';
 
 // ── Interfaces ─────────────────────────────────────────────────────────────────
 
@@ -308,59 +327,6 @@ const NODE_POS: Record<string, { x: number; y: number }> = {
   E005: { x: 110, y: 205 },
   E006: { x: 230, y: 140 },
 };
-
-// ── Stats data ──────────────────────────────────────────────────────────────────
-
-const H_VALUES = [8, 11, 12, 15, 18, 19, 23, 25, 28, 29, 31, 33, 34, 41, 42, 45, 62, 67, 72, 88];
-
-function buildHistogram(vals: number[], binCount = 7) {
-  const lo = Math.min(...vals), hi = Math.max(...vals);
-  const step = (hi - lo) / binCount;
-  return Array.from({ length: binCount }, (_, i) => {
-    const binLo = lo + i * step, binHi = binLo + step;
-    const count = vals.filter(v => v >= binLo && (i === binCount - 1 ? v <= binHi : v < binHi)).length;
-    return { name: `${Math.round(binLo)}-${Math.round(binHi)}`, count, outlier: binLo >= 65 };
-  });
-}
-
-const HIST_BINS = buildHistogram(H_VALUES);
-const sortedH = [...H_VALUES].sort((a, b) => a - b);
-const Q1 = sortedH[Math.floor(sortedH.length * 0.25)];
-const Q3 = sortedH[Math.floor(sortedH.length * 0.75)];
-const IQR = Q3 - Q1;
-const whiskerLo = Math.max(sortedH[0], Q1 - 1.5 * IQR);
-const whiskerHi = Math.min(sortedH[sortedH.length - 1], Q3 + 1.5 * IQR);
-const OUTLIER_VALS = sortedH.filter(v => v > Q3 + 1.5 * IQR || v < Q1 - 1.5 * IQR);
-const medianH = sortedH[Math.floor(sortedH.length / 2)];
-const meanH = Math.round(H_VALUES.reduce((a, b) => a + b, 0) / H_VALUES.length);
-
-// ── Time-series data ────────────────────────────────────────────────────────────
-
-const TS_PAPERS_RAW = [
-  { date: '2019-Q1', v: 8 }, { date: '2019-Q2', v: 11 }, { date: '2019-Q3', v: 9 },  { date: '2019-Q4', v: 14 },
-  { date: '2020-Q1', v: 12 }, { date: '2020-Q2', v: 6 },  { date: '2020-Q3', v: 10 }, { date: '2020-Q4', v: 13 },
-  { date: '2021-Q1', v: 11 }, { date: '2021-Q2', v: 15 }, { date: '2021-Q3', v: 42 }, { date: '2021-Q4', v: 16 },
-  { date: '2022-Q1', v: 14 }, { date: '2022-Q2', v: 17 }, { date: '2022-Q3', v: 13 }, { date: '2022-Q4', v: 18 },
-  { date: '2023-Q1', v: 15 }, { date: '2023-Q2', v: 19 }, { date: '2023-Q3', v: 16 }, { date: '2023-Q4', v: 21 },
-];
-
-const TS_EMP_RAW = [
-  { date: '2018', v: 120 }, { date: '2019', v: 340 }, { date: '2020', v: 680 },
-  { date: '2021', v: 890 }, { date: '2022', v: 1050 }, { date: '2023', v: 1240 }, { date: '2024', v: 1280 },
-];
-
-function detectAnomalies(raw: { date: string; v: number }[]) {
-  return raw.map((d, i) => {
-    const window = raw.slice(Math.max(0, i - 4), i).map(x => x.v);
-    if (window.length < 2) return { date: d.date, value: d.v, anomaly: false };
-    const wMean = window.reduce((a, b) => a + b, 0) / window.length;
-    const wStd = Math.sqrt(window.reduce((a, b) => a + (b - wMean) ** 2, 0) / window.length) || 1;
-    return { date: d.date, value: d.v, anomaly: Math.abs(d.v - wMean) > 2.5 * wStd };
-  });
-}
-
-const TS_PAPERS = detectAnomalies(TS_PAPERS_RAW);
-const TS_EMP = detectAnomalies(TS_EMP_RAW);
 
 // ── Utility ─────────────────────────────────────────────────────────────────────
 
@@ -1414,139 +1380,252 @@ function ValidationPanel({ panelFocus }: { panelFocus?: PanelFocus }) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function StatsPanel({ panelFocus }: { panelFocus?: PanelFocus }) {
+  const [graphSpace, setGraphSpace] = useState<string>(PROPERTY_GRAPH_SPACES[0].id);
+  const [attributes, setAttributes] = useState<AnalyticsAttribute[]>([]);
+  const [attributeKey, setAttributeKey] = useState('');
+  const [result, setResult] = useState<DistributionResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [drillOpen, setDrillOpen] = useState(false);
 
   useEffect(() => {
     if (panelFocus === 'outlier-drill') setDrillOpen(true);
   }, [panelFocus]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    setResult(null);
+    getPropertyAttributes(graphSpace, 'distribution', controller.signal)
+      .then(res => {
+        // Prefer business metrics; keep year-like fields at the end.
+        const items = res.items
+          .filter(a => a.supportsDistribution)
+          .sort((a, b) => {
+            const score = (x: AnalyticsAttribute) => {
+              if (x.timeseriesVia) return 0;
+              if (x.attribute === 'registered_capital' || x.attribute === 'h_index') return 1;
+              if (x.attribute === 'year' || x.attribute === 'is_current') return 3;
+              return 2;
+            };
+            return score(a) - score(b) || a.label.localeCompare(b.label, 'zh');
+          });
+        setAttributes(items);
+        setAttributeKey(current =>
+          items.some(a => attributeOptionKey(a) === current)
+            ? current
+            : (items[0] ? attributeOptionKey(items[0]) : '')
+        );
+        if (items.length === 0) {
+          setLoading(false);
+          setError('当前图谱没有可做分布分析的数值属性。');
+        }
+      })
+      .catch(reason => {
+        if (reason instanceof DOMException && reason.name === 'AbortError') return;
+        setAttributes([]);
+        setAttributeKey('');
+        setError(reason instanceof Error ? reason.message : '属性目录加载失败。');
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [graphSpace, reloadKey]);
+
+  useEffect(() => {
+    if (!attributeKey) return;
+    const attr = attributes.find(a => attributeOptionKey(a) === attributeKey);
+    if (!attr) return;
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    postPropertyDistribution(buildDistributionRequest(graphSpace, attr), controller.signal)
+      .then(data => {
+        setResult(data);
+        setLoading(false);
+      })
+      .catch(reason => {
+        if (reason instanceof DOMException && reason.name === 'AbortError') return;
+        setResult(null);
+        setError(reason instanceof Error ? reason.message : '分布统计加载失败。');
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [graphSpace, attributeKey, attributes, reloadKey]);
+
+  const summary = result?.summary;
+  const axisMin = summary ? Math.min(summary.whiskerLow, summary.min) : 0;
+  const axisMax = summary ? Math.max(summary.whiskerHigh, summary.max, ...(result?.outliers.map(o => o.displayValue ?? o.value) ?? [0])) : 100;
+  const span = Math.max(axisMax - axisMin, 1e-6);
   const svgW = 300;
-  const toX = (v: number) => ((v - 0) / 100) * svgW;
-  const outlierEntities = mockEntities.filter(e => {
-    const p = e.properties.find(x => x.key === 'h_index');
-    return p && OUTLIER_VALS.includes(Number(p.value));
-  });
+  const toX = (v: number) => ((v - axisMin) / span) * svgW;
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
         <p className="text-base font-semibold text-gray-900">图谱统计数据可视化</p>
-        <p className="text-sm text-gray-500 mt-0.5">属性值分布直方图与箱线图，自动识别离群点</p>
+        <p className="text-sm text-gray-500 mt-0.5">基于 TRS 数值属性的分布直方图与箱线图，自动识别离群点</p>
       </div>
 
-      <div className="flex items-center gap-3">
-        <label className="text-xs font-medium text-gray-600">分析属性</label>
-        <select className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400">
-          <option>H指数（人物 · 数值型）</option>
-          <option>员工人数（组织 · 数值型）</option>
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className="text-xs font-medium text-gray-600">图谱</label>
+        <select
+          value={graphSpace}
+          onChange={e => setGraphSpace(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+        >
+          {PROPERTY_GRAPH_SPACES.map(space => (
+            <option key={space.id} value={space.id}>{space.label}</option>
+          ))}
         </select>
-        <span className="ml-auto text-xs text-gray-400">{H_VALUES.length} 个样本</span>
+        <label className="text-xs font-medium text-gray-600">分析属性</label>
+        <select
+          value={attributeKey}
+          onChange={e => setAttributeKey(e.target.value)}
+          disabled={attributes.length === 0}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400 min-w-48"
+        >
+          {attributes.length === 0 && <option value="">暂无属性</option>}
+          {attributes.map(attr => (
+            <option key={attributeOptionKey(attr)} value={attributeOptionKey(attr)}>
+              {attributeOptionLabel(attr)}
+            </option>
+          ))}
+        </select>
+        <span className="ml-auto text-xs text-gray-400">
+          {result ? `${result.sampleCount} 个样本` : '—'}
+        </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
-        {/* Histogram */}
-        <div id="pm-value-distribution" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'value-distribution')}`}>
-          <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-700">值分布直方图</span>
-            {OUTLIER_VALS.length > 0 && (
-              <button
-                onClick={() => setDrillOpen(true)}
-                className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full"
-              >
-                {OUTLIER_VALS.length} 个离群点 →
-              </button>
-            )}
+      {result?.meta?.warnings && result.meta.warnings.length > 0 && (
+        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          {result.meta.warnings.join('；')}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="h-64 flex flex-col items-center justify-center gap-2 text-gray-500">
+          <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+          <span className="text-sm">正在计算属性分布…</span>
+        </div>
+      ) : error ? (
+        <div className="h-64 flex flex-col items-center justify-center gap-3 text-center px-4">
+          <AlertCircle className="w-7 h-7 text-red-400" />
+          <p className="text-sm text-gray-700">{error}</p>
+          <button
+            onClick={() => setReloadKey(k => k + 1)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />重新加载
+          </button>
+        </div>
+      ) : !result || !summary ? (
+        <div className="h-64 flex items-center justify-center text-sm text-gray-400">暂无统计数据</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-5">
+          <div id="pm-value-distribution" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'value-distribution')}`}>
+            <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-700">值分布直方图</span>
+              {result.outliers.length > 0 && (
+                <button
+                  onClick={() => setDrillOpen(true)}
+                  className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full"
+                >
+                  {result.outliers.length} 个离群点 →
+                </button>
+              )}
+            </div>
+            <div className="p-3">
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={result.bins} margin={{ top: 4, right: 4, bottom: 22, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} angle={-30} textAnchor="end" interval={0} />
+                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                  <Tooltip
+                    formatter={(v: number) => [`${v} 个实体`, '数量']}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    {result.bins.map((b, i) => <Cell key={i} fill={b.outlier ? '#f59e0b' : '#3b82f6'} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="flex justify-end gap-4 text-[10px] text-gray-400 mt-1">
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-2.5 bg-blue-500 rounded-sm" />正常</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-2.5 bg-amber-400 rounded-sm" />离群</span>
+              </div>
+            </div>
           </div>
-          <div className="p-3">
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={HIST_BINS} margin={{ top: 4, right: 4, bottom: 22, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} angle={-30} textAnchor="end" interval={0} />
-                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                <Tooltip
-                  formatter={(v: number) => [`${v} 个实体`, '数量']}
-                  contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
-                />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {HIST_BINS.map((b, i) => <Cell key={i} fill={b.outlier ? '#f59e0b' : '#3b82f6'} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="flex justify-end gap-4 text-[10px] text-gray-400 mt-1">
-              <span className="flex items-center gap-1"><span className="inline-block w-3 h-2.5 bg-blue-500 rounded-sm" />正常</span>
-              <span className="flex items-center gap-1"><span className="inline-block w-3 h-2.5 bg-amber-400 rounded-sm" />离群</span>
+
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-700">
+              箱线图 · {result.attributeLabel}（{result.unit || '数值'}）
+            </div>
+            <div className="p-4">
+              <svg viewBox="0 0 320 110" className="w-full" style={{ height: 110 }}>
+                <line x1={toX(summary.whiskerLow)} y1={55} x2={toX(summary.whiskerHigh)} y2={55} stroke="#94a3b8" strokeWidth="1.5" />
+                <line x1={toX(summary.whiskerLow)} y1={45} x2={toX(summary.whiskerLow)} y2={65} stroke="#94a3b8" strokeWidth="1.5" />
+                <line x1={toX(summary.whiskerHigh)} y1={45} x2={toX(summary.whiskerHigh)} y2={65} stroke="#94a3b8" strokeWidth="1.5" />
+                <rect x={toX(summary.q1)} y={40} width={Math.max(toX(summary.q3) - toX(summary.q1), 1)} height={30} fill="#dbeafe" stroke="#3b82f6" strokeWidth="2" rx="3" />
+                <line x1={toX(summary.median)} y1={40} x2={toX(summary.median)} y2={70} stroke="#1d4ed8" strokeWidth="2.5" />
+                {result.outliers.map((o, i) => (
+                  <circle key={o.entityId || i} cx={toX(o.displayValue ?? o.value)} cy={55} r={5} fill="#f59e0b" stroke="white" strokeWidth="1.5" />
+                ))}
+                {[
+                  { v: summary.whiskerLow, label: `Min\n${Number(summary.whiskerLow.toFixed(2))}` },
+                  { v: summary.q1, label: `Q1\n${Number(summary.q1.toFixed(2))}` },
+                  { v: summary.median, label: `中\n${Number(summary.median.toFixed(2))}` },
+                  { v: summary.q3, label: `Q3\n${Number(summary.q3.toFixed(2))}` },
+                  { v: summary.whiskerHigh, label: `Max\n${Number(summary.whiskerHigh.toFixed(2))}` },
+                ].map(p => (
+                  <g key={p.label}>
+                    <text x={toX(p.v)} y={86} textAnchor="middle" fontSize="8" fill="#64748b">{p.label.split('\n')[0]}</text>
+                    <text x={toX(p.v)} y={97} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="700">{p.label.split('\n')[1]}</text>
+                  </g>
+                ))}
+              </svg>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                {[
+                  { label: '均值', v: Number(summary.mean.toFixed(2)) },
+                  { label: 'IQR', v: Number(summary.iqr.toFixed(2)) },
+                  { label: '离群点', v: summary.outlierCount },
+                ].map(s => (
+                  <div key={s.label} className="text-center p-2 bg-gray-50 rounded-lg">
+                    <p className="text-xs font-bold text-gray-800">{s.v}</p>
+                    <p className="text-[10px] text-gray-400">{s.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Box plot */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-700">箱线图</div>
-          <div className="p-4">
-            <svg viewBox="0 0 320 110" className="w-full" style={{ height: 110 }}>
-              {/* whisker line */}
-              <line x1={toX(whiskerLo)} y1={55} x2={toX(whiskerHi)} y2={55} stroke="#94a3b8" strokeWidth="1.5" />
-              <line x1={toX(whiskerLo)} y1={45} x2={toX(whiskerLo)} y2={65} stroke="#94a3b8" strokeWidth="1.5" />
-              <line x1={toX(whiskerHi)} y1={45} x2={toX(whiskerHi)} y2={65} stroke="#94a3b8" strokeWidth="1.5" />
-              {/* box */}
-              <rect x={toX(Q1)} y={40} width={toX(Q3) - toX(Q1)} height={30} fill="#dbeafe" stroke="#3b82f6" strokeWidth="2" rx="3" />
-              {/* median */}
-              <line x1={toX(medianH)} y1={40} x2={toX(medianH)} y2={70} stroke="#1d4ed8" strokeWidth="2.5" />
-              {/* outlier dots */}
-              {OUTLIER_VALS.map((v, i) => (
-                <circle key={i} cx={toX(v)} cy={55} r={5} fill="#f59e0b" stroke="white" strokeWidth="1.5" />
-              ))}
-              {/* labels */}
-              {[
-                { v: whiskerLo, label: `Min\n${Math.round(whiskerLo)}` },
-                { v: Q1,        label: `Q1\n${Q1}` },
-                { v: medianH,   label: `中\n${medianH}` },
-                { v: Q3,        label: `Q3\n${Q3}` },
-                { v: whiskerHi, label: `Max\n${Math.round(whiskerHi)}` },
-              ].map(p => (
-                <g key={p.label}>
-                  <text x={toX(p.v)} y={86} textAnchor="middle" fontSize="8" fill="#64748b">{p.label.split('\n')[0]}</text>
-                  <text x={toX(p.v)} y={97} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="700">{p.label.split('\n')[1]}</text>
-                </g>
-              ))}
-            </svg>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              {[{ label: '均值', v: meanH }, { label: 'IQR', v: IQR }, { label: '离群点', v: OUTLIER_VALS.length }].map(s => (
-                <div key={s.label} className="text-center p-2 bg-gray-50 rounded-lg">
-                  <p className="text-xs font-bold text-gray-800">{s.v}</p>
-                  <p className="text-[10px] text-gray-400">{s.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Drill-down modal */}
-      {drillOpen && (
+      {drillOpen && result && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-base font-semibold text-gray-900">离群点详情 · H指数</p>
+              <p className="text-base font-semibold text-gray-900">离群点详情 · {result.attributeLabel}</p>
               <button onClick={() => setDrillOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <p className="text-sm text-gray-500 mb-3">
-              超出正常范围（Q3 + 1.5×IQR = {Math.round(Q3 + 1.5 * IQR)}）的实体：
+              超出正常范围的实体（方法：{result.method.outlierMethod}）：
             </p>
-            <div className="space-y-2">
-              {outlierEntities.length === 0 ? (
-                <p className="text-sm text-gray-400">无实体记录匹配离群值</p>
-              ) : outlierEntities.map(e => {
-                const val = e.properties.find(p => p.key === 'h_index')?.value;
-                return (
-                  <div key={e.id} className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                    <span className="text-sm font-semibold text-gray-900">{e.name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${entityTypeColors[e.type] ?? 'bg-gray-100 text-gray-500'}`}>{e.type}</span>
-                    <span className="ml-auto text-sm font-bold text-amber-700">H={val}</span>
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {result.outliers.length === 0 ? (
+                <p className="text-sm text-gray-400">当前无离群点</p>
+              ) : result.outliers.map(o => (
+                <div key={o.entityId} className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{o.entityName}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{o.reason}</p>
                   </div>
-                );
-              })}
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{o.entityType}</span>
+                  <span className="text-sm font-bold text-amber-700">{o.displayValue ?? o.value}</span>
+                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                </div>
+              ))}
             </div>
             <button onClick={() => setDrillOpen(false)} className="mt-4 w-full py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50">关闭</button>
           </div>
@@ -1560,11 +1639,7 @@ function StatsPanel({ panelFocus }: { panelFocus?: PanelFocus }) {
 // Panel: 时序可视化
 // ══════════════════════════════════════════════════════════════════════════════
 
-type TsKey = 'papers' | 'employees';
-
-interface TsPoint { date: string; value: number; anomaly: boolean }
-
-function renderTimeSeriesDot(props: { cx?: number; cy?: number; payload?: TsPoint }, onClick: (p: TsPoint) => void) {
+function renderTimeSeriesDot(props: { cx?: number; cy?: number; payload?: TimeseriesPoint }, onClick: (p: TimeseriesPoint) => void) {
   const { cx = 0, cy = 0, payload } = props;
   if (!payload) return null;
   if (!payload.anomaly) {
@@ -1579,42 +1654,167 @@ function renderTimeSeriesDot(props: { cx?: number; cy?: number; payload?: TsPoin
 }
 
 function TimeSeriesPanel({ panelFocus }: { panelFocus?: PanelFocus }) {
-  const [tsKey, setTsKey] = useState<TsKey>('papers');
-  const [drillPoint, setDrillPoint] = useState<TsPoint | null>(null);
+  const [graphSpace, setGraphSpace] = useState<string>(PROPERTY_GRAPH_SPACES[0].id);
+  const [attributes, setAttributes] = useState<AnalyticsAttribute[]>([]);
+  const [attributeKey, setAttributeKey] = useState('');
+  const [entities, setEntities] = useState<TimeseriesEntity[]>([]);
+  const [entityId, setEntityId] = useState('');
+  const [result, setResult] = useState<TimeseriesResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [drillPoint, setDrillPoint] = useState<TimeseriesPoint | null>(null);
 
-  const data: TsPoint[] = tsKey === 'papers' ? TS_PAPERS : TS_EMP;
-  const label = tsKey === 'papers' ? '发表论文数（季度）' : '员工人数（年度）';
-  const entityName = tsKey === 'papers' ? '李明' : '北京人工智能研究院';
-  const anomalies = data.filter(d => d.anomaly);
-  const avg = Math.round(data.reduce((a, d) => a + d.value, 0) / data.length);
+  const chartData: TimeseriesPoint[] = result?.points ?? [];
+  const anomalies = result?.anomalies ?? chartData.filter(p => p.anomaly);
+  const avg = result?.summary.mean ?? 0;
+  const label = result
+    ? `${result.attributeLabel}${result.unit ? `（${result.unit}）` : ''}`
+    : '数值属性';
 
   useEffect(() => {
-    const anomaly = data.find(d => d.anomaly);
-    if (panelFocus === 'anomaly-detect' && anomaly) setDrillPoint(anomaly);
-  }, [panelFocus, data]);
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    setResult(null);
+    getPropertyAttributes(graphSpace, 'timeseries', controller.signal)
+      .then(res => {
+        // 算法对 timeseriesVia=null 的动态属性要求调用方补齐快照路径；页面只展示可直接调用的属性。
+        const items = res.items.filter(canRunTimeseries);
+        setAttributes(items);
+        setAttributeKey(current =>
+          items.some(a => attributeOptionKey(a) === current)
+            ? current
+            : (items[0] ? attributeOptionKey(items[0]) : '')
+        );
+        if (items.length === 0) {
+          setEntities([]);
+          setEntityId('');
+          setLoading(false);
+          setError('当前图谱没有带完整时序路径（timeseriesVia）的数值属性。');
+        }
+      })
+      .catch(reason => {
+        if (reason instanceof DOMException && reason.name === 'AbortError') return;
+        setAttributes([]);
+        setAttributeKey('');
+        setEntities([]);
+        setEntityId('');
+        setError(reason instanceof Error ? reason.message : '属性目录加载失败。');
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [graphSpace, reloadKey]);
 
-  const handleDotClick = (p: TsPoint) => setDrillPoint(d => d?.date === p.date ? null : p);
+  useEffect(() => {
+    if (!attributeKey) return;
+    const attr = attributes.find(a => attributeOptionKey(a) === attributeKey);
+    if (!attr) return;
+    const path = timeseriesPathFromAttribute(attr);
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    getTimeseriesEntities(graphSpace, attr.attribute, path, controller.signal)
+      .then(res => {
+        setEntities(res.items);
+        setEntityId(current =>
+          res.items.some(e => e.entityId === current) ? current : (res.items[0]?.entityId ?? '')
+        );
+        if (res.items.length === 0) {
+          setResult(null);
+          setLoading(false);
+          setError('当前属性下没有足够时序点的实体。');
+        }
+      })
+      .catch(reason => {
+        if (reason instanceof DOMException && reason.name === 'AbortError') return;
+        setEntities([]);
+        setEntityId('');
+        setResult(null);
+        setError(reason instanceof Error ? reason.message : '时序实体列表加载失败。');
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [graphSpace, attributeKey, attributes, reloadKey]);
+
+  useEffect(() => {
+    if (!attributeKey || !entityId) return;
+    const attr = attributes.find(a => attributeOptionKey(a) === attributeKey);
+    if (!attr) return;
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    setDrillPoint(null);
+    postPropertyTimeseries(buildTimeseriesRequest(graphSpace, entityId, attr), controller.signal)
+      .then(data => {
+        setResult(data);
+        setLoading(false);
+      })
+      .catch(reason => {
+        if (reason instanceof DOMException && reason.name === 'AbortError') return;
+        setResult(null);
+        setError(reason instanceof Error ? reason.message : '时序数据加载失败。');
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [graphSpace, attributeKey, attributes, entityId, reloadKey]);
+
+  useEffect(() => {
+    const anomaly = chartData.find(d => d.anomaly);
+    if (panelFocus === 'anomaly-detect' && anomaly) setDrillPoint(anomaly);
+  }, [panelFocus, chartData]);
+
+  const handleDotClick = (p: TimeseriesPoint) => setDrillPoint(d => d?.t === p.t ? null : p);
+  const anomalyDetail = drillPoint
+    ? (result?.anomalies.find(a => a.t === drillPoint.t) || null)
+    : null;
 
   return (
     <div className="space-y-5 max-w-3xl">
       <div>
         <p className="text-base font-semibold text-gray-900">时序可视化</p>
-        <p className="text-sm text-gray-500 mt-0.5">属性随时间变化的折线图，自动检测异常突变点</p>
+        <p className="text-sm text-gray-500 mt-0.5">读取 TRS 实体数值属性时序，自动检测异常突变点</p>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-xs font-medium text-gray-600">实体</label>
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-          {([['papers', '李明 · 论文数'], ['employees', '北京AI研究院 · 员工数']] as const).map(([k, n]) => (
-            <button
-              key={k}
-              onClick={() => { setTsKey(k); setDrillPoint(null); }}
-              className={`px-4 py-1.5 transition-colors ${tsKey === k ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-            >
-              {n}
-            </button>
+        <label className="text-xs font-medium text-gray-600">图谱</label>
+        <select
+          value={graphSpace}
+          onChange={e => setGraphSpace(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+        >
+          {PROPERTY_GRAPH_SPACES.map(space => (
+            <option key={space.id} value={space.id}>{space.label}</option>
           ))}
-        </div>
+        </select>
+        <label className="text-xs font-medium text-gray-600">属性</label>
+        <select
+          value={attributeKey}
+          onChange={e => setAttributeKey(e.target.value)}
+          disabled={attributes.length === 0}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+        >
+          {attributes.length === 0 && <option value="">暂无属性</option>}
+          {attributes.map(attr => (
+            <option key={attributeOptionKey(attr)} value={attributeOptionKey(attr)}>
+              {attr.label}
+            </option>
+          ))}
+        </select>
+        <label className="text-xs font-medium text-gray-600">实体</label>
+        <select
+          value={entityId}
+          onChange={e => setEntityId(e.target.value)}
+          disabled={entities.length === 0}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400 min-w-48"
+        >
+          {entities.length === 0 && <option value="">暂无实体</option>}
+          {entities.map(entity => (
+            <option key={entity.entityId} value={entity.entityId}>
+              {entity.entityName}（{entity.pointCount} 点）
+            </option>
+          ))}
+        </select>
         {anomalies.length > 0 && (
           <span className="ml-auto flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
             <AlertTriangle className="w-3 h-3" />{anomalies.length} 个异常点
@@ -1622,87 +1822,114 @@ function TimeSeriesPanel({ panelFocus }: { panelFocus?: PanelFocus }) {
         )}
       </div>
 
-      <div id="pm-timeseries-curve" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'timeseries-curve')}`}>
-        <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-700">
-          {entityName} · {label}
-        </div>
-        <div className="p-4">
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={data} margin={{ top: 10, right: 20, bottom: 22, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} angle={-30} textAnchor="end" interval={Math.floor(data.length / 6)} />
-              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <Tooltip
-                formatter={(v: number) => [v, label]}
-                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
-              />
-              <ReferenceLine
-                y={avg}
-                stroke="#94a3b8"
-                strokeDasharray="4 3"
-                label={{ value: `均值 ${avg}`, position: 'right', fontSize: 9, fill: '#94a3b8' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={(props: any) => renderTimeSeriesDot(props, handleDotClick) as any}
-                activeDot={{ r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-          <div className="flex justify-end gap-4 text-[10px] text-gray-400 mt-1">
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-blue-500" />正常数据点</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-full bg-amber-100 border-2 border-amber-400" />异常突变（点击查看）</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Anomaly list */}
-      {anomalies.length > 0 && (
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center gap-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-            <span className="text-xs font-semibold text-gray-700">自动检测到的异常变化点</span>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {anomalies.map((a, idx) => (
-              <div
-                key={idx}
-                onClick={() => setDrillPoint(d => d?.date === a.date ? null : a)}
-                className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${drillPoint?.date === a.date ? 'bg-amber-50' : 'hover:bg-gray-50'}`}
-              >
-                <Clock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                <span className="text-sm font-semibold text-gray-800 w-24">{a.date}</span>
-                <span className="text-sm text-gray-700">值 <span className="font-mono font-bold text-amber-700">{a.value}</span></span>
-                <span className="ml-auto text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">显著突变</span>
-              </div>
-            ))}
-          </div>
+      {result?.meta?.warnings && result.meta.warnings.length > 0 && (
+        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          {result.meta.warnings.join('；')}
         </div>
       )}
 
-      {/* Drill-down inline detail */}
-      {drillPoint && (
-        <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 space-y-2">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
-            <span className="text-sm font-semibold text-amber-900">异常点详情：{drillPoint.date}</span>
-            <button onClick={() => setDrillPoint(null)} className="ml-auto text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-          </div>
-          <p className="text-sm text-amber-800">
-            该时间点{label}为 <span className="font-bold">{drillPoint.value}</span>，与前期滚动均值偏差超过 2.5σ，可能存在数据录入错误或实际突变事件，建议人工校验。
-          </p>
-          <div className="flex gap-2 mt-2 flex-wrap">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg text-xs hover:bg-amber-100">
-              <Info className="w-3.5 h-3.5" />标记为已知异常
-            </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg text-xs hover:bg-amber-100">
-              <Edit2 className="w-3.5 h-3.5" />前往属性编辑
-            </button>
-          </div>
+      {loading ? (
+        <div className="h-64 flex flex-col items-center justify-center gap-2 text-gray-500">
+          <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+          <span className="text-sm">正在加载时序数据…</span>
         </div>
+      ) : error ? (
+        <div className="h-64 flex flex-col items-center justify-center gap-3 text-center px-4">
+          <AlertCircle className="w-7 h-7 text-red-400" />
+          <p className="text-sm text-gray-700">{error}</p>
+          <button
+            onClick={() => setReloadKey(k => k + 1)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />重新加载
+          </button>
+        </div>
+      ) : !result ? (
+        <div className="h-64 flex items-center justify-center text-sm text-gray-400">暂无时序数据</div>
+      ) : (
+        <>
+          <div id="pm-timeseries-curve" className={`border border-gray-200 rounded-xl overflow-hidden ${focusRing(panelFocus === 'timeseries-curve')}`}>
+            <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-700">
+              {result.entityName} · {label}
+            </div>
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 22, left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="t" tick={{ fontSize: 10, fill: '#94a3b8' }} angle={-30} textAnchor="end" interval={Math.max(0, Math.floor(chartData.length / 6))} />
+                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                  <Tooltip
+                    formatter={(v: number) => [v, label]}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                  />
+                  <ReferenceLine
+                    y={avg}
+                    stroke="#94a3b8"
+                    strokeDasharray="4 3"
+                    label={{ value: `均值 ${Number(avg.toFixed(2))}`, position: 'right', fontSize: 9, fill: '#94a3b8' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={(props: any) => renderTimeSeriesDot(props, handleDotClick) as any}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              <div className="flex justify-end gap-4 text-[10px] text-gray-400 mt-1">
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-blue-500" />正常数据点</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-full bg-amber-100 border-2 border-amber-400" />异常突变（点击查看）</span>
+              </div>
+            </div>
+          </div>
+
+          {anomalies.length > 0 && (
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-xs font-semibold text-gray-700">自动检测到的异常变化点</span>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {anomalies.map((a, idx) => (
+                  <div
+                    key={`${a.t}-${idx}`}
+                    onClick={() => setDrillPoint(d => d?.t === a.t ? null : { t: a.t, value: a.value, anomaly: true })}
+                    className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${drillPoint?.t === a.t ? 'bg-amber-50' : 'hover:bg-gray-50'}`}
+                  >
+                    <Clock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                    <span className="text-sm font-semibold text-gray-800 w-24">{a.t}</span>
+                    <span className="text-sm text-gray-700">值 <span className="font-mono font-bold text-amber-700">{a.value}</span></span>
+                    <span className="ml-auto text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">显著突变</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {drillPoint && (
+            <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-semibold text-amber-900">异常点详情：{drillPoint.t}</span>
+                <button onClick={() => setDrillPoint(null)} className="ml-auto text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+              </div>
+              <p className="text-sm text-amber-800">
+                {anomalyDetail?.reason
+                  || `该时间点${label}为 ${drillPoint.value}，相对前期滚动均值偏差超过阈值，建议人工校验。`}
+              </p>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg text-xs hover:bg-amber-100">
+                  <Info className="w-3.5 h-3.5" />标记为已知异常
+                </button>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg text-xs hover:bg-amber-100">
+                  <Edit2 className="w-3.5 h-3.5" />前往属性编辑
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

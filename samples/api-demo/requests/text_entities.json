@@ -1,0 +1,5 @@
+{
+  "text": "清华大学张明教授在 ACL 2024 上发表了关于知识图谱与 GraphSAGE 嵌入的研究成果，合作单位包括北京大学与中科院计算所。",
+  "lang": "zh",
+  "entityTypes": ["ORG", "PER", "EVENT", "CONCEPT"]
+}
