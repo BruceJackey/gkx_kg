@@ -46,6 +46,8 @@ import FutureStatePrediction from './components/FutureStatePrediction';
 import TemporalRelationAudit from './components/TemporalRelationAudit';
 import LiteratureMultidimensionalParse from './components/LiteratureMultidimensionalParse';
 import PatentTechnicalElementParse from './components/PatentTechnicalElementParse';
+import PatentModuleDecomposition from './components/PatentModuleDecomposition';
+import PatentLiteratureMatch from './components/PatentLiteratureMatch';
 import LocalLearningAnnotator from './components/LocalLearningAnnotator';
 import EntityAttributeExtractApi from './components/EntityAttributeExtractApi';
 import TextHighlightSeedAnnotator from './components/TextHighlightSeedAnnotator';
@@ -402,7 +404,7 @@ export default function App() {
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
     // 审计专用独立页优先（不与产品页共用）
-    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'high-performance-inference-kernel' || pageId === 'fact-change-listening' || pageId === 'inference-task-management' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'future-state-prediction' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation') {
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'high-performance-inference-kernel' || pageId === 'fact-change-listening' || pageId === 'inference-task-management' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'future-state-prediction' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'patent-module-decomposition' || pageId === 'patent-literature-match' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation') {
       if (pageId === 'temporal-relation-audit') {
         setTemporalAuditMode(resolveTemporalAuditMode(feature.pagePath) ?? 'extraction');
       }
@@ -916,6 +918,10 @@ export default function App() {
             initialFocus={patentParseFocus ?? undefined}
           />
         );
+      case 'patent-module-decomposition':
+        return <PatentModuleDecomposition />;
+      case 'patent-literature-match':
+        return <PatentLiteratureMatch />;
       case 'local-learning-annotator':
         return (
           <LocalLearningAnnotator
