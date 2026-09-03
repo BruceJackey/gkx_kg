@@ -1517,27 +1517,27 @@
                           "name": "语料库选择与配置",
                           "type": "feature",
                           "reqId": "60",
-                          "pagePath": "",
+                          "pagePath": "候选模式生成/语料库选择与配置",
                           "featureDesc": "允许用户选择一个或多个文本语料库，作为模式发现的数据源。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "独立页：数据源管理形态 · 语料多选"
                         },
                         {
                           "id": "fp-60-121",
                           "name": "上下文模式抽取引擎",
                           "type": "feature",
                           "reqId": "60",
-                          "pagePath": "",
+                          "pagePath": "候选模式生成/上下文模式抽取引擎",
                           "featureDesc": "内置算法，能够自动提取种子实例周围的文本、词性或句法结构，并将其泛化为候选模式（如“公司[INSTANCE]宣布...”、“[INSTANCE]总部位于...”）。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "介绍页：上下文抽取与模式泛化"
                         },
                         {
                           "id": "fp-60-122",
                           "name": "模式预览与管理",
                           "type": "feature",
                           "reqId": "60",
-                          "pagePath": "",
+                          "pagePath": "候选模式生成/模式预览与管理",
                           "featureDesc": "以列表形式展示所有生成的候选模式，并提供搜索和筛选功能。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "候选规则形态 · 模式列表/搜索/筛选"
                         }
                       ]
                     },
@@ -1551,27 +1551,27 @@
                           "name": "自动化评分算法",
                           "type": "feature",
                           "reqId": "61",
-                          "pagePath": "",
+                          "pagePath": "候选模式评分/自动化评分算法",
                           "featureDesc": "内置基于置信度、支持度等指标的评分算法，自动为每个候选模式计算一个质量分数。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "模式预览页 · 自动化评分说明与指标"
                         },
                         {
                           "id": "fp-61-124",
                           "name": "评分结果可视化",
                           "type": "feature",
                           "reqId": "61",
-                          "pagePath": "",
+                          "pagePath": "候选模式评分/评分结果可视化",
                           "featureDesc": "以可排序的列表形式展示所有候选模式及其分数，并辅以图表来展示分数的整体分布情况。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "模式预览页 · 分布图与可排序列表"
                         },
                         {
                           "id": "fp-61-125",
                           "name": "人工审核与阈值设定",
                           "type": "feature",
                           "reqId": "61",
-                          "pagePath": "",
+                          "pagePath": "候选模式评分/人工审核与阈值设定",
                           "featureDesc": "允许用户对模式的评分进行人工调整，并提供一个滑块或输入框来设定一个分数阈值，只有高于该阈值的模式才能用于下一步。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "模式预览页 · 阈值滑块与人工调分"
                         }
                       ]
                     },
@@ -1585,27 +1585,27 @@
                           "name": "模式应用引擎",
                           "type": "feature",
                           "reqId": "62",
-                          "pagePath": "",
+                          "pagePath": "实体学习/模式应用引擎",
                           "featureDesc": "将筛选出的高质量模式应用于指定的语料库，进行大规模的文本匹配。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "介绍页：高质量模式 × 语料库大规模匹配"
                         },
                         {
                           "id": "fp-62-127",
                           "name": "新实例抽取",
                           "type": "feature",
                           "reqId": "62",
-                          "pagePath": "",
+                          "pagePath": "实体学习/新实例抽取",
                           "featureDesc": "从匹配到的文本中，抽取出符合模式结构的新实体实例。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "接口演示：POST /api/v1/patterns/instances:extract"
                         },
                         {
                           "id": "fp-62-128",
                           "name": "实例置信度评估",
                           "type": "feature",
                           "reqId": "62",
-                          "pagePath": "",
+                          "pagePath": "实体学习/实例置信度评估",
                           "featureDesc": "为每个新抽取的实例计算一个置信度分数，该分数通常基于发现它的模式数量和模式本身的质量分。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "接口演示：POST /api/v1/patterns/instances:score"
                         }
                       ]
                     },
@@ -1619,27 +1619,27 @@
                           "name": "待入库实例审核",
                           "type": "feature",
                           "reqId": "63",
-                          "pagePath": "",
+                          "pagePath": "知识图谱属性表扩充/待入库实例审核",
                           "featureDesc": "提供一个最终的审核界面，让用户对所有待添加的新实例进行最后的确认。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "复制识别结果管理 · 改名待入库实例审核"
                         },
                         {
                           "id": "fp-63-130",
                           "name": "实体对齐与消歧",
                           "type": "feature",
                           "reqId": "63",
-                          "pagePath": "",
+                          "pagePath": "知识图谱属性表扩充/实体对齐与消歧",
                           "featureDesc": "在入库前，系统会自动检测新实例是否与知识图谱中已有的实体重复，并提供合并或创建新实体的选项。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "实体链接与消歧改名 · 合并/创建新实体"
                         },
                         {
                           "id": "fp-63-131",
                           "name": "批量入库操作",
                           "type": "feature",
                           "reqId": "63",
-                          "pagePath": "",
+                          "pagePath": "知识图谱属性表扩充/批量入库操作",
                           "featureDesc": "提供“一键入库”功能，将所有审核通过的新实例批量添加到知识图谱的目标概念下。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "一键入库 · 确认实例批量写入目标概念"
                         }
                       ]
                     }
@@ -1946,27 +1946,27 @@
                           "name": "图谱构建模块",
                           "type": "feature",
                           "reqId": "72",
-                          "pagePath": "",
+                          "pagePath": "知识图谱一体化工作平台/图谱构建模块",
                           "featureDesc": "集成所有图谱构建相关的功能，提供可视化的ETL和知识抽取流程编排。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "一体化工作平台 · 介绍 + 跳转图谱构造"
                         },
                         {
                           "id": "fp-72-157",
                           "name": "推理引擎模块",
                           "type": "feature",
                           "reqId": "72",
-                          "pagePath": "",
+                          "pagePath": "知识图谱一体化工作平台/推理引擎模块",
                           "featureDesc": "集成规则学习、知识推理等计算引擎。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "一体化工作平台 · 仅介绍"
                         },
                         {
                           "id": "fp-72-158",
                           "name": "可视化UI模块",
                           "type": "feature",
                           "reqId": "72",
-                          "pagePath": "",
+                          "pagePath": "知识图谱一体化工作平台/可视化UI模块",
                           "featureDesc": "集成图谱可视化、演化分析、关系分析等可视化界面。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "一体化工作平台 · 介绍 + 跳转可视化/演化/关系分析"
                         }
                       ]
                     },
@@ -2121,9 +2121,9 @@
                           "name": "相似度计算引擎",
                           "type": "feature",
                           "reqId": "77",
-                          "pagePath": "",
+                          "pagePath": "本体匹配关系智能构建/相似度计算引擎",
                           "featureDesc": "内置多种相似度计算算法，包括编辑距离、Jaro-Winkler、词向量余弦相似度。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "接口演示：POST /api/v1/similarity/compute"
                         },
                         {
                           "id": "fp-77-171",

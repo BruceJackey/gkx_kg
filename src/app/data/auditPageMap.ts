@@ -291,6 +291,22 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '跨本体实体模糊关系与逻辑关系构建/逻辑关系构建': 'graph-fusion',
   '跨本体实体模糊关系与逻辑关系构建/模糊关系构建': 'graph-fusion',
   '跨本体实体模糊关系与逻辑关系构建/关系可视化': 'graph-fusion',
+  '本体匹配关系智能构建/相似度计算引擎': 'similarity-computation-engine',
+  '知识图谱一体化工作平台/图谱构建模块': 'kg-integrated-workbench',
+  '知识图谱一体化工作平台/推理引擎模块': 'kg-integrated-workbench',
+  '知识图谱一体化工作平台/可视化UI模块': 'kg-integrated-workbench',
+  '候选模式生成/语料库选择与配置': 'corpus-selection-config',
+  '候选模式生成/上下文模式抽取引擎': 'context-pattern-extraction-engine',
+  '候选模式生成/模式预览与管理': 'pattern-preview-management',
+  '候选模式评分/自动化评分算法': 'pattern-preview-management',
+  '候选模式评分/评分结果可视化': 'pattern-preview-management',
+  '候选模式评分/人工审核与阈值设定': 'pattern-preview-management',
+  '实体学习/模式应用引擎': 'pattern-application-engine',
+  '实体学习/新实例抽取': 'new-instance-extraction',
+  '实体学习/实例置信度评估': 'instance-confidence-evaluation',
+  '知识图谱属性表扩充/待入库实例审核': 'pending-instance-review',
+  '知识图谱属性表扩充/实体对齐与消歧': 'entity-alignment-disambiguation',
+  '知识图谱属性表扩充/批量入库操作': 'batch-instance-ingest',
   '图谱融合/智能匹配推荐': 'graph-fusion',
   '图谱融合/人工审核与反馈': 'graph-fusion',
   '智能匹配推荐': 'graph-fusion',
@@ -1214,6 +1230,33 @@ export function resolveGraphVizDockFocus(pagePath: string | undefined): GraphViz
   if (path.includes('学派关联') || path.includes('学术交叉')) return 'schools';
   if (path.includes('动态主题追踪')) return 'topic';
   if (path.includes('技术演进路径') || path.includes('时间轴播放器')) return 'timeline';
+  return null;
+}
+
+/** 知识图谱一体化工作平台：定位到指定模块介绍 */
+export type IntegratedWorkbenchModule = 'construction' | 'inference' | 'visualization';
+
+export function resolveIntegratedWorkbenchModule(
+  pagePath: string | undefined,
+): IntegratedWorkbenchModule | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('图谱构建模块')) return 'construction';
+  if (path.includes('推理引擎模块')) return 'inference';
+  if (path.includes('可视化UI') || path.includes('可视化 UI')) return 'visualization';
+  return null;
+}
+
+/** 模式预览与管理：定位到预览 / 评分 / 可视化 / 审核 */
+export type PatternPreviewFocus = 'preview' | 'scoring' | 'viz' | 'review';
+
+export function resolvePatternPreviewFocus(pagePath: string | undefined): PatternPreviewFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('自动化评分')) return 'scoring';
+  if (path.includes('评分结果可视化')) return 'viz';
+  if (path.includes('人工审核') || path.includes('阈值设定')) return 'review';
+  if (path.includes('模式预览')) return 'preview';
   return null;
 }
 

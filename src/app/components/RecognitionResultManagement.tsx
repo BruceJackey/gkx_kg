@@ -4,6 +4,8 @@ import { Check, X, Tag, Link2, Highlighter, MousePointerClick, Trash2, Plus, Gri
 type EntityType = '机构' | '作者' | '概念' | '论文';
 type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'modified';
 
+type AlignmentDecision = 'merge' | 'create' | null;
+
 interface RecognitionItem {
   id: string;
   text: string;
@@ -14,6 +16,8 @@ interface RecognitionItem {
   status: ReviewStatus;
   /** 已链接本体 ID */
   ontologyId: string | null;
+  /** 对齐决策：合并已有 / 创建新实体 */
+  alignmentDecision?: AlignmentDecision;
   /** 同名消歧候选（≥2 才视为有歧义） */
   ontologyOptions: Array<{ id: string; label: string; ontology: string; desc: string }>;
 }
@@ -98,10 +102,13 @@ export function RecognitionResultManagementPanel({
   initialFocus,
   labels,
   showLinking = true,
+  enableAlignmentActions = false,
 }: {
   initialFocus?: RecognitionFocus;
   labels?: RecognitionPanelLabels;
   showLinking?: boolean;
+  /** 对齐模式：合并到已有实体 / 创建新实体 */
+  enableAlignmentActions?: boolean;
 } = {}) {
   const highlightTitle = labels?.highlight ?? '结果可视化与高亮';
   const reviewTitle = labels?.review ?? '人工审核与修正界面';
@@ -382,12 +389,26 @@ export function RecognitionResultManagementPanel({
               <span className="text-sm font-semibold text-gray-800">{linkingTitle}</span>
             </div>
             <div className="p-4 space-y-2">
+              {enableAlignmentActions && (
+                <p className="text-xs text-gray-500 mb-1">
+                  检测到与知识图谱中已有实体可能重复。请选择合并到候选实体，或创建新实体。
+                </p>
+              )}
               <div className="text-xs text-gray-500">
-                已链接本体：
-                {selected.ontologyId ? (
-                  <code className="ml-1 text-teal-700 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded">{selected.ontologyId}</code>
+                {enableAlignmentActions ? '对齐结果：' : '已链接本体：'}
+                {selected.alignmentDecision === 'create' ? (
+                  <span className="ml-1 text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
+                    创建新实体
+                    {selected.ontologyId ? ` · ${selected.ontologyId}` : ''}
+                  </span>
+                ) : selected.ontologyId ? (
+                  <code className="ml-1 text-teal-700 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded">
+                    {enableAlignmentActions ? '合并 → ' : ''}{selected.ontologyId}
+                  </code>
                 ) : (
-                  <span className="ml-1 text-amber-600">未选择（请从候选中链接）</span>
+                  <span className="ml-1 text-amber-600">
+                    {enableAlignmentActions ? '未决策（请合并或创建）' : '未选择（请从候选中链接）'}
+                  </span>
                 )}
               </div>
               {selected.ontologyOptions.map((opt) => (
@@ -396,10 +417,13 @@ export function RecognitionResultManagementPanel({
                   type="button"
                   onClick={() => updateSelected({
                     ontologyId: opt.id,
+                    alignmentDecision: enableAlignmentActions ? 'merge' : selected.alignmentDecision,
                     status: selected.status === 'pending' ? 'modified' : selected.status,
                   })}
                   className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
-                    selected.ontologyId === opt.id ? 'border-teal-400 bg-teal-50' : 'border-gray-200 hover:border-gray-300'
+                    selected.ontologyId === opt.id && selected.alignmentDecision !== 'create'
+                      ? 'border-teal-400 bg-teal-50'
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -408,18 +432,46 @@ export function RecognitionResultManagementPanel({
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                       {opt.ontology}
                     </span>
+                    {enableAlignmentActions && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-100">
+                        合并
+                      </span>
+                    )}
                     <code className="text-[10px] text-gray-400 ml-auto">{opt.id}</code>
                   </div>
                   <p className="text-[11px] text-gray-500 mt-0.5 ml-5">{opt.desc}</p>
                 </button>
               ))}
+              {enableAlignmentActions && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newId = `onto:new/${selected.text.replace(/\s+/g, '-').toLowerCase()}`;
+                    updateSelected({
+                      ontologyId: newId,
+                      alignmentDecision: 'create',
+                      status: selected.status === 'pending' ? 'modified' : selected.status,
+                    });
+                    flash(`已选择创建新实体：${selected.text}`);
+                  }}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors flex items-center gap-2 ${
+                    selected.alignmentDecision === 'create'
+                      ? 'border-emerald-400 bg-emerald-50'
+                      : 'border-dashed border-gray-300 hover:border-emerald-300 hover:bg-emerald-50/40'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-sm font-medium text-gray-800">创建新实体「{selected.text}」</span>
+                  <span className="text-[10px] text-gray-400 ml-auto">不与已有实体合并</span>
+                </button>
+              )}
               {selected.ontologyId && (
                 <button
                   type="button"
-                  onClick={() => updateSelected({ ontologyId: null })}
+                  onClick={() => updateSelected({ ontologyId: null, alignmentDecision: null })}
                   className="text-sm px-3 py-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50"
                 >
-                  取消链接
+                  {enableAlignmentActions ? '取消对齐' : '取消链接'}
                 </button>
               )}
             </div>
