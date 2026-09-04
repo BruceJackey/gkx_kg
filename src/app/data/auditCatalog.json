@@ -5706,7 +5706,7 @@
                           "reqId": "181",
                           "pagePath": "四元结构自动提取与建模/结构化信息抽取",
                           "featureDesc": "提供自动化的信息抽取流水线，用于从文本、表格中提取四元组知识。",
-                          "auditNote": "接口演示 · POST /api/v1/mmkg/quadruples:extract"
+                          "auditNote": "接口演示 · POST /api/v1/extract/quadruples:extract（text JSON / file multipart）"
                         },
                         {
                           "id": "fp-181-427",
@@ -5715,7 +5715,7 @@
                           "reqId": "181",
                           "pagePath": "四元结构自动提取与建模/跨资源关系预测",
                           "featureDesc": "开发基于跨资源共现分析的关系预测模型，用于发现隐含的知识关联。",
-                          "auditNote": "接口演示 · POST /api/v1/mmkg/relations:predict-cross-resource"
+                          "auditNote": "接口演示 · POST /api/v1/relations/cross-resource:predict（literature + patent）"
                         }
                       ]
                     },
