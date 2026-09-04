@@ -330,7 +330,7 @@ type LayoutMode = 'force' | 'hierarchical' | 'concentric' | 'grid' | 'circle' | 
 type RightTab = 'entity' | 'critical' | 'analysis' | 'filter' | 'style' | 'snapshot' | 'story';
 type DockTab = 'timeline' | 'schools' | 'topic' | 'stats' | 'map';
 
-type GraphVizDockFocus = 'timeline' | 'schools' | 'topic';
+type GraphVizDockFocus = 'timeline' | 'schools' | 'topic' | 'stats' | 'map';
 
 export function GraphVisualization({ initialDockTab }: { initialDockTab?: GraphVizDockFocus | null } = {}) {
   const [graphTheme, setGraphTheme] = useState<GraphTheme>('academic');

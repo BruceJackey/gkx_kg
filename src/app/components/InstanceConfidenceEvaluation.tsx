@@ -143,7 +143,7 @@ export default function InstanceConfidenceEvaluation() {
 
         <div className="text-xs text-gray-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
           评分依据：支持模式数量 n、各模式 qualityScore；演示公式
-          <code className="mx-1 text-blue-700">confidence ≈ avg(q) × (0.55 + 0.45×(1−e^{−0.7n}))</code>
+          <code className="mx-1 text-blue-700">{'confidence ≈ avg(q) × (0.55 + 0.45×(1−e^{−0.7n}))'}</code>
         </div>
 
         <div>

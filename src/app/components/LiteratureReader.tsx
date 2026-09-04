@@ -47,7 +47,7 @@ interface KBEntity {
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-export type LiteratureReaderFocus = 'highlight' | 'popup';
+export type LiteratureReaderFocus = 'highlight' | 'popup' | 'generate-notes' | 'ai-qa' | 'molecule' | 'deep-read' | 'kb-read';
 
 const ReaderEntityFocusContext = createContext<{ forcePopupEntityId?: string | null }>({});
 
@@ -1000,6 +1000,22 @@ export default function LiteratureReader({
     if (initialFocus === 'generate-notes') {
       setRightTab('notes');
       window.setTimeout(() => setNoteDialogOpen(true), 350);
+      return;
+    }
+    if (initialFocus === 'ai-qa') {
+      setRightTab('ai');
+      return;
+    }
+    if (initialFocus === 'molecule') {
+      setRightTab('molecular');
+      return;
+    }
+    if (initialFocus === 'deep-read') {
+      setRightTab('translate');
+      return;
+    }
+    if (initialFocus === 'kb-read') {
+      setRightTab('notes');
       return;
     }
     setRightTab('entities');

@@ -187,18 +187,18 @@
                           "name": "语义相似度图构建",
                           "type": "feature",
                           "reqId": "5",
-                          "pagePath": "算法管理/算法仓库/知识推理/基于置信度图传播的术语排序/语义相似度图构建",
+                          "pagePath": "基于置信度图传播的术语排序/语义相似度图构建",
                           "featureDesc": "基于术语向量，自动构建一个以术语为节点、相似度为边权重的图。",
-                          "auditNote": "无调整"
+                          "auditNote": "接口演示 · 输入术语 → 返回子图 nodes/edges"
                         },
                         {
                           "id": "fp-5-16",
                           "name": "置信度计算与排序",
                           "type": "feature",
                           "reqId": "5",
-                          "pagePath": "算法管理/算法仓库/知识推理/基于置信度图传播的术语排序/置信度计算与排序",
+                          "pagePath": "基于置信度图传播的术语排序/置信度计算与排序",
                           "featureDesc": "将种子术语作为高置信度节点，在图上运行传播算法，为所有节点打分。",
-                          "auditNote": "无调整"
+                          "auditNote": "接口演示 · 种子传播 → 节点 confidence/rank"
                         },
                         {
                           "id": "fp-5-17",
@@ -1301,6 +1301,54 @@
                           "auditNote": "复用事件审核与修正工作台 · 改名 + 一键入库"
                         }
                       ]
+                    },
+                    {
+                      "id": "l5-基于LSTM-CRF的识别模型",
+                      "name": "基于LSTM-CRF的识别模型",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-37-leaf",
+                          "name": "基于LSTM-CRF的识别模型",
+                          "type": "feature",
+                          "reqId": "37",
+                          "pagePath": "事件知识学习/基于LSTM-CRF的识别模型",
+                          "featureDesc": "基于LSTM-CRF的识别模型提供经典的序列标注模型，用于在句子级别上进行端到端的事件元素抽取。",
+                          "auditNote": "算法仓库 · LSTM-CRF"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-基于强化学习的句子选择器",
+                      "name": "基于强化学习的句子选择器",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-38-leaf",
+                          "name": "基于强化学习的句子选择器",
+                          "type": "feature",
+                          "reqId": "38",
+                          "pagePath": "事件知识学习/基于强化学习的句子选择器",
+                          "featureDesc": "基于强化学习的句子选择器利用强化学习技术，智能地从未标注的文本中挑选出最有价值的句子给人工进行标注。",
+                          "auditNote": "算法仓库 · 强化学习句子选择器"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-基于局部学习的标注器",
+                      "name": "基于局部学习的标注器",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-40-leaf",
+                          "name": "基于局部学习的标注器",
+                          "type": "feature",
+                          "reqId": "40",
+                          "pagePath": "事件知识学习/基于局部学习的标注器",
+                          "featureDesc": "基于局部学习的标注器支持基于局部学习的标注器和基于强化学习的句子选择器，旨在用更少的人工标注数据、更智能的样本选择，来优化和提升事件识别模型的训练效率与性能。",
+                          "auditNote": "局部学习标注器页"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -1399,6 +1447,54 @@
                           "auditNote": "对应图谱构造 · 策略配置 · 句法增强表示模块开关"
                         }
                       ]
+                    },
+                    {
+                      "id": "l5-基于强化学习的降噪模型",
+                      "name": "基于强化学习的降噪模型",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-46-leaf",
+                          "name": "基于强化学习的降噪模型",
+                          "type": "feature",
+                          "reqId": "46",
+                          "pagePath": "事件关系抽取/基于强化学习的降噪模型",
+                          "featureDesc": "基于强化学习的降噪模型利用强化学习来训练一个降噪模型，自动过滤掉那些虽然在文本上有关联，但实际上没有真实关系的句子，提升抽取精度。",
+                          "auditNote": "算法仓库 · 强化学习降噪"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-事件关系提取接口",
+                      "name": "事件关系提取接口",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-47-leaf",
+                          "name": "事件关系提取接口",
+                          "type": "feature",
+                          "reqId": "47",
+                          "pagePath": "事件关系抽取/事件关系提取接口",
+                          "featureDesc": "事件关系提取接口将事件关系抽取能力封装为服务，并提供相应的管理工具。提供API接口，输入包含事件或实体的文本，返回它们之间可能存在的关系类型和置信度。",
+                          "auditNote": "算法仓库 · 事件关系提取接口"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-事件关系提取管理",
+                      "name": "事件关系提取管理",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-48-leaf",
+                          "name": "事件关系提取管理",
+                          "type": "feature",
+                          "reqId": "48",
+                          "pagePath": "事件关系抽取/事件关系提取管理",
+                          "featureDesc": "事件关系提取管理提供一个审核工作台，对机器抽取出的事件关系进行人工确认、修正或删除。",
+                          "auditNote": "审核与入库工作流（事件关系审核）"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -1463,6 +1559,141 @@
                           "pagePath": "知识图谱构造引擎/人工审核/候选属性审核界面",
                           "featureDesc": "将审核确认的属性三元组一键写入知识库，与对应实体进行关联。",
                           "auditNote": "对应人工审核 · 候选属性审核界面 · 操作（一键入库或拒绝）"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "l4-规则学习",
+                  "name": "规则学习",
+                  "type": "level4",
+                  "children": [
+                    {
+                      "id": "l5-EmbeddingLearning模块",
+                      "name": "EmbeddingLearning模块",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-51-leaf",
+                          "name": "EmbeddingLearning模块",
+                          "type": "feature",
+                          "reqId": "51",
+                          "pagePath": "规则学习/EmbeddingLearning模块",
+                          "featureDesc": "嵌入学习模块（EmbeddingLearning）支持将知识图谱进行向量化表示，为后续的计算提供基础。",
+                          "auditNote": "规则学习工作台 · EmbeddingLearning"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-AxiomInduction模块",
+                      "name": "AxiomInduction模块",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-52-leaf",
+                          "name": "AxiomInduction模块",
+                          "type": "feature",
+                          "reqId": "52",
+                          "pagePath": "规则学习/AxiomInduction模块",
+                          "featureDesc": "规则归纳模块(AxiomInduction)支持在向量空间中搜索和发现潜在的逻辑规则模式。",
+                          "auditNote": "规则学习工作台 · AxiomInduction"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-AxiomInjection模块",
+                      "name": "AxiomInjection模块",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-53-leaf",
+                          "name": "AxiomInjection模块",
+                          "type": "feature",
+                          "reqId": "53",
+                          "pagePath": "规则学习/AxiomInjection模块",
+                          "featureDesc": "规则注入与验证模块(AxiomInjection)支持将发现的规则重新应用于知识图谱，验证其有效性并进行修正。",
+                          "auditNote": "规则学习工作台 · AxiomInjection"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-知识样本收集与预处理",
+                      "name": "知识样本收集与预处理",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-54-leaf",
+                          "name": "知识样本收集与预处理",
+                          "type": "feature",
+                          "reqId": "54",
+                          "pagePath": "规则学习/知识样本收集与预处理",
+                          "featureDesc": "知识样本收集与预处理支持从知识图谱中采样出用于规则学习的正负样本。",
+                          "auditNote": "规则学习工作台 · 样本预处理"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-候选规则模式自动挖掘",
+                      "name": "候选规则模式自动挖掘",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-55-leaf",
+                          "name": "候选规则模式自动挖掘",
+                          "type": "feature",
+                          "reqId": "55",
+                          "pagePath": "规则学习/候选规则模式自动挖掘",
+                          "featureDesc": "候选规则模式自动挖掘支持基于样本，自动挖掘出满足特定模式的候选规则。",
+                          "auditNote": "规则学习工作台 · 候选规则挖掘"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-规则置信度计算与评估",
+                      "name": "规则置信度计算与评估",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-56-leaf",
+                          "name": "规则置信度计算与评估",
+                          "type": "feature",
+                          "reqId": "56",
+                          "pagePath": "规则学习/规则置信度计算与评估",
+                          "featureDesc": "规则置信度计算与评估支持为每条候选规则计算置信度、支持度等评估指标。",
+                          "auditNote": "规则学习工作台 · 置信度评估"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-规则入库与版本管理",
+                      "name": "规则入库与版本管理",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-57-leaf",
+                          "name": "规则入库与版本管理",
+                          "type": "feature",
+                          "reqId": "57",
+                          "pagePath": "规则学习/规则入库与版本管理",
+                          "featureDesc": "规则入库与版本管理支持将经过评估的规则存入规则库，并进行版本管理。",
+                          "auditNote": "规则学习工作台 · 入库与版本"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-规则触发与应用接口",
+                      "name": "规则触发与应用接口",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-58-leaf",
+                          "name": "规则触发与应用接口",
+                          "type": "feature",
+                          "reqId": "58",
+                          "pagePath": "规则学习/规则触发与应用接口",
+                          "featureDesc": "规则触发与应用接口支持将规则库与推理引擎集成，使其能够在推理任务中被自动触发和应用。",
+                          "auditNote": "规则学习工作台 · 触发与应用"
                         }
                       ]
                     }
@@ -4229,6 +4460,38 @@
                           "auditNote": "需补充页面路由"
                         }
                       ]
+                    },
+                    {
+                      "id": "l5-统计图联动关联图分析",
+                      "name": "统计图联动关联图分析",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-138-leaf",
+                          "name": "统计图联动关联图分析",
+                          "type": "feature",
+                          "reqId": "138",
+                          "pagePath": "图谱可视化/统计图联动关联图分析",
+                          "featureDesc": "统计图联动关联图分析支持在统计图的某个数据项上点击，关系图上对应的节点或边高亮显示，反之亦然。",
+                          "auditNote": "图谱可视化 · 统计图联动"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-地图联动关联图分析",
+                      "name": "地图联动关联图分析",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-139-leaf",
+                          "name": "地图联动关联图分析",
+                          "type": "feature",
+                          "reqId": "139",
+                          "pagePath": "图谱可视化/地图联动关联图分析",
+                          "featureDesc": "地图联动关联图分析支持在地图上框选一个区域，关系图显示该区域内所有实体及其在图中的连接。",
+                          "auditNote": "图谱可视化 · 地图联动"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -4468,6 +4731,125 @@
                           "pagePath": "",
                           "featureDesc": "支持用户创建“IF...THEN...”规则，实现文献的自动分类（如“若标题包含‘AI’，则自动移入‘人工智能’文件夹”）。",
                           "auditNote": "需补充页面路由"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-元数据自动标注",
+                      "name": "元数据自动标注",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-149-leaf",
+                          "name": "元数据自动标注",
+                          "type": "feature",
+                          "reqId": "149",
+                          "pagePath": "知识库构建/元数据自动标注",
+                          "featureDesc": "元数据自动标注支持为文献管理提供高效的元数据处理能力，系统对上传文献进行自动化元数据标注，包括作者、出版时间、期刊、DOI等信息。",
+                          "auditNote": "知识库 · 元数据自动标注"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-树状文件夹管理",
+                      "name": "树状文件夹管理",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-150-leaf",
+                          "name": "树状文件夹管理",
+                          "type": "feature",
+                          "reqId": "150",
+                          "pagePath": "知识库构建/树状文件夹管理",
+                          "featureDesc": "树状文件夹管理支持树状结构的文件夹管理。",
+                          "auditNote": "知识库 · 树状文件夹"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-知识库发布广场",
+                      "name": "知识库发布广场",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-152-leaf",
+                          "name": "知识库发布广场",
+                          "type": "feature",
+                          "reqId": "152",
+                          "pagePath": "知识库构建/知识库发布广场",
+                          "featureDesc": "知识库发布广场支持承载1万以上用户自动发布高质量知识库。",
+                          "auditNote": "知识库 · 发布广场"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "l4-文献要点总结",
+                  "name": "文献要点总结",
+                  "type": "level4",
+                  "children": [
+                    {
+                      "id": "l5-高效阅读，深度理解",
+                      "name": "高效阅读，深度理解",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-153-leaf",
+                          "name": "高效阅读，深度理解",
+                          "type": "feature",
+                          "reqId": "153",
+                          "pagePath": "文献要点总结/高效阅读，深度理解",
+                          "featureDesc": "高效阅读，深度理解功能支持集成AI问答、智能翻译、笔记标注等功能。侧边栏提供实时互动支持，帮助科研人员高效阅读、理解和管理学术内容，提升科研效率。",
+                          "auditNote": "文献阅读器 · 深度理解侧栏"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-文档内分子活性信息抽取",
+                      "name": "文档内分子活性信息抽取",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-154-leaf",
+                          "name": "文档内分子活性信息抽取",
+                          "type": "feature",
+                          "reqId": "154",
+                          "pagePath": "文献要点总结/文档内分子活性信息抽取",
+                          "featureDesc": "文档内分子活性信息抽取功能支持从复杂文献中精准识别并匹配分子结构及其活性数值，生成结构化数据表格。显著提升数据收集效率与准确性，为分子优化和药物设计提供可靠数据支持，加速科研进程。",
+                          "auditNote": "文献阅读器 · 分子活性"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-单篇或多篇文献的AI问答功能",
+                      "name": "单篇或多篇文献的AI问答功能",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-155-leaf",
+                          "name": "单篇或多篇文献的AI问答功能",
+                          "type": "feature",
+                          "reqId": "155",
+                          "pagePath": "文献要点总结/单篇或多篇文献的AI问答功能",
+                          "featureDesc": "单篇或多篇文献的AI问答功能支持用户通过提问，获得文献中的关键信息和答案，提升文献的解读效率。",
+                          "auditNote": "文献阅读器 · AI问答"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "l5-文献知识库阅读",
+                      "name": "文献知识库阅读",
+                      "type": "level5",
+                      "children": [
+                        {
+                          "id": "fp-156-leaf",
+                          "name": "文献知识库阅读",
+                          "type": "feature",
+                          "reqId": "156",
+                          "pagePath": "文献要点总结/文献知识库阅读",
+                          "featureDesc": "文献知识库阅读功能支持通过自然语言进行检索和智能问答；支持缩略图、大纲、书签、图层视图；页面支持顺时针和逆时针旋转、支持单页和双页查看；支持下划线、曲线、手绘、自由文本、插入文本、替换文本等注释方式；支持矩形、椭圆、多边形、云等标记形状；支持插入文件、盖章；支持添加备注。",
+                          "auditNote": "文献阅读器 · 知识库阅读能力"
                         }
                       ]
                     }
@@ -5322,18 +5704,18 @@
                           "name": "结构化信息抽取",
                           "type": "feature",
                           "reqId": "181",
-                          "pagePath": "",
+                          "pagePath": "四元结构自动提取与建模/结构化信息抽取",
                           "featureDesc": "提供自动化的信息抽取流水线，用于从文本、表格中提取四元组知识。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "接口演示 · POST /api/v1/mmkg/quadruples:extract"
                         },
                         {
                           "id": "fp-181-427",
                           "name": "跨资源关系预测",
                           "type": "feature",
                           "reqId": "181",
-                          "pagePath": "",
+                          "pagePath": "四元结构自动提取与建模/跨资源关系预测",
                           "featureDesc": "开发基于跨资源共现分析的关系预测模型，用于发现隐含的知识关联。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "接口演示 · POST /api/v1/mmkg/relations:predict-cross-resource"
                         }
                       ]
                     },
@@ -5506,27 +5888,27 @@
                           "name": "图结构约束集成",
                           "type": "feature",
                           "reqId": "187",
-                          "pagePath": "",
+                          "pagePath": "多模态语义检索与路径导航/语义+结构双因子排序/图结构约束集成",
                           "featureDesc": "在排序算法中，考虑实体在图谱中的连接结构和中心性等拓扑特征。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "接口演示 · dual-factor-rank · graph_structure"
                         },
                         {
                           "id": "fp-187-442",
                           "name": "嵌入相似度集成",
                           "type": "feature",
                           "reqId": "187",
-                          "pagePath": "",
+                          "pagePath": "多模态语义检索与路径导航/语义+结构双因子排序/嵌入相似度集成",
                           "featureDesc": "将跨模态嵌入向量的语义相似度作为排序的核心因子。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "接口演示 · dual-factor-rank · ranking_factors.embedding_score"
                         },
                         {
                           "id": "fp-187-443",
                           "name": "跨资源关联结果优先",
                           "type": "feature",
                           "reqId": "187",
-                          "pagePath": "",
+                          "pagePath": "多模态语义检索与路径导航/语义+结构双因子排序/跨资源关联结果优先",
                           "featureDesc": "在排序时，优先返回那些能够连接起文献、专利、数据库这三类资源的关联结果。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "接口演示 · dual-factor-rank · cross_resource_association"
                         }
                       ]
                     },

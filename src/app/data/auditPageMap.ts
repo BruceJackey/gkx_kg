@@ -69,8 +69,14 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '算法管理/算法仓库/抽取类算法/候选术语生成/基于规则的扩展': 'algorithm-detail',
   '算法管理/算法仓库/抽取类算法/候选术语生成/候选术语去重与合并': 'algorithm-detail',
   '算法管理/算法仓库/知识推理/基于置信度图传播的术语排序': 'algorithm-detail',
-  '算法管理/算法仓库/知识推理/基于置信度图传播的术语排序/语义相似度图构建': 'algorithm-detail',
-  '算法管理/算法仓库/知识推理/基于置信度图传播的术语排序/置信度计算与排序': 'algorithm-detail',
+  '基于置信度图传播的术语排序/语义相似度图构建': 'term-confidence-graph',
+  '基于置信度图传播的术语排序/置信度计算与排序': 'term-confidence-graph',
+  '语义相似度图构建': 'term-confidence-graph',
+  '置信度计算与排序': 'term-confidence-graph',
+  '四元结构自动提取与建模/结构化信息抽取': 'quadruple-structure',
+  '四元结构自动提取与建模/跨资源关系预测': 'quadruple-structure',
+  '结构化信息抽取': 'quadruple-structure',
+  '跨资源关系预测': 'quadruple-structure',
   '算法管理/算法仓库/抽取类算法/LAC': 'algorithm-list',
   '算法管理/算法仓库/抽取类算法/关系图注意网络': 'algorithm-detail',
   '算法管理/算法仓库/抽取类算法/关系图注意网络/预训练模型管理': 'algorithm-detail',
@@ -307,6 +313,38 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '知识图谱属性表扩充/待入库实例审核': 'pending-instance-review',
   '知识图谱属性表扩充/实体对齐与消歧': 'entity-alignment-disambiguation',
   '知识图谱属性表扩充/批量入库操作': 'batch-instance-ingest',
+  '事件知识学习/基于LSTM-CRF的识别模型': 'algorithm-detail',
+  '事件知识学习/基于强化学习的句子选择器': 'algorithm-detail',
+  '事件知识学习/基于局部学习的标注器': 'local-learning-annotator',
+  '事件关系抽取/基于强化学习的降噪模型': 'algorithm-detail',
+  '事件关系抽取/事件关系提取接口': 'algorithm-detail',
+  '事件关系抽取/事件关系提取管理': 'event-ingest-workflow',
+  '规则学习/EmbeddingLearning模块': 'rule-learning-workbench',
+  '规则学习/AxiomInduction模块': 'rule-learning-workbench',
+  '规则学习/AxiomInjection模块': 'rule-learning-workbench',
+  '规则学习/知识样本收集与预处理': 'rule-learning-workbench',
+  '规则学习/候选规则模式自动挖掘': 'rule-learning-workbench',
+  '规则学习/规则置信度计算与评估': 'rule-learning-workbench',
+  '规则学习/规则入库与版本管理': 'rule-learning-workbench',
+  '规则学习/规则触发与应用接口': 'rule-learning-workbench',
+  '图谱可视化/统计图联动关联图分析': 'graph-visualization',
+  '图谱可视化/地图联动关联图分析': 'graph-visualization',
+  '知识库构建/元数据自动标注': 'knowledge-base',
+  '知识库构建/树状文件夹管理': 'knowledge-base',
+  '知识库构建/知识库发布广场': 'knowledge-base',
+  '文献要点总结/高效阅读，深度理解': 'literature-reader',
+  '文献要点总结/文档内分子活性信息抽取': 'literature-reader',
+  '文献要点总结/单篇或多篇文献的AI问答功能': 'literature-reader',
+  '文献要点总结/文献知识库阅读': 'literature-reader',
+  '多模态语义检索与路径导航/语义+结构双因子排序/图结构约束集成': 'dual-factor-rank',
+  '多模态语义检索与路径导航/语义+结构双因子排序/嵌入相似度集成': 'dual-factor-rank',
+  '多模态语义检索与路径导航/语义+结构双因子排序/跨资源关联结果优先': 'dual-factor-rank',
+  '语义+结构双因子排序/图结构约束集成': 'dual-factor-rank',
+  '语义+结构双因子排序/嵌入相似度集成': 'dual-factor-rank',
+  '语义+结构双因子排序/跨资源关联结果优先': 'dual-factor-rank',
+  '图结构约束集成': 'dual-factor-rank',
+  '嵌入相似度集成': 'dual-factor-rank',
+  '跨资源关联结果优先': 'dual-factor-rank',
   '图谱融合/智能匹配推荐': 'graph-fusion',
   '图谱融合/人工审核与反馈': 'graph-fusion',
   '智能匹配推荐': 'graph-fusion',
@@ -500,8 +538,6 @@ export const AUDIT_ALGORITHM_MAP: Record<string, string> = {
   '算法管理/算法仓库/抽取类算法/候选术语生成/基于规则的扩展': 'candidate-term-generation',
   '算法管理/算法仓库/抽取类算法/候选术语生成/候选术语去重与合并': 'candidate-term-generation',
   '算法管理/算法仓库/知识推理/基于置信度图传播的术语排序': 'confidence-graph-term-ranking',
-  '算法管理/算法仓库/知识推理/基于置信度图传播的术语排序/语义相似度图构建': 'confidence-graph-term-ranking',
-  '算法管理/算法仓库/知识推理/基于置信度图传播的术语排序/置信度计算与排序': 'confidence-graph-term-ranking',
   '算法管理/算法仓库/抽取类算法/依存关系图构建': 'dependency-graph',
   '算法管理/算法仓库/抽取类算法/依存关系图构建/句法分析任务管理': 'dependency-graph',
   '算法管理/算法仓库/抽取类算法/依存关系图构建/结果抽样可视化': 'dependency-graph',
@@ -559,6 +595,10 @@ export const AUDIT_ALGORITHM_MAP: Record<string, string> = {
   '算法管理/算法仓库/图嵌入/Open CLIP/对比学习训练': 'open-clip',
   '数据的统一建模与表示融合/知识点关联/关联关系学习': 'open-clip',
   '关联关系学习': 'open-clip',
+  '事件知识学习/基于LSTM-CRF的识别模型': 'lstm-crf',
+  '事件知识学习/基于强化学习的句子选择器': 'rl-sentence-selector',
+  '事件关系抽取/基于强化学习的降噪模型': 'rl-denoising',
+  '事件关系抽取/事件关系提取接口': 'event-relation-extraction',
 };
 
 export type SemanticRetrievalFocus = 'retrieval' | 'recommendation';
@@ -950,12 +990,16 @@ export function resolveLinkAnnotationFocus(pagePath: string | undefined): LinkAn
   return null;
 }
 
-export type LiteratureReaderFocus = 'highlight' | 'popup' | 'generate-notes';
+export type LiteratureReaderFocus = 'highlight' | 'popup' | 'generate-notes' | 'ai-qa' | 'molecule' | 'deep-read' | 'kb-read';
 
 export function resolveLiteratureReaderFocus(pagePath: string | undefined): LiteratureReaderFocus | null {
   const path = (pagePath ?? '').trim();
   if (!path) return null;
   if (path.includes('一键生成笔记') || path.includes('智能笔记')) return 'generate-notes';
+  if (path.includes('AI问答') || path.includes('单篇或多篇文献')) return 'ai-qa';
+  if (path.includes('分子活性')) return 'molecule';
+  if (path.includes('高效阅读') || path.includes('深度理解')) return 'deep-read';
+  if (path.includes('文献知识库阅读')) return 'kb-read';
   if (path.includes('实体信息浮窗')) return 'popup';
   if (path.includes('实体高亮')) return 'highlight';
   return null;
@@ -1221,12 +1265,14 @@ export function resolveTemporalAuditMode(pagePath: string | undefined): Temporal
   return null;
 }
 
-/** 图谱可视化底部模块：技术演进 / 学派关联 / 动态主题 */
-export type GraphVizDockFocus = 'timeline' | 'schools' | 'topic';
+/** 图谱可视化底部模块：技术演进 / 学派关联 / 动态主题 / 统计联动 / 地图联动 */
+export type GraphVizDockFocus = 'timeline' | 'schools' | 'topic' | 'stats' | 'map';
 
 export function resolveGraphVizDockFocus(pagePath: string | undefined): GraphVizDockFocus | null {
   const path = (pagePath ?? '').trim();
   if (!path) return null;
+  if (path.includes('统计图联动')) return 'stats';
+  if (path.includes('地图联动')) return 'map';
   if (path.includes('学派关联') || path.includes('学术交叉')) return 'schools';
   if (path.includes('动态主题追踪')) return 'topic';
   if (path.includes('技术演进路径') || path.includes('时间轴播放器')) return 'timeline';
@@ -1257,6 +1303,69 @@ export function resolvePatternPreviewFocus(pagePath: string | undefined): Patter
   if (path.includes('评分结果可视化')) return 'viz';
   if (path.includes('人工审核') || path.includes('阈值设定')) return 'review';
   if (path.includes('模式预览')) return 'preview';
+  return null;
+}
+
+/** 规则学习工作台 Tab */
+export type RuleLearningTab =
+  | 'embedding'
+  | 'induction'
+  | 'injection'
+  | 'sample'
+  | 'mining'
+  | 'score'
+  | 'version'
+  | 'trigger';
+
+export function resolveRuleLearningTab(pagePath: string | undefined): RuleLearningTab | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('EmbeddingLearning') || path.includes('Embedding')) return 'embedding';
+  if (path.includes('AxiomInduction') || path.includes('Induction')) return 'induction';
+  if (path.includes('AxiomInjection') || path.includes('Injection')) return 'injection';
+  if (path.includes('知识样本') || path.includes('样本收集')) return 'sample';
+  if (path.includes('候选规则') || path.includes('自动挖掘')) return 'mining';
+  if (path.includes('置信度计算') || path.includes('置信度评估')) return 'score';
+  if (path.includes('入库与版本') || path.includes('版本管理')) return 'version';
+  if (path.includes('触发与应用') || path.includes('规则触发')) return 'trigger';
+  return null;
+}
+
+/** 「语义+结构」双因子排序：聚焦结构 / 嵌入 / 跨资源 */
+export type DualFactorRankFocus = 'structure' | 'embedding' | 'cross-resource';
+
+export function resolveDualFactorRankFocus(pagePath: string | undefined): DualFactorRankFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('图结构约束')) return 'structure';
+  if (path.includes('嵌入相似度')) return 'embedding';
+  if (path.includes('跨资源关联')) return 'cross-resource';
+  return null;
+}
+
+/** 术语置信度图：构图 / 传播排序 */
+export type TermConfidenceGraphFocus = 'graph' | 'ranking';
+
+export function resolveTermConfidenceGraphFocus(
+  pagePath: string | undefined,
+): TermConfidenceGraphFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('语义相似度图构建')) return 'graph';
+  if (path.includes('置信度计算与排序')) return 'ranking';
+  return null;
+}
+
+/** 四元结构自动提取与建模：抽取 / 跨资源预测 */
+export type QuadrupleStructureFocus = 'extract' | 'predict';
+
+export function resolveQuadrupleStructureFocus(
+  pagePath: string | undefined,
+): QuadrupleStructureFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('结构化信息抽取')) return 'extract';
+  if (path.includes('跨资源关系预测')) return 'predict';
   return null;
 }
 
@@ -1338,9 +1447,15 @@ export function resolveAuditAlgorithmId(pagePath: string | undefined): string | 
   if (path.includes('候选术语生成') || path.includes('基于统计的扩展') || path.includes('基于规则的扩展') || path.includes('候选术语去重与合并')) {
     return 'candidate-term-generation';
   }
-  if (path.includes('置信度图传播') || path.includes('语义相似度图构建') || path.includes('置信度计算与排序')) {
-    if (path.includes('交互式审核')) return null;
+  if (path.includes('置信度图传播')) {
+    if (path.includes('交互式审核') || path.includes('语义相似度图构建') || path.includes('置信度计算与排序')) {
+      return null;
+    }
     return 'confidence-graph-term-ranking';
+  }
+  // 语义相似度图构建 / 置信度计算与排序 → 独立接口页 term-confidence-graph（不进算法详情）
+  if (path.includes('语义相似度图构建') || path.includes('置信度计算与排序')) {
+    return null;
   }
   if (path.includes('依存关系图构建')) {
     return 'dependency-graph';
