@@ -466,7 +466,7 @@ export default function App() {
         setPatternPreviewFocus(resolvePatternPreviewFocus(feature.pagePath) ?? 'preview');
       }
       if (pageId === 'rule-learning-workbench') {
-        setRuleLearningTab(resolveRuleLearningTab(feature.pagePath) ?? 'embedding');
+        setRuleLearningTab(resolveRuleLearningTab(feature.pagePath) ?? 'sample');
       }
       if (pageId === 'dual-factor-rank') {
         setDualFactorRankFocus(resolveDualFactorRankFocus(feature.pagePath));
@@ -1111,8 +1111,8 @@ export default function App() {
       case 'rule-learning-workbench':
         return (
           <RuleLearningWorkbench
-            key={ruleLearningTab ?? 'embedding'}
-            initialTab={ruleLearningTab ?? 'embedding'}
+            key={ruleLearningTab ?? 'sample'}
+            initialTab={ruleLearningTab ?? 'sample'}
           />
         );
       case 'dual-factor-rank':

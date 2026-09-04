@@ -1308,24 +1308,24 @@ export function resolvePatternPreviewFocus(pagePath: string | undefined): Patter
 
 /** 规则学习工作台 Tab */
 export type RuleLearningTab =
-  | 'embedding'
-  | 'induction'
-  | 'injection'
   | 'sample'
+  | 'embedding'
   | 'mining'
+  | 'induction'
   | 'score'
+  | 'injection'
   | 'version'
   | 'trigger';
 
 export function resolveRuleLearningTab(pagePath: string | undefined): RuleLearningTab | null {
   const path = (pagePath ?? '').trim();
   if (!path) return null;
-  if (path.includes('EmbeddingLearning') || path.includes('Embedding')) return 'embedding';
-  if (path.includes('AxiomInduction') || path.includes('Induction')) return 'induction';
-  if (path.includes('AxiomInjection') || path.includes('Injection')) return 'injection';
-  if (path.includes('知识样本') || path.includes('样本收集')) return 'sample';
+  if (path.includes('知识样本') || path.includes('样本收集') || path.includes('样本预处理')) return 'sample';
+  if (path.includes('EmbeddingLearning')) return 'embedding';
   if (path.includes('候选规则') || path.includes('自动挖掘')) return 'mining';
+  if (path.includes('AxiomInduction')) return 'induction';
   if (path.includes('置信度计算') || path.includes('置信度评估')) return 'score';
+  if (path.includes('AxiomInjection')) return 'injection';
   if (path.includes('入库与版本') || path.includes('版本管理')) return 'version';
   if (path.includes('触发与应用') || path.includes('规则触发')) return 'trigger';
   return null;

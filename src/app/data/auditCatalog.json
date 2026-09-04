@@ -1581,7 +1581,7 @@
                           "reqId": "51",
                           "pagePath": "规则学习/EmbeddingLearning模块",
                           "featureDesc": "嵌入学习模块（EmbeddingLearning）支持将知识图谱进行向量化表示，为后续的计算提供基础。",
-                          "auditNote": "规则学习工作台 · EmbeddingLearning"
+                          "auditNote": "接口演示 · POST /api/v1/rule-learning/embeddings/learn · BASE :18190"
                         }
                       ]
                     },
@@ -1597,7 +1597,7 @@
                           "reqId": "52",
                           "pagePath": "规则学习/AxiomInduction模块",
                           "featureDesc": "规则归纳模块(AxiomInduction)支持在向量空间中搜索和发现潜在的逻辑规则模式。",
-                          "auditNote": "规则学习工作台 · AxiomInduction"
+                          "auditNote": "接口演示 · POST /api/v1/rule-learning/axioms/induce · BASE :18190"
                         }
                       ]
                     },
@@ -1613,7 +1613,7 @@
                           "reqId": "53",
                           "pagePath": "规则学习/AxiomInjection模块",
                           "featureDesc": "规则注入与验证模块(AxiomInjection)支持将发现的规则重新应用于知识图谱，验证其有效性并进行修正。",
-                          "auditNote": "规则学习工作台 · AxiomInjection"
+                          "auditNote": "接口演示 · POST /api/v1/rule-learning/axioms/inject · BASE :18190"
                         }
                       ]
                     },
@@ -1629,7 +1629,7 @@
                           "reqId": "54",
                           "pagePath": "规则学习/知识样本收集与预处理",
                           "featureDesc": "知识样本收集与预处理支持从知识图谱中采样出用于规则学习的正负样本。",
-                          "auditNote": "规则学习工作台 · 样本预处理"
+                          "auditNote": "接口演示 · POST /api/v1/rule-learning/samples/collect · BASE :18190"
                         }
                       ]
                     },
@@ -1645,7 +1645,7 @@
                           "reqId": "55",
                           "pagePath": "规则学习/候选规则模式自动挖掘",
                           "featureDesc": "候选规则模式自动挖掘支持基于样本，自动挖掘出满足特定模式的候选规则。",
-                          "auditNote": "规则学习工作台 · 候选规则挖掘"
+                          "auditNote": "接口演示 · POST /api/v1/rule-learning/patterns/mine · BASE :18190"
                         }
                       ]
                     },
@@ -1661,7 +1661,7 @@
                           "reqId": "56",
                           "pagePath": "规则学习/规则置信度计算与评估",
                           "featureDesc": "规则置信度计算与评估支持为每条候选规则计算置信度、支持度等评估指标。",
-                          "auditNote": "规则学习工作台 · 置信度评估"
+                          "auditNote": "接口演示 · POST /api/v1/rule-learning/metrics/evaluate · BASE :18190"
                         }
                       ]
                     },
@@ -1677,7 +1677,7 @@
                           "reqId": "57",
                           "pagePath": "规则学习/规则入库与版本管理",
                           "featureDesc": "规则入库与版本管理支持将经过评估的规则存入规则库，并进行版本管理。",
-                          "auditNote": "规则学习工作台 · 入库与版本"
+                          "auditNote": "接口演示 · POST/GET /api/v1/rule-learning/rules · versions/rollback · BASE :18190"
                         }
                       ]
                     },
@@ -1693,7 +1693,7 @@
                           "reqId": "58",
                           "pagePath": "规则学习/规则触发与应用接口",
                           "featureDesc": "规则触发与应用接口支持将规则库与推理引擎集成，使其能够在推理任务中被自动触发和应用。",
-                          "auditNote": "规则学习工作台 · 触发与应用"
+                          "auditNote": "接口演示 · POST /api/v1/rule-learning/rules/apply · BASE :18190"
                         }
                       ]
                     }
