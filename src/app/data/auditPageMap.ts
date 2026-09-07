@@ -94,12 +94,15 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '知识表示学习/表示空间/实数空间嵌入': 'algorithm-detail',
   '知识表示学习/表示空间/复数空间嵌入': 'algorithm-detail',
   '知识表示学习/表示空间/空间类型选择与配置': 'algorithm-detail',
-  '算法管理/算法仓库/知识推理/打分函数/基于距离的打分函数': 'algorithm-detail',
-  '算法管理/算法仓库/知识推理/打分函数/基于语义相似度的打分函数': 'algorithm-detail',
-  '算法管理/算法仓库/知识推理/打分函数/打分函数可视化解释': 'algorithm-detail',
-  '知识表示学习/打分函数/基于距离的打分函数': 'algorithm-detail',
-  '知识表示学习/打分函数/基于语义相似度的打分函数': 'algorithm-detail',
-  '知识表示学习/打分函数/打分函数可视化解释': 'algorithm-detail',
+  '算法管理/算法仓库/知识推理/打分函数/基于距离的打分函数': 'scoring-function-workbench',
+  '算法管理/算法仓库/知识推理/打分函数/基于语义相似度的打分函数': 'scoring-function-workbench',
+  '算法管理/算法仓库/知识推理/打分函数/打分函数可视化解释': 'scoring-function-workbench',
+  '知识表示学习/打分函数/基于距离的打分函数': 'scoring-function-workbench',
+  '知识表示学习/打分函数/基于语义相似度的打分函数': 'scoring-function-workbench',
+  '知识表示学习/打分函数/打分函数可视化解释': 'scoring-function-workbench',
+  '基于距离的打分函数': 'scoring-function-workbench',
+  '基于语义相似度的打分函数': 'scoring-function-workbench',
+  '打分函数可视化解释': 'scoring-function-workbench',
   '算法管理/算法仓库/图嵌入/编码模型/平移距离模型库': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/编码模型/张量/矩阵分解模型库': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/编码模型/神经网络模型库': 'algorithm-detail',
@@ -562,12 +565,12 @@ export const AUDIT_ALGORITHM_MAP: Record<string, string> = {
   '知识表示学习/表示空间/实数空间嵌入': 'representation-space',
   '知识表示学习/表示空间/复数空间嵌入': 'representation-space',
   '知识表示学习/表示空间/空间类型选择与配置': 'representation-space',
-  '算法管理/算法仓库/知识推理/打分函数/基于距离的打分函数': 'scoring-function',
-  '算法管理/算法仓库/知识推理/打分函数/基于语义相似度的打分函数': 'scoring-function',
-  '算法管理/算法仓库/知识推理/打分函数/打分函数可视化解释': 'scoring-function',
-  '知识表示学习/打分函数/基于距离的打分函数': 'scoring-function',
-  '知识表示学习/打分函数/基于语义相似度的打分函数': 'scoring-function',
-  '知识表示学习/打分函数/打分函数可视化解释': 'scoring-function',
+  '算法管理/算法仓库/知识推理/打分函数/基于距离的打分函数': 'scoring-function-workbench',
+  '算法管理/算法仓库/知识推理/打分函数/基于语义相似度的打分函数': 'scoring-function-workbench',
+  '算法管理/算法仓库/知识推理/打分函数/打分函数可视化解释': 'scoring-function-workbench',
+  '知识表示学习/打分函数/基于距离的打分函数': 'scoring-function-workbench',
+  '知识表示学习/打分函数/基于语义相似度的打分函数': 'scoring-function-workbench',
+  '知识表示学习/打分函数/打分函数可视化解释': 'scoring-function-workbench',
   '算法管理/算法仓库/图嵌入/编码模型/平移距离模型库': 'encoding-model',
   '算法管理/算法仓库/图嵌入/编码模型/张量/矩阵分解模型库': 'encoding-model',
   '算法管理/算法仓库/图嵌入/编码模型/神经网络模型库': 'encoding-model',
@@ -1506,7 +1509,7 @@ export function resolveAuditAlgorithmId(pagePath: string | undefined): string | 
     || path.includes('基于语义相似度的打分函数')
     || path.includes('打分函数可视化解释')
   ) {
-    return 'scoring-function';
+    return null; // 走 scoring-function-workbench 独立页，不再进算法详情
   }
   if (
     path.includes('平移距离模型库')
