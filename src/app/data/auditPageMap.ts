@@ -269,8 +269,12 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '审核与入库工作流': 'event-ingest-workflow',
   '事件标注项目管理': 'event-annotation-mgmt',
   '模型训练与迭代': 'event-annotation-mgmt',
+  '基于规则映射的方法/规则引擎执行': 'rule-mapped-instance',
+  '基于规则映射的方法/实例生成预览': 'rule-mapped-instance',
+  '规则引擎执行': 'rule-mapped-instance',
+  '概念实例生成/规则引擎执行': 'rule-mapped-instance',
+  '概念实例生成/实例生成预览': 'rule-mapped-instance',
   '图谱任务/实例生成预览': 'graph-tasks',
-  '实例生成预览': 'graph-tasks',
   '图谱任务/RDF三元组生成': 'graph-tasks',
   'RDF三元组生成': 'graph-tasks',
   '图谱任务/多格式结构化输出': 'graph-tasks',
@@ -298,9 +302,13 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '跨本体实体模糊关系与逻辑关系构建/模糊关系构建': 'graph-fusion',
   '跨本体实体模糊关系与逻辑关系构建/关系可视化': 'graph-fusion',
   '本体匹配关系智能构建/相似度计算引擎': 'similarity-computation-engine',
+  '知识图谱一体化工作平台': 'kg-integrated-workbench',
   '知识图谱一体化工作平台/图谱构建模块': 'kg-integrated-workbench',
   '知识图谱一体化工作平台/推理引擎模块': 'kg-integrated-workbench',
   '知识图谱一体化工作平台/可视化UI模块': 'kg-integrated-workbench',
+  '图谱构建模块': 'kg-integrated-workbench',
+  '推理引擎模块': 'kg-integrated-workbench',
+  '可视化UI模块': 'kg-integrated-workbench',
   '候选模式生成/语料库选择与配置': 'corpus-selection-config',
   '候选模式生成/上下文模式抽取引擎': 'context-pattern-extraction-engine',
   '候选模式生成/模式预览与管理': 'pattern-preview-management',
@@ -1316,6 +1324,23 @@ export type RuleLearningTab =
   | 'injection'
   | 'version'
   | 'trigger';
+
+/** 概念实例生成 · 基于规则映射：引擎执行 / 实例预览 */
+export type RuleMappedInstanceFocus = 'engine' | 'preview';
+
+export function resolveRuleMappedInstanceFocus(
+  pagePath: string | undefined,
+): RuleMappedInstanceFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('规则引擎执行')) return 'engine';
+  if (path.includes('实例生成预览') && (path.includes('规则映射') || path.includes('概念实例'))) {
+    return 'preview';
+  }
+  if (path.includes('基于规则映射的方法/实例生成预览')) return 'preview';
+  if (path.endsWith('实例生成预览') && !path.includes('图谱任务')) return 'preview';
+  return null;
+}
 
 export function resolveRuleLearningTab(pagePath: string | undefined): RuleLearningTab | null {
   const path = (pagePath ?? '').trim();

@@ -1,37 +1,48 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Workflow, BrainCircuit, LayoutDashboard, ArrowRight, Share2, TrendingUp, GitBranch,
+  ArrowRight,
+  BrainCircuit,
+  GitBranch,
+  LayoutDashboard,
+  Share2,
+  TrendingUp,
+  Workflow,
 } from 'lucide-react';
 
 export type IntegratedWorkbenchModule = 'construction' | 'inference' | 'visualization';
 
+/** 与 auditCatalog 功能点 name / featureDesc 严格对齐 */
 const MODULES: Array<{
   id: IntegratedWorkbenchModule;
   title: string;
-  subtitle: string;
+  featureDesc: string;
   icon: typeof Workflow;
-  accent: string;
-  iconBg: string;
-  intro: string[];
-  capabilities: string[];
+  tone: {
+    card: string;
+    icon: string;
+    badge: string;
+    cta: string;
+  };
+  bullets: string[];
   links?: Array<{ pageId: string; label: string; desc: string; icon: typeof Share2 }>;
+  introOnly?: boolean;
 }> = [
   {
     id: 'construction',
     title: '图谱构建模块',
-    subtitle: 'ETL 与知识抽取流程编排',
+    featureDesc: '集成所有图谱构建相关的功能，提供可视化的ETL和知识抽取流程编排。',
     icon: Workflow,
-    accent: 'border-blue-200',
-    iconBg: 'bg-blue-50 text-blue-600',
-    intro: [
-      '集成数据接入、映射配置、本体管理与知识抽取等图谱构建能力，形成一站式构建工作台。',
-      '提供可视化的 ETL 流水线与抽取策略编排，支持规则、统计学习等多策略组合，降低构建门槛。',
-    ],
-    capabilities: [
-      '数据源接入与字段映射',
-      '可视化 ETL / 抽取流程编排',
-      '规则与机器学习抽取策略配置',
-      '自动化任务生成与构造引擎联动',
+    tone: {
+      card: 'border-sky-200 hover:border-sky-300',
+      icon: 'bg-sky-50 text-sky-700',
+      badge: 'bg-sky-50 text-sky-700 border-sky-200',
+      cta: 'bg-sky-600 hover:bg-sky-700',
+    },
+    bullets: [
+      '数据源接入、映射配置与本体管理一体化编排',
+      '可视化 ETL / 知识抽取流水线',
+      '规则、统计学习等多策略抽取组合',
+      '与图谱构造、图谱任务联动落地',
     ],
     links: [
       {
@@ -45,35 +56,36 @@ const MODULES: Array<{
   {
     id: 'inference',
     title: '推理引擎模块',
-    subtitle: '规则学习与知识推理',
+    featureDesc: '集成规则学习、知识推理等计算引擎。',
     icon: BrainCircuit,
-    accent: 'border-violet-200',
-    iconBg: 'bg-violet-50 text-violet-600',
-    intro: [
-      '集成规则学习、条件驱动推理与知识补全等计算引擎，支撑事实驱动的前向链与一致性校验。',
-      '本模块以能力说明为主，聚焦推理内核、规则执行与任务调度的一体化接入方式。',
-    ],
-    capabilities: [
-      'Rete / Leaps 等高性能推理内核',
-      '规则学习与规则库管理',
+    tone: {
+      card: 'border-indigo-200 hover:border-indigo-300',
+      icon: 'bg-indigo-50 text-indigo-700',
+      badge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      cta: 'bg-indigo-600 hover:bg-indigo-700',
+    },
+    bullets: [
+      '规则学习流水线接入',
+      '知识推理 / 条件驱动前向链',
       '事实变更触发的增量推理',
-      '推理任务启停、调度与结果回流',
+      '推理任务调度与结果回流',
     ],
+    introOnly: true,
   },
   {
     id: 'visualization',
-    title: '可视化 UI 模块',
-    subtitle: '图谱浏览、演化与关系分析',
+    title: '可视化UI模块',
+    featureDesc: '集成图谱可视化、演化分析、关系分析等可视化界面。',
     icon: LayoutDashboard,
-    accent: 'border-emerald-200',
-    iconBg: 'bg-emerald-50 text-emerald-600',
-    intro: [
-      '集成图谱可视化、演化分析、关系分析等界面，支持探索式浏览与分析联动。',
-      '用户可在统一入口进入各可视化能力，完成路径溯源、主题演进与关系洞察。',
-    ],
-    capabilities: [
+    tone: {
+      card: 'border-teal-200 hover:border-teal-300',
+      icon: 'bg-teal-50 text-teal-700',
+      badge: 'bg-teal-50 text-teal-700 border-teal-200',
+      cta: 'bg-teal-600 hover:bg-teal-700',
+    },
+    bullets: [
       '交互式图谱可视化与路径探索',
-      '技术演进 / 主题演化分析',
+      '技术 / 主题演化分析',
       '关系分析与关联发现',
       '统计联动、时间轴与快照报告',
     ],
@@ -101,7 +113,8 @@ const MODULES: Array<{
 ];
 
 /**
- * 审计目录专用：知识图谱一体化工作平台
+ * 审计目录专用：知识图谱一体化工作平台（门户页）
+ * 三个模块介绍；构建 → 图谱构造；推理仅介绍；可视化 → 可视化/演化/关系分析
  */
 export default function KgIntegratedWorkbench({
   initialModule,
@@ -110,114 +123,143 @@ export default function KgIntegratedWorkbench({
   initialModule?: IntegratedWorkbenchModule | null;
   onNavigate?: (pageId: string) => void;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState<IntegratedWorkbenchModule | null>(initialModule ?? null);
 
   useEffect(() => {
-    if (!initialModule) return;
-    const timer = window.setTimeout(() => {
-      scrollRef.current
-        ?.querySelector(`#workbench-${initialModule}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
-    return () => window.clearTimeout(timer);
+    setActive(initialModule ?? null);
   }, [initialModule]);
 
+  const activeMod = MODULES.find((m) => m.id === active) ?? null;
+  const pageTitle = activeMod?.title ?? '知识图谱一体化工作平台';
+  const pageDesc =
+    activeMod?.featureDesc ??
+    '构建一个集成了所有核心功能的、统一的Web操作平台，为用户提供一站式的知识图谱构建与分析体验。';
+
   return (
-    <div ref={scrollRef} className="h-full flex flex-col gap-5 overflow-y-auto">
-      <div className="flex items-start justify-between flex-shrink-0">
+    <div className="h-full flex flex-col gap-5 overflow-y-auto pb-6">
+      <div className="flex items-start justify-between flex-shrink-0 gap-3">
         <div>
-          <h1 className="text-2xl text-gray-900 mb-1">知识图谱一体化工作平台</h1>
-          <p className="text-sm text-gray-500">
-            集成图谱构建、推理引擎与可视化 UI 的统一 Web 操作平台，提供一站式知识图谱构建与分析体验
-          </p>
+          {activeMod && (
+            <button
+              type="button"
+              onClick={() => setActive(null)}
+              className="text-[11px] text-gray-400 hover:text-teal-700 mb-0.5"
+            >
+              知识图谱一体化工作平台
+            </button>
+          )}
+          <h1 className="text-2xl text-gray-900 mb-1">{pageTitle}</h1>
+          <p className="text-sm text-gray-500 max-w-3xl leading-relaxed">{pageDesc}</p>
         </div>
-        <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+        <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex-shrink-0">
           审计目录专用页
         </span>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 max-w-4xl leading-relaxed">
-        平台将核心能力划分为三大模块：构建侧完成数据到知识的编排落地，推理侧提供规则与计算引擎支撑，
-        可视化侧承接探索分析。以下为各模块介绍；可跳转入口已标注在对应模块中。
-      </div>
-
-      <div className="space-y-4 max-w-4xl">
+      {/* 门户三模块 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl">
         {MODULES.map((mod) => {
           const Icon = mod.icon;
-          const highlighted = initialModule === mod.id;
+          const selected = active === mod.id;
           return (
-            <section
+            <button
               key={mod.id}
-              id={`workbench-${mod.id}`}
-              className={`bg-white border rounded-xl overflow-hidden ${mod.accent} ${
-                highlighted ? 'ring-2 ring-blue-400/40' : ''
+              type="button"
+              onClick={() => setActive(mod.id)}
+              className={`text-left bg-white border rounded-2xl p-5 transition-all ${mod.tone.card} ${
+                selected ? 'ring-2 ring-offset-1 ring-slate-300 shadow-sm' : ''
               }`}
             >
-              <div className="px-5 py-4 border-b border-gray-100 flex items-start gap-3">
-                <span className={`w-10 h-10 rounded-lg inline-flex items-center justify-center flex-shrink-0 ${mod.iconBg}`}>
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <span className={`w-10 h-10 rounded-xl inline-flex items-center justify-center ${mod.tone.icon}`}>
                   <Icon className="w-5 h-5" />
                 </span>
-                <div>
-                  <h2 className="text-lg text-gray-900 font-medium">{mod.title}</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">{mod.subtitle}</p>
-                </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${mod.tone.badge}`}>
+                  {mod.introOnly ? '仅介绍' : '可跳转'}
+                </span>
               </div>
-
-              <div className="px-5 py-4 space-y-4">
-                <div className="space-y-2 text-sm text-gray-700 leading-relaxed">
-                  {mod.intro.map((p) => (
-                    <p key={p}>{p}</p>
-                  ))}
-                </div>
-
-                <div>
-                  <div className="text-xs font-medium text-gray-500 mb-2">能力要点</div>
-                  <ul className="grid sm:grid-cols-2 gap-1.5">
-                    {mod.capabilities.map((c) => (
-                      <li key={c} className="text-xs text-gray-600 flex items-start gap-1.5">
-                        <span className="mt-1.5 w-1 h-1 rounded-full bg-gray-400 flex-shrink-0" />
-                        {c}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {mod.links && mod.links.length > 0 && (
-                  <div className="pt-1 border-t border-gray-100">
-                    <div className="text-xs font-medium text-gray-500 mb-2">快捷入口</div>
-                    <div className="flex flex-col gap-2">
-                      {mod.links.map((link) => {
-                        const LinkIcon = link.icon;
-                        return (
-                          <button
-                            key={link.pageId}
-                            type="button"
-                            onClick={() => onNavigate?.(link.pageId)}
-                            className="flex items-center gap-3 text-left px-3 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/40 transition-colors"
-                          >
-                            <LinkIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-800">{link.label}</div>
-                              <div className="text-[11px] text-gray-500">{link.desc}</div>
-                            </div>
-                            <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {!mod.links && (
-                  <div className="text-xs text-gray-400 border-t border-gray-100 pt-3">
-                    本模块为能力介绍，暂不提供页面跳转
-                  </div>
-                )}
+              <h2 className="text-base font-semibold text-gray-900 mb-1.5">{mod.title}</h2>
+              <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{mod.featureDesc}</p>
+              <div className="mt-4 inline-flex items-center gap-1 text-xs text-gray-600">
+                查看模块
+                <ArrowRight className="w-3.5 h-3.5" />
               </div>
-            </section>
+            </button>
           );
         })}
       </div>
+
+      {/* 模块详情 */}
+      {activeMod && (() => {
+        const ActiveIcon = activeMod.icon;
+        return (
+        <section className={`bg-white border rounded-2xl overflow-hidden max-w-5xl ${activeMod.tone.card}`}>
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+            <span className={`w-9 h-9 rounded-lg inline-flex items-center justify-center ${activeMod.tone.icon}`}>
+              <ActiveIcon className="w-4 h-4" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">{activeMod.title}</h2>
+              <p className="text-xs text-gray-500 mt-0.5">{activeMod.featureDesc}</p>
+            </div>
+          </div>
+
+          <div className="px-5 py-4 space-y-4">
+            <div>
+              <div className="text-xs font-medium text-gray-500 mb-2">能力要点</div>
+              <ul className="grid sm:grid-cols-2 gap-2">
+                {activeMod.bullets.map((b) => (
+                  <li key={b} className="text-sm text-gray-700 flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {activeMod.introOnly && (
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500">
+                本模块为能力介绍，不提供页面跳转。规则学习、知识推理等计算引擎在平台内统一接入。
+              </div>
+            )}
+
+            {activeMod.links && activeMod.links.length > 0 && (
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-2">快捷入口</div>
+                <div className="flex flex-col gap-2">
+                  {activeMod.links.map((link) => {
+                    const LinkIcon = link.icon;
+                    return (
+                      <button
+                        key={link.pageId}
+                        type="button"
+                        onClick={() => onNavigate?.(link.pageId)}
+                        className="flex items-center gap-3 text-left px-3 py-3 rounded-xl border border-gray-200 hover:border-teal-300 hover:bg-teal-50/40 transition-colors"
+                      >
+                        <span className={`w-9 h-9 rounded-lg inline-flex items-center justify-center flex-shrink-0 ${activeMod.tone.icon}`}>
+                          <LinkIcon className="w-4 h-4" />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900">{link.label}</div>
+                          <div className="text-[11px] text-gray-500">{link.desc}</div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+        );
+      })()}
+
+      {!activeMod && (
+        <div className="max-w-5xl rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 leading-relaxed">
+          请选择上方模块卡片查看介绍。图谱构建模块可进入图谱构造；推理引擎模块仅介绍；可视化UI模块可跳转图谱可视化、演化分析与关系分析。
+        </div>
+      )}
     </div>
   );
 }

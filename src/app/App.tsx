@@ -60,6 +60,7 @@ import PendingInstanceReview from './components/PendingInstanceReview';
 import EntityAlignmentDisambiguation from './components/EntityAlignmentDisambiguation';
 import BatchInstanceIngest from './components/BatchInstanceIngest';
 import RuleLearningWorkbench from './components/RuleLearningWorkbench';
+import RuleMappedInstanceWorkbench from './components/RuleMappedInstanceWorkbench';
 import DualFactorRankApi from './components/DualFactorRankApi';
 import TermConfidenceGraphApi from './components/TermConfidenceGraphApi';
 import QuadrupleStructureApi from './components/QuadrupleStructureApi';
@@ -167,6 +168,7 @@ import {
   resolveIntegratedWorkbenchModule,
   resolvePatternPreviewFocus,
   resolveRuleLearningTab,
+  resolveRuleMappedInstanceFocus,
   resolveDualFactorRankFocus,
   resolveTermConfidenceGraphFocus,
   resolveQuadrupleStructureFocus,
@@ -204,6 +206,7 @@ import {
   type IntegratedWorkbenchModule,
   type PatternPreviewFocus,
   type RuleLearningTab,
+  type RuleMappedInstanceFocus,
   type DualFactorRankFocus,
   type TermConfidenceGraphFocus,
   type QuadrupleStructureFocus,
@@ -292,6 +295,7 @@ export default function App() {
   const [graphVizDockFocus, setGraphVizDockFocus] = useState<GraphVizDockFocus | null>(null);
   const [integratedWorkbenchModule, setIntegratedWorkbenchModule] = useState<IntegratedWorkbenchModule | null>(null);
   const [ruleLearningTab, setRuleLearningTab] = useState<RuleLearningTab | null>(null);
+  const [ruleMappedInstanceFocus, setRuleMappedInstanceFocus] = useState<RuleMappedInstanceFocus | null>(null);
   const [dualFactorRankFocus, setDualFactorRankFocus] = useState<DualFactorRankFocus | null>(null);
   const [termConfidenceGraphFocus, setTermConfidenceGraphFocus] = useState<TermConfidenceGraphFocus | null>(null);
   const [quadrupleStructureFocus, setQuadrupleStructureFocus] = useState<QuadrupleStructureFocus | null>(null);
@@ -368,6 +372,7 @@ export default function App() {
     setIntegratedWorkbenchModule(null);
     setPatternPreviewFocus(null);
     setRuleLearningTab(null);
+    setRuleMappedInstanceFocus(null);
     setDualFactorRankFocus(null);
     setTermConfidenceGraphFocus(null);
     setQuadrupleStructureFocus(null);
@@ -443,7 +448,7 @@ export default function App() {
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
     // 审计专用独立页优先（不与产品页共用）
-    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'high-performance-inference-kernel' || pageId === 'fact-change-listening' || pageId === 'inference-task-management' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'future-state-prediction' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'patent-module-decomposition' || pageId === 'patent-literature-match' || pageId === 'similarity-computation-engine' || pageId === 'kg-integrated-workbench' || pageId === 'corpus-selection-config' || pageId === 'context-pattern-extraction-engine' || pageId === 'pattern-preview-management' || pageId === 'pattern-application-engine' || pageId === 'new-instance-extraction' || pageId === 'instance-confidence-evaluation' || pageId === 'pending-instance-review' || pageId === 'entity-alignment-disambiguation' || pageId === 'batch-instance-ingest' || pageId === 'rule-learning-workbench' || pageId === 'dual-factor-rank' || pageId === 'term-confidence-graph' || pageId === 'quadruple-structure' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation') {
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'high-performance-inference-kernel' || pageId === 'fact-change-listening' || pageId === 'inference-task-management' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'future-state-prediction' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'patent-module-decomposition' || pageId === 'patent-literature-match' || pageId === 'similarity-computation-engine' || pageId === 'kg-integrated-workbench' || pageId === 'corpus-selection-config' || pageId === 'context-pattern-extraction-engine' || pageId === 'pattern-preview-management' || pageId === 'pattern-application-engine' || pageId === 'new-instance-extraction' || pageId === 'instance-confidence-evaluation' || pageId === 'pending-instance-review' || pageId === 'entity-alignment-disambiguation' || pageId === 'batch-instance-ingest' || pageId === 'rule-learning-workbench' || pageId === 'rule-mapped-instance' || pageId === 'dual-factor-rank' || pageId === 'term-confidence-graph' || pageId === 'quadruple-structure' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation') {
       if (pageId === 'temporal-relation-audit') {
         setTemporalAuditMode(resolveTemporalAuditMode(feature.pagePath) ?? 'extraction');
       }
@@ -467,6 +472,9 @@ export default function App() {
       }
       if (pageId === 'rule-learning-workbench') {
         setRuleLearningTab(resolveRuleLearningTab(feature.pagePath) ?? 'sample');
+      }
+      if (pageId === 'rule-mapped-instance') {
+        setRuleMappedInstanceFocus(resolveRuleMappedInstanceFocus(feature.pagePath) ?? 'engine');
       }
       if (pageId === 'dual-factor-rank') {
         setDualFactorRankFocus(resolveDualFactorRankFocus(feature.pagePath));
@@ -1115,6 +1123,13 @@ export default function App() {
             initialTab={ruleLearningTab ?? 'sample'}
           />
         );
+      case 'rule-mapped-instance':
+        return (
+          <RuleMappedInstanceWorkbench
+            key={ruleMappedInstanceFocus ?? 'engine'}
+            initialFocus={ruleMappedInstanceFocus ?? 'engine'}
+          />
+        );
       case 'dual-factor-rank':
         return (
           <DualFactorRankApi
@@ -1374,8 +1389,8 @@ export default function App() {
         selectedAuditFeatureId={selectedAuditFeature?.id}
         onAuditFeatureSelect={handleAuditFeatureSelect}
       />
-      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'fact-change-listening', 'inference-task-management', 'corpus-selection-config', 'pattern-preview-management', 'pending-instance-review', 'entity-alignment-disambiguation', 'batch-instance-ingest', 'rule-learning-workbench', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
-        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'fact-change-listening', 'inference-task-management', 'corpus-selection-config', 'pattern-preview-management', 'pending-instance-review', 'entity-alignment-disambiguation', 'batch-instance-ingest', 'rule-learning-workbench', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
+      <main className={`flex-1 overflow-hidden flex flex-col ${['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'fact-change-listening', 'inference-task-management', 'corpus-selection-config', 'pattern-preview-management', 'pending-instance-review', 'entity-alignment-disambiguation', 'batch-instance-ingest', 'rule-learning-workbench', 'rule-mapped-instance', 'kg-integrated-workbench', 'audit-feature'].includes(currentPage) ? '' : 'p-8 overflow-y-auto'}`}>
+        <div className={['app-center', 'graph-visualization', 'evolution-analysis', 'vertical-domain-graph', 'knowledge-search', 'literature-reader', 'knowledge-base', 'academic-poster', 'kg-ontology', 'kg-datasource', 'kg-mapping', 'graph-construction', 'graph-tasks', 'human-review', 'human-machine-review', 'graph-fusion', 'property-management', 'schema-constraint-rules', 'data-consistency-scan', 'validation-report', 'completion-result-review', 'text-entity-localization', 'visual-entity-localization', 'text-concept-localization', 'visual-concept-localization', 'relation-localization', 'text-relation-localization', 'visual-relation-localization', 'multimodal-dataset', 'candidate-entity-generation', 'link-annotation-mapping', 'entity-matching-disambiguation', 'fact-change-listening', 'inference-task-management', 'corpus-selection-config', 'pattern-preview-management', 'pending-instance-review', 'entity-alignment-disambiguation', 'batch-instance-ingest', 'rule-learning-workbench', 'rule-mapped-instance', 'kg-integrated-workbench', 'audit-feature'].includes(currentPage) ? 'h-full flex flex-col' : ''}>
           {renderPage()}
         </div>
       </main>
