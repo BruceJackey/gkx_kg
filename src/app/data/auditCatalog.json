@@ -3359,27 +3359,27 @@
                           "name": "RL环境定义",
                           "type": "feature",
                           "reqId": "109",
-                          "pagePath": "",
+                          "pagePath": "强化学习框架集成/RL环境定义",
                           "featureDesc": "提供界面让用户定义强化学习的环境要素，如状态、动作和奖励函数。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 状态 / 动作 / 奖励函数配置"
                         },
                         {
                           "id": "fp-109-251",
                           "name": "策略网络训练与管理",
                           "type": "feature",
                           "reqId": "109",
-                          "pagePath": "",
+                          "pagePath": "强化学习框架集成/策略网络训练与管理",
                           "featureDesc": "支持选择并训练不同的策略网络模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · DQN/PPO/REINFORCE/Actor-Critic 训练管理"
                         },
                         {
                           "id": "fp-109-252",
                           "name": "训练过程监控",
                           "type": "feature",
                           "reqId": "109",
-                          "pagePath": "",
+                          "pagePath": "强化学习框架集成/训练过程监控",
                           "featureDesc": "以图表形式实时展示智能体的累计奖励、成功率等训练指标。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 累计奖励 / 成功率曲线"
                         }
                       ]
                     },
@@ -3393,27 +3393,27 @@
                           "name": "元学习任务构建",
                           "type": "feature",
                           "reqId": "110",
-                          "pagePath": "",
+                          "pagePath": "少样本学习三元组生成/元学习任务构建",
                           "featureDesc": "提供工具将现有的知识转化为一系列元学习任务，让模型“学会学习”。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · N-way K-shot 元学习任务构建"
                         },
                         {
                           "id": "fp-110-254",
                           "name": "原型网络支持",
                           "type": "feature",
                           "reqId": "110",
-                          "pagePath": "",
+                          "pagePath": "少样本学习三元组生成/原型网络支持",
                           "featureDesc": "内置原型网络等经典的少样本学习算法。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 原型网络 / 匹配网络 / 关系网络"
                         },
                         {
                           "id": "fp-110-255",
                           "name": "新关系快速学习",
                           "type": "feature",
                           "reqId": "110",
-                          "pagePath": "",
+                          "pagePath": "少样本学习三元组生成/新关系快速学习",
                           "featureDesc": "用户只需标注少量新关系的样本，即可快速训练出能够预测该关系的模型。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 少量标注 → 新三元组生成"
                         }
                       ]
                     },
@@ -5059,27 +5059,27 @@
                           "name": "特征对齐与归一化",
                           "type": "feature",
                           "reqId": "163",
-                          "pagePath": "",
+                          "pagePath": "异质多模态特征融合/特征对齐与归一化",
                           "featureDesc": "提供工具，在融合前对不同来源、不同维度的特征向量进行对齐、填充或降维处理，并进行归一化，解决异质性问题。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 对齐/填充/降维 + 归一化交互工具"
                         },
                         {
                           "id": "fp-163-374",
                           "name": "早期融合策略",
                           "type": "feature",
                           "reqId": "163",
-                          "pagePath": "",
+                          "pagePath": "异质多模态特征融合/早期融合策略",
                           "featureDesc": "支持在模型输入的早期阶段，通过简单的拼接（Concatenation）或加权平均等方式，将不同模态的特征向量直接合并。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 架构图示 + 介绍（Concat / 加权平均）"
                         },
                         {
                           "id": "fp-163-375",
                           "name": "晚期融合策略",
                           "type": "feature",
                           "reqId": "163",
-                          "pagePath": "",
+                          "pagePath": "异质多模态特征融合/晚期融合策略",
                           "featureDesc": "支持分别为每个模态训练一个独立的模型，在模型的输出（预测）层，通过投票、取平均值或再训练一个元学习器的方式进行融合。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 架构图示 + 介绍（投票 / 平均 / 元学习器）"
                         }
                       ]
                     },

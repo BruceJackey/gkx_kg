@@ -103,6 +103,23 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '基于距离的打分函数': 'scoring-function-workbench',
   '基于语义相似度的打分函数': 'scoring-function-workbench',
   '打分函数可视化解释': 'scoring-function-workbench',
+  '异质多模态特征融合/特征对齐与归一化': 'heterogeneous-multimodal-fusion',
+  '异质多模态特征融合/早期融合策略': 'heterogeneous-multimodal-fusion',
+  '异质多模态特征融合/晚期融合策略': 'heterogeneous-multimodal-fusion',
+  '特征对齐与归一化': 'heterogeneous-multimodal-fusion',
+  '早期融合策略': 'heterogeneous-multimodal-fusion',
+  '晚期融合策略': 'heterogeneous-multimodal-fusion',
+  '强化学习框架集成/RL环境定义': 'rl-framework-integration',
+  '强化学习框架集成/策略网络训练与管理': 'rl-framework-integration',
+  '强化学习框架集成/训练过程监控': 'rl-framework-integration',
+  'RL环境定义': 'rl-framework-integration',
+  '策略网络训练与管理': 'rl-framework-integration',
+  '少样本学习三元组生成/元学习任务构建': 'few-shot-triple-generation',
+  '少样本学习三元组生成/原型网络支持': 'few-shot-triple-generation',
+  '少样本学习三元组生成/新关系快速学习': 'few-shot-triple-generation',
+  '元学习任务构建': 'few-shot-triple-generation',
+  '原型网络支持': 'few-shot-triple-generation',
+  '新关系快速学习': 'few-shot-triple-generation',
   '算法管理/算法仓库/图嵌入/编码模型/平移距离模型库': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/编码模型/张量/矩阵分解模型库': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/编码模型/神经网络模型库': 'algorithm-detail',
@@ -906,6 +923,45 @@ export function resolveScoringFunctionFocus(pagePath: string | undefined): Scori
   if (path.includes('基于距离的打分函数')) return 'distance';
   if (path.includes('基于语义相似度的打分函数')) return 'similarity';
   if (path.includes('打分函数可视化解释')) return 'visualize';
+  return null;
+}
+
+/** 异质多模态特征融合：对齐归一化 / 早期融合 / 晚期融合 */
+export type HeterogeneousFusionFocus = 'align' | 'early' | 'late';
+
+export function resolveHeterogeneousFusionFocus(
+  pagePath: string | undefined,
+): HeterogeneousFusionFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('特征对齐与归一化') || path.includes('特征对齐')) return 'align';
+  if (path.includes('早期融合')) return 'early';
+  if (path.includes('晚期融合')) return 'late';
+  return null;
+}
+
+/** 强化学习框架集成：环境 / 策略 / 监控 */
+export type RLFrameworkFocus = 'env' | 'policy' | 'monitor';
+
+export function resolveRLFrameworkFocus(pagePath: string | undefined): RLFrameworkFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('RL环境') || path.includes('环境定义')) return 'env';
+  if (path.includes('策略网络')) return 'policy';
+  if (path.includes('强化学习框架') && path.includes('训练过程监控')) return 'monitor';
+  if (path.includes('强化学习框架集成/训练过程监控')) return 'monitor';
+  return null;
+}
+
+/** 少样本学习三元组生成：元任务 / 原型网络 / 新关系适配 */
+export type FewShotTripleFocus = 'meta' | 'proto' | 'adapt';
+
+export function resolveFewShotTripleFocus(pagePath: string | undefined): FewShotTripleFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('元学习任务')) return 'meta';
+  if (path.includes('原型网络')) return 'proto';
+  if (path.includes('新关系快速')) return 'adapt';
   return null;
 }
 
