@@ -3940,27 +3940,27 @@
                           "name": "多步路径发现",
                           "type": "feature",
                           "reqId": "125",
-                          "pagePath": "",
+                          "pagePath": "关系度量与排序/多步路径发现",
                           "featureDesc": "提供高效的图算法，用于发现两个实体之间指定深度内的所有连接路径。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 实体对路径枚举"
                         },
                         {
                           "id": "fp-125-300",
                           "name": "路径评分批量计算",
                           "type": "feature",
                           "reqId": "125",
-                          "pagePath": "",
+                          "pagePath": "关系度量与排序/路径评分批量计算",
                           "featureDesc": "根据用户选定的评分模型，对所有发现的路径进行自动化的批量打分。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 评分模型批量打分"
                         },
                         {
                           "id": "fp-125-301",
                           "name": "结果排序与筛选",
                           "type": "feature",
                           "reqId": "125",
-                          "pagePath": "",
+                          "pagePath": "关系度量与排序/结果排序与筛选",
                           "featureDesc": "支持用户根据综合评分、路径长度、包含/排除特定节点或关系等条件，对路径结果进行排序和筛选。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 评分/长度/节点关系筛选"
                         }
                       ]
                     },
@@ -4008,18 +4008,18 @@
                           "name": "导出为表格数据",
                           "type": "feature",
                           "reqId": "127",
-                          "pagePath": "",
+                          "pagePath": "关系分析结果导出/导出为表格数据",
                           "featureDesc": "支持将发现的路径列表及其评分，以CSV或Excel格式导出。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "并入关系度量与排序页 · CSV/Excel 导出"
                         },
                         {
                           "id": "fp-127-306",
                           "name": "导出为可视化图片",
                           "type": "feature",
                           "reqId": "127",
-                          "pagePath": "",
+                          "pagePath": "关系分析结果导出/导出为可视化图片",
                           "featureDesc": "支持将当前的关系分析可视化网络图，导出为PNG或SVG图片格式。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "并入关系度量与排序页 · PNG/SVG 导出"
                         }
                       ]
                     }
@@ -4040,27 +4040,27 @@
                           "name": "数据子集选择",
                           "type": "feature",
                           "reqId": "128",
-                          "pagePath": "",
+                          "pagePath": "关联规则挖掘/数据子集选择",
                           "featureDesc": "允许用户选择知识图谱的特定部分作为挖掘的数据源。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 子图数据源选择"
                         },
                         {
                           "id": "fp-128-308",
                           "name": "算法参数配置",
                           "type": "feature",
                           "reqId": "128",
-                          "pagePath": "",
+                          "pagePath": "关联规则挖掘/算法参数配置",
                           "featureDesc": "支持用户配置挖掘算法的核心参数，如最小支持度和最小置信度。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · min_support / min_confidence"
                         },
                         {
                           "id": "fp-128-309",
                           "name": "规则挖掘任务执行",
                           "type": "feature",
                           "reqId": "128",
-                          "pagePath": "",
+                          "pagePath": "关联规则挖掘/规则挖掘任务执行",
                           "featureDesc": "提供后台任务管理，支持执行耗时较长的关联规则挖掘任务。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 后台任务队列"
                         }
                       ]
                     },
@@ -5534,49 +5534,40 @@
                       "type": "level5",
                       "children": [
                         {
-                          "id": "fp-177-413",
-                          "name": "文献处理提供对学术文献（PDF、XML、HTML等格式）进行深度解析的能力，能够提取正文、图、表、公式等各类模态的内容，并将其结构化。开发段落级摘要生成、图表关系还原、公式结构识别与图注关联机制；输出内容包括",
-                          "type": "feature",
-                          "reqId": "177",
-                          "pagePath": "",
-                          "featureDesc": "概念定义、变量关系、实验过程、引用路径。",
-                          "auditNote": "需补充页面路由"
-                        },
-                        {
                           "id": "fp-177-414",
                           "name": "多格式正文解析",
                           "type": "feature",
                           "reqId": "177",
-                          "pagePath": "",
+                          "pagePath": "文献处理/多格式正文解析",
                           "featureDesc": "支持对PDF、JATSXML、HTML等多种格式的文献进行正文文本、章节结构和元数据的提取。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 正文 / 章节 / 元数据提取"
                         },
                         {
                           "id": "fp-177-415",
                           "name": "多模态内容解析",
                           "type": "feature",
                           "reqId": "177",
-                          "pagePath": "",
+                          "pagePath": "文献处理/多模态内容解析",
                           "featureDesc": "内置图像识别、表格结构还原、公式结构识别等模块，用于解析文献中的非文本内容。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 图 / 表 / 公式解析"
                         },
                         {
                           "id": "fp-177-416",
                           "name": "深度语义解析",
                           "type": "feature",
                           "reqId": "177",
-                          "pagePath": "",
+                          "pagePath": "文献处理/深度语义解析",
                           "featureDesc": "利用大语言模型进行段落级摘要生成，并建立图表与正文注释之间的关联关系。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 段落摘要 + 图注关联"
                         },
                         {
                           "id": "fp-177-417",
                           "name": "结构化内容输出",
                           "type": "feature",
                           "reqId": "177",
-                          "pagePath": "",
+                          "pagePath": "文献处理/结构化内容输出",
                           "featureDesc": "将解析结果统一输出为包含概念定义、变量关系、实验过程、引用路径等信息的结构化数据。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 概念 / 变量 / 实验 / 引用"
                         }
                       ]
                     }
@@ -5604,27 +5595,27 @@
                           "name": "专利多模态内容解析",
                           "type": "feature",
                           "reqId": "178",
-                          "pagePath": "",
+                          "pagePath": "专利处理/专利多模态内容解析",
                           "featureDesc": "支持对专利文件中的附图进行识别和初步理解。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 附图识别（结构图 / 流程图）"
                         },
                         {
                           "id": "fp-178-419",
                           "name": "权利要求结构化抽取",
                           "type": "feature",
                           "reqId": "178",
-                          "pagePath": "",
+                          "pagePath": "专利处理/权利要求结构化抽取",
                           "featureDesc": "利用NLP技术，将复杂的权利要求语句，自动抽取出“权利部件-功能-用途”的结构化三元组。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 部件-功能-用途三元组"
                         },
                         {
                           "id": "fp-178-420",
                           "name": "技术路径模型构建",
                           "type": "feature",
                           "reqId": "178",
-                          "pagePath": "",
+                          "pagePath": "专利处理/技术路径模型构建",
                           "featureDesc": "基于抽取结果，在图谱中建立从“技术方案”到“结构实现”再到“应用场景”的标准化知识路径。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "目录补充页 · 技术方案→结构实现→应用场景"
                         }
                       ]
                     },

@@ -120,6 +120,36 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '元学习任务构建': 'few-shot-triple-generation',
   '原型网络支持': 'few-shot-triple-generation',
   '新关系快速学习': 'few-shot-triple-generation',
+  '文献处理/多格式正文解析': 'literature-processing',
+  '文献处理/多模态内容解析': 'literature-processing',
+  '文献处理/深度语义解析': 'literature-processing',
+  '文献处理/结构化内容输出': 'literature-processing',
+  '多格式正文解析': 'literature-processing',
+  '多模态内容解析': 'literature-processing',
+  '深度语义解析': 'literature-processing',
+  '结构化内容输出': 'literature-processing',
+  '专利处理/专利多模态内容解析': 'patent-processing',
+  '专利处理/权利要求结构化抽取': 'patent-processing',
+  '专利处理/技术路径模型构建': 'patent-processing',
+  '专利多模态内容解析': 'patent-processing',
+  '权利要求结构化抽取': 'patent-processing',
+  '技术路径模型构建': 'patent-processing',
+  '关系度量与排序/多步路径发现': 'relation-measure-ranking',
+  '关系度量与排序/路径评分批量计算': 'relation-measure-ranking',
+  '关系度量与排序/结果排序与筛选': 'relation-measure-ranking',
+  '多步路径发现': 'relation-measure-ranking',
+  '路径评分批量计算': 'relation-measure-ranking',
+  '结果排序与筛选': 'relation-measure-ranking',
+  '关系分析结果导出/导出为表格数据': 'relation-measure-ranking',
+  '关系分析结果导出/导出为可视化图片': 'relation-measure-ranking',
+  '导出为表格数据': 'relation-measure-ranking',
+  '导出为可视化图片': 'relation-measure-ranking',
+  '关联规则挖掘/数据子集选择': 'association-rule-mining',
+  '关联规则挖掘/算法参数配置': 'association-rule-mining',
+  '关联规则挖掘/规则挖掘任务执行': 'association-rule-mining',
+  '数据子集选择': 'association-rule-mining',
+  '算法参数配置': 'association-rule-mining',
+  '规则挖掘任务执行': 'association-rule-mining',
   '算法管理/算法仓库/图嵌入/编码模型/平移距离模型库': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/编码模型/张量/矩阵分解模型库': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/编码模型/神经网络模型库': 'algorithm-detail',
@@ -965,6 +995,70 @@ export function resolveFewShotTripleFocus(pagePath: string | undefined): FewShot
   return null;
 }
 
+/** 文献处理：正文解析 / 多模态 / 语义 / 结构化输出 */
+export type LiteratureProcessingFocus = 'structure' | 'modal' | 'semantic' | 'output';
+
+export function resolveLiteratureProcessingFocus(
+  pagePath: string | undefined,
+): LiteratureProcessingFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('多格式正文解析')) return 'structure';
+  if (path.includes('多模态内容解析')) return 'modal';
+  if (path.includes('深度语义解析')) return 'semantic';
+  if (path.includes('结构化内容输出')) return 'output';
+  return null;
+}
+
+/** 专利处理：多模态附图 / 权利要求三元组 / 技术路径 */
+export type PatentProcessingFocus = 'multimodal' | 'claims' | 'pathway';
+
+export function resolvePatentProcessingFocus(
+  pagePath: string | undefined,
+): PatentProcessingFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('专利多模态内容解析') || path.includes('多模态内容解析')) return 'multimodal';
+  if (path.includes('权利要求结构化抽取')) return 'claims';
+  if (path.includes('技术路径模型构建')) return 'pathway';
+  return null;
+}
+
+/** 关系度量与排序 / 结果导出：路径发现 / 批量评分 / 排序筛选 / 表格导出 / 图片导出 */
+export type RelationMeasureRankingFocus =
+  | 'discover'
+  | 'score'
+  | 'filter'
+  | 'export-table'
+  | 'export-image';
+
+export function resolveRelationMeasureRankingFocus(
+  pagePath: string | undefined,
+): RelationMeasureRankingFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('多步路径发现')) return 'discover';
+  if (path.includes('路径评分批量计算')) return 'score';
+  if (path.includes('结果排序与筛选')) return 'filter';
+  if (path.includes('导出为表格数据')) return 'export-table';
+  if (path.includes('导出为可视化图片')) return 'export-image';
+  return null;
+}
+
+/** 关联规则挖掘：子集选择 / 参数配置 / 任务执行 */
+export type AssociationRuleMiningFocus = 'subset' | 'params' | 'execute';
+
+export function resolveAssociationRuleMiningFocus(
+  pagePath: string | undefined,
+): AssociationRuleMiningFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('数据子集选择')) return 'subset';
+  if (path.includes('算法参数配置')) return 'params';
+  if (path.includes('规则挖掘任务执行')) return 'execute';
+  return null;
+}
+
 export type RepresentationSpaceFocus = 'real' | 'complex' | 'config';
 
 /** 表示空间算法：审计目录聚焦实数 / 复数 / 配置界面 */
@@ -1488,6 +1582,11 @@ export function resolveEventReviewSubTab(pagePath: string | undefined): EventRev
 
 /** 页面路径前缀兜底（列 I 为空或未录入精确路径时） */
 const AUDIT_PAGE_PREFIX: Array<{ prefix: string; pageId: string }> = [
+  { prefix: '文献处理', pageId: 'literature-processing' },
+  { prefix: '专利处理', pageId: 'patent-processing' },
+  { prefix: '关系度量与排序', pageId: 'relation-measure-ranking' },
+  { prefix: '关系分析结果导出', pageId: 'relation-measure-ranking' },
+  { prefix: '关联规则挖掘', pageId: 'association-rule-mining' },
   { prefix: '候选实体生成', pageId: 'candidate-entity-generation' },
   { prefix: '图谱构造引擎/数据源', pageId: 'kg-datasource' },
   { prefix: '图谱构造引擎/本体', pageId: 'kg-ontology' },

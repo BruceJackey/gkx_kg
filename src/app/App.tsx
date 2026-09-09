@@ -31,6 +31,8 @@ import DecisionSupport from './components/DecisionSupport';
 import KnowledgeValidation from './components/KnowledgeValidation';
 import AcademicPoster from './components/AcademicPoster';
 import PatentProcessing from './components/PatentProcessing';
+import RelationMeasureRanking from './components/RelationMeasureRanking';
+import AssociationRuleMining from './components/AssociationRuleMining';
 import { ApiCallLogs } from './components/ApiCallLogs';
 import TermReview from './components/TermReview';
 import InteractiveReviewAdoption from './components/InteractiveReviewAdoption';
@@ -152,6 +154,10 @@ import {
   resolveHeterogeneousFusionFocus,
   resolveRLFrameworkFocus,
   resolveFewShotTripleFocus,
+  resolveLiteratureProcessingFocus,
+  resolvePatentProcessingFocus,
+  resolveRelationMeasureRankingFocus,
+  resolveAssociationRuleMiningFocus,
   resolveEncodingModelFocus,
   resolveSupervisedSimilarityFocus,
   resolveNodeSimilarityFocus,
@@ -247,6 +253,10 @@ import {
   type HeterogeneousFusionFocus,
   type RLFrameworkFocus,
   type FewShotTripleFocus,
+  type LiteratureProcessingFocus,
+  type PatentProcessingFocus,
+  type RelationMeasureRankingFocus,
+  type AssociationRuleMiningFocus,
   type EncodingModelFocus,
   type SupervisedSimilarityFocus,
   type NodeSimilarityFocus,
@@ -342,6 +352,10 @@ export default function App() {
   const [heterogeneousFusionFocus, setHeterogeneousFusionFocus] = useState<HeterogeneousFusionFocus | null>(null);
   const [rlFrameworkFocus, setRLFrameworkFocus] = useState<RLFrameworkFocus | null>(null);
   const [fewShotTripleFocus, setFewShotTripleFocus] = useState<FewShotTripleFocus | null>(null);
+  const [literatureProcessingFocus, setLiteratureProcessingFocus] = useState<LiteratureProcessingFocus | null>(null);
+  const [patentProcessingFocus, setPatentProcessingFocus] = useState<PatentProcessingFocus | null>(null);
+  const [relationMeasureRankingFocus, setRelationMeasureRankingFocus] = useState<RelationMeasureRankingFocus | null>(null);
+  const [associationRuleMiningFocus, setAssociationRuleMiningFocus] = useState<AssociationRuleMiningFocus | null>(null);
   const [encodingModelFocus, setEncodingModelFocus] = useState<EncodingModelFocus | null>(null);
   const [supervisedSimilarityFocus, setSupervisedSimilarityFocus] = useState<SupervisedSimilarityFocus | null>(null);
   const [nodeSimilarityFocus, setNodeSimilarityFocus] = useState<NodeSimilarityFocus | null>(null);
@@ -421,6 +435,10 @@ export default function App() {
     setHeterogeneousFusionFocus(null);
     setRLFrameworkFocus(null);
     setFewShotTripleFocus(null);
+    setLiteratureProcessingFocus(null);
+    setPatentProcessingFocus(null);
+    setRelationMeasureRankingFocus(null);
+    setAssociationRuleMiningFocus(null);
     setEncodingModelFocus(null);
     setSupervisedSimilarityFocus(null);
     setNodeSimilarityFocus(null);
@@ -464,7 +482,7 @@ export default function App() {
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
     // 审计专用独立页优先（不与产品页共用）
-    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'high-performance-inference-kernel' || pageId === 'fact-change-listening' || pageId === 'inference-task-management' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'future-state-prediction' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'patent-module-decomposition' || pageId === 'patent-literature-match' || pageId === 'similarity-computation-engine' || pageId === 'kg-integrated-workbench' || pageId === 'corpus-selection-config' || pageId === 'context-pattern-extraction-engine' || pageId === 'pattern-preview-management' || pageId === 'pattern-application-engine' || pageId === 'new-instance-extraction' || pageId === 'instance-confidence-evaluation' || pageId === 'pending-instance-review' || pageId === 'entity-alignment-disambiguation' || pageId === 'batch-instance-ingest' || pageId === 'rule-learning-workbench' || pageId === 'rule-mapped-instance' || pageId === 'scoring-function-workbench' || pageId === 'heterogeneous-multimodal-fusion' || pageId === 'rl-framework-integration' || pageId === 'few-shot-triple-generation' || pageId === 'dual-factor-rank' || pageId === 'term-confidence-graph' || pageId === 'quadruple-structure' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation') {
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'high-performance-inference-kernel' || pageId === 'fact-change-listening' || pageId === 'inference-task-management' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'future-state-prediction' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'patent-module-decomposition' || pageId === 'patent-literature-match' || pageId === 'similarity-computation-engine' || pageId === 'kg-integrated-workbench' || pageId === 'corpus-selection-config' || pageId === 'context-pattern-extraction-engine' || pageId === 'pattern-preview-management' || pageId === 'pattern-application-engine' || pageId === 'new-instance-extraction' || pageId === 'instance-confidence-evaluation' || pageId === 'pending-instance-review' || pageId === 'entity-alignment-disambiguation' || pageId === 'batch-instance-ingest' || pageId === 'rule-learning-workbench' || pageId === 'rule-mapped-instance' || pageId === 'scoring-function-workbench' || pageId === 'heterogeneous-multimodal-fusion' || pageId === 'rl-framework-integration' || pageId === 'few-shot-triple-generation' || pageId === 'dual-factor-rank' || pageId === 'term-confidence-graph' || pageId === 'quadruple-structure' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation' || pageId === 'literature-processing' || pageId === 'patent-processing' || pageId === 'relation-measure-ranking' || pageId === 'association-rule-mining') {
       if (pageId === 'temporal-relation-audit') {
         setTemporalAuditMode(resolveTemporalAuditMode(feature.pagePath) ?? 'extraction');
       }
@@ -503,6 +521,18 @@ export default function App() {
       }
       if (pageId === 'few-shot-triple-generation') {
         setFewShotTripleFocus(resolveFewShotTripleFocus(feature.pagePath) ?? 'meta');
+      }
+      if (pageId === 'literature-processing') {
+        setLiteratureProcessingFocus(resolveLiteratureProcessingFocus(feature.pagePath) ?? 'structure');
+      }
+      if (pageId === 'patent-processing') {
+        setPatentProcessingFocus(resolvePatentProcessingFocus(feature.pagePath) ?? 'multimodal');
+      }
+      if (pageId === 'relation-measure-ranking') {
+        setRelationMeasureRankingFocus(resolveRelationMeasureRankingFocus(feature.pagePath) ?? 'discover');
+      }
+      if (pageId === 'association-rule-mining') {
+        setAssociationRuleMiningFocus(resolveAssociationRuleMiningFocus(feature.pagePath) ?? 'subset');
       }
       if (pageId === 'dual-factor-rank') {
         setDualFactorRankFocus(resolveDualFactorRankFocus(feature.pagePath));
@@ -1363,7 +1393,12 @@ export default function App() {
       case 'knowledge-repository':
         return <KnowledgeRepository />;
       case 'literature-processing':
-        return <LiteratureProcessing />;
+        return (
+          <LiteratureProcessing
+            key={literatureProcessingFocus ?? 'structure'}
+            initialFocus={literatureProcessingFocus ?? 'structure'}
+          />
+        );
       case 'literature-reader':
         return (
           <LiteratureReader
@@ -1372,7 +1407,26 @@ export default function App() {
           />
         );
       case 'patent-processing':
-        return <PatentProcessing />;
+        return (
+          <PatentProcessing
+            key={patentProcessingFocus ?? 'multimodal'}
+            initialFocus={patentProcessingFocus ?? 'multimodal'}
+          />
+        );
+      case 'relation-measure-ranking':
+        return (
+          <RelationMeasureRanking
+            key={relationMeasureRankingFocus ?? 'discover'}
+            initialFocus={relationMeasureRankingFocus ?? 'discover'}
+          />
+        );
+      case 'association-rule-mining':
+        return (
+          <AssociationRuleMining
+            key={associationRuleMiningFocus ?? 'subset'}
+            initialFocus={associationRuleMiningFocus ?? 'subset'}
+          />
+        );
       case 'api-keys':
         return <ApiKeyManagement />;
       case 'app-center':
