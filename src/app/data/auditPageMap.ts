@@ -109,6 +109,12 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '特征对齐与归一化': 'heterogeneous-multimodal-fusion',
   '早期融合策略': 'heterogeneous-multimodal-fusion',
   '晚期融合策略': 'heterogeneous-multimodal-fusion',
+  '多模态特征融合/协同注意力融合机制': 'multimodal-feature-fusion',
+  '多模态特征融合/门控与双线性融合': 'multimodal-feature-fusion',
+  '多模态特征融合/融合模型训练与管理': 'multimodal-feature-fusion',
+  '协同注意力融合机制': 'multimodal-feature-fusion',
+  '门控与双线性融合': 'multimodal-feature-fusion',
+  '融合模型训练与管理': 'multimodal-feature-fusion',
   '强化学习框架集成/RL环境定义': 'rl-framework-integration',
   '强化学习框架集成/策略网络训练与管理': 'rl-framework-integration',
   '强化学习框架集成/训练过程监控': 'rl-framework-integration',
@@ -150,6 +156,11 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '数据子集选择': 'association-rule-mining',
   '算法参数配置': 'association-rule-mining',
   '规则挖掘任务执行': 'association-rule-mining',
+  '规则筛选与应用/规则评估指标展示': 'rule-filter-apply',
+  '规则筛选与应用/规则库管理': 'rule-filter-apply',
+  '规则评估指标展示': 'rule-filter-apply',
+  '规则筛选与应用/应用接口': 'rule-apply-api',
+  '应用接口': 'rule-apply-api',
   '算法管理/算法仓库/图嵌入/编码模型/平移距离模型库': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/编码模型/张量/矩阵分解模型库': 'algorithm-detail',
   '算法管理/算法仓库/图嵌入/编码模型/神经网络模型库': 'algorithm-detail',
@@ -158,6 +169,12 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '知识表示学习/编码模型/张量/矩阵分解模型库': 'algorithm-detail',
   '知识表示学习/编码模型/神经网络模型库': 'algorithm-detail',
   '知识表示学习/编码模型/模型选择与超参数配置': 'algorithm-detail',
+  '知识表示学习/辅助信息/文本描述信息融合': 'auxiliary-info-encoding',
+  '知识表示学习/辅助信息/实体类型信息融合': 'auxiliary-info-encoding',
+  '知识表示学习/辅助信息/多模态信息集成': 'auxiliary-info-encoding',
+  '文本描述信息融合': 'auxiliary-info-encoding',
+  '实体类型信息融合': 'auxiliary-info-encoding',
+  '多模态信息集成': 'auxiliary-info-encoding',
   '知识相关性计算/基于监督学习的相似度计算/相似度样本标注工具': 'dataset-category-detail',
   '数据集管理/相似度计算数据集/相似度样本标注工具': 'dataset-category-detail',
   '知识相关性计算/基于监督学习的相似度计算/相似度模型训练': 'algorithm-detail',
@@ -931,6 +948,18 @@ export function resolveSupervisedSimilarityFocus(pagePath: string | undefined): 
   return null;
 }
 
+export type AuxiliaryInfoFocus = 'text' | 'type' | 'mm';
+
+/** 辅助信息：文本描述 / 实体类型 / 多模态 */
+export function resolveAuxiliaryInfoFocus(pagePath: string | undefined): AuxiliaryInfoFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('文本描述')) return 'text';
+  if (path.includes('实体类型')) return 'type';
+  if (path.includes('多模态信息')) return 'mm';
+  return null;
+}
+
 export type EncodingModelFocus = 'translation' | 'decomposition' | 'neural' | 'config';
 
 /** 编码模型算法：模型库分类聚焦或超参数配置（含发起训练） */
@@ -967,6 +996,20 @@ export function resolveHeterogeneousFusionFocus(
   if (path.includes('特征对齐与归一化') || path.includes('特征对齐')) return 'align';
   if (path.includes('早期融合')) return 'early';
   if (path.includes('晚期融合')) return 'late';
+  return null;
+}
+
+/** 多模态特征融合：协同注意力 / 门控双线性 / 训练管理 */
+export type MultimodalFeatureFusionFocus = 'coattn' | 'gate' | 'train';
+
+export function resolveMultimodalFeatureFusionFocus(
+  pagePath: string | undefined,
+): MultimodalFeatureFusionFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('协同注意力')) return 'coattn';
+  if (path.includes('门控与双线性') || path.includes('门控')) return 'gate';
+  if (path.includes('融合模型训练') || path.includes('训练与管理')) return 'train';
   return null;
 }
 
@@ -1056,6 +1099,19 @@ export function resolveAssociationRuleMiningFocus(
   if (path.includes('数据子集选择')) return 'subset';
   if (path.includes('算法参数配置')) return 'params';
   if (path.includes('规则挖掘任务执行')) return 'execute';
+  return null;
+}
+
+/** 规则筛选与应用：评估指标 / 规则库（应用接口为独立页） */
+export type RuleFilterApplyFocus = 'metrics' | 'library';
+
+export function resolveRuleFilterApplyFocus(
+  pagePath: string | undefined,
+): RuleFilterApplyFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('规则库管理')) return 'library';
+  if (path.includes('规则评估指标展示')) return 'metrics';
   return null;
 }
 
@@ -1587,6 +1643,8 @@ const AUDIT_PAGE_PREFIX: Array<{ prefix: string; pageId: string }> = [
   { prefix: '关系度量与排序', pageId: 'relation-measure-ranking' },
   { prefix: '关系分析结果导出', pageId: 'relation-measure-ranking' },
   { prefix: '关联规则挖掘', pageId: 'association-rule-mining' },
+  { prefix: '规则筛选与应用/应用接口', pageId: 'rule-apply-api' },
+  { prefix: '规则筛选与应用', pageId: 'rule-filter-apply' },
   { prefix: '候选实体生成', pageId: 'candidate-entity-generation' },
   { prefix: '图谱构造引擎/数据源', pageId: 'kg-datasource' },
   { prefix: '图谱构造引擎/本体', pageId: 'kg-ontology' },

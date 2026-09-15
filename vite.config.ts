@@ -43,6 +43,12 @@ export default defineConfig({
           ? { Authorization: `Bearer ${process.env.VERTICAL_DOMAIN_GATEWAY_TOKEN}` }
           : undefined,
       },
+      // 关系度量 / 关联规则挖掘（本地开发可走代理避免 CORS）
+      '/relation-measure-api': {
+        target: process.env.RELATION_MEASURE_PROXY_TARGET || 'http://113.57.198.122:30080',
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/relation-measure-api/, ''),
+      },
     },
   },
 

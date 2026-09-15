@@ -13,8 +13,15 @@ import {
   Image as ImageIcon,
   Download,
   CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import type { RelationMeasureRankingFocus } from '../data/auditPageMap';
+import {
+  relationMeasureApi,
+  RELATION_MEASURE_BASE,
+  type ApiPath,
+} from '../api/relationMeasureApi';
 
 type AnalysisTab = RelationMeasureRankingFocus;
 
@@ -32,76 +39,42 @@ interface DiscoveredPath {
   modelScores: Record<string, number>;
 }
 
+function toUiPath(p: ApiPath): DiscoveredPath {
+  return {
+    id: p.path_id,
+    length: p.length,
+    hops: (p.hops ?? []).map((h) => ({
+      from: h.from,
+      relation: h.relation,
+      to: h.to,
+    })),
+    score: p.score ?? null,
+    modelScores: p.model_scores ?? {},
+  };
+}
+
+function toApiPath(p: DiscoveredPath): ApiPath {
+  return {
+    path_id: p.id,
+    length: p.length,
+    hops: p.hops.map((h) => ({
+      from: h.from,
+      from_id: h.from,
+      relation: h.relation,
+      to: h.to,
+      to_id: h.to,
+    })),
+    score: p.score,
+    model_scores: p.modelScores,
+  };
+}
+
 const ENTITIES = ['知识图谱', 'Transformer', 'BERT', '深度学习', '清华大学', '张明', '自然语言处理'];
 
 const SCORING_MODELS = [
   { id: 'path_len', name: '路径长度衰减', desc: 'score = ∏(wᵢ) / length' },
   { id: 'rel_product', name: '关系权重乘积', desc: '各边权重连乘' },
   { id: 'reliability', name: '路径可靠性', desc: '证据支持度加权' },
-];
-
-const MOCK_PATHS: DiscoveredPath[] = [
-  {
-    id: 'p1',
-    length: 2,
-    score: null,
-    hops: [
-      { from: '知识图谱', relation: '应用于', to: '自然语言处理' },
-      { from: '自然语言处理', relation: '引用', to: 'Transformer' },
-    ],
-    modelScores: { path_len: 0.91, rel_product: 0.88, reliability: 0.94 },
-  },
-  {
-    id: 'p2',
-    length: 3,
-    score: null,
-    hops: [
-      { from: '知识图谱', relation: '研究', to: '张明' },
-      { from: '张明', relation: '隶属于', to: '清华大学' },
-      { from: '清华大学', relation: '参与', to: 'Transformer' },
-    ],
-    modelScores: { path_len: 0.72, rel_product: 0.68, reliability: 0.75 },
-  },
-  {
-    id: 'p3',
-    length: 2,
-    score: null,
-    hops: [
-      { from: '知识图谱', relation: '引用', to: '深度学习' },
-      { from: '深度学习', relation: '应用于', to: 'Transformer' },
-    ],
-    modelScores: { path_len: 0.86, rel_product: 0.84, reliability: 0.89 },
-  },
-  {
-    id: 'p4',
-    length: 4,
-    score: null,
-    hops: [
-      { from: '知识图谱', relation: '应用于', to: 'BERT' },
-      { from: 'BERT', relation: '引用', to: 'Transformer' },
-      { from: 'Transformer', relation: '应用于', to: '深度学习' },
-      { from: '深度学习', relation: '引用', to: 'Transformer' },
-    ],
-    modelScores: { path_len: 0.58, rel_product: 0.61, reliability: 0.55 },
-  },
-  {
-    id: 'p5',
-    length: 3,
-    score: null,
-    hops: [
-      { from: '知识图谱', relation: '研究', to: '李华' },
-      { from: '李华', relation: '研究', to: 'BERT' },
-      { from: 'BERT', relation: '引用', to: 'Transformer' },
-    ],
-    modelScores: { path_len: 0.79, rel_product: 0.76, reliability: 0.81 },
-  },
-  {
-    id: 'p6',
-    length: 1,
-    score: null,
-    hops: [{ from: '知识图谱', relation: '关联', to: 'Transformer' }],
-    modelScores: { path_len: 0.97, rel_product: 0.95, reliability: 0.92 },
-  },
 ];
 
 const PIPELINE_STEPS = [
@@ -280,8 +253,12 @@ export default function RelationMeasureRanking({
   const [paths, setPaths] = useState<DiscoveredPath[]>([]);
   const [selectedModel, setSelectedModel] = useState('path_len');
   const [scored, setScored] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
   const [scoring, setScoring] = useState(false);
-  const [exportMsg, setExportMsg] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [apiMsg, setApiMsg] = useState('');
+  const [apiError, setApiError] = useState('');
+  const [meta, setMeta] = useState<{ elapsedMs?: number; graphSource?: string; requestId?: string }>({});
 
   const [sortBy, setSortBy] = useState<'score' | 'length'>('score');
   const [minScore, setMinScore] = useState(0);
@@ -303,40 +280,71 @@ export default function RelationMeasureRanking({
       ? '关系度量与排序 · 关系分析结果导出'
       : '关系度量与排序';
 
-  const workingPaths = useMemo(() => {
-    if (paths.length) return paths;
-    return MOCK_PATHS.filter((p) => p.length <= maxDepth).map((p) => ({
-      ...p,
-      score: p.modelScores[selectedModel] ?? null,
-    }));
-  }, [paths, maxDepth, selectedModel]);
-
-  const runDiscover = () => {
-    const filtered = MOCK_PATHS.filter((p) => p.length <= maxDepth);
-    setPaths(filtered.map((p) => ({ ...p, score: null })));
-    setDiscovered(true);
-    setScored(false);
+  const flash = (msg: string, isError = false) => {
+    if (isError) {
+      setApiError(msg);
+      setApiMsg('');
+    } else {
+      setApiMsg(msg);
+      setApiError('');
+    }
+    window.setTimeout(() => {
+      setApiMsg('');
+      setApiError('');
+    }, 4000);
   };
 
-  const runBatchScore = () => {
-    if (!discovered) runDiscover();
-    setScoring(true);
-    window.setTimeout(() => {
-      setPaths((prev) => {
-        const base = prev.length ? prev : MOCK_PATHS.filter((p) => p.length <= maxDepth);
-        return base.map((p) => ({
-          ...p,
-          score: p.modelScores[selectedModel] ?? 0.5,
-        }));
+  const runDiscover = async () => {
+    setDiscovering(true);
+    setApiError('');
+    try {
+      const data = await relationMeasureApi.discover({
+        source_entity_name: source,
+        target_entity_name: target,
+        max_depth: maxDepth,
+        directed: true,
+        max_paths: 200,
       });
+      setPaths((data.paths ?? []).map(toUiPath));
       setDiscovered(true);
+      setScored(false);
+      setMeta({
+        elapsedMs: data.elapsed_ms,
+        graphSource: data.graph_source,
+        requestId: data.request_id,
+      });
+      flash(`发现 ${data.path_count} 条路径${data.truncated ? '（已截断）' : ''}`);
+    } catch (e) {
+      flash(e instanceof Error ? e.message : '路径发现失败', true);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  const runBatchScore = async () => {
+    if (!paths.length) {
+      flash('请先发现路径', true);
+      return;
+    }
+    setScoring(true);
+    setApiError('');
+    try {
+      const data = await relationMeasureApi.score({
+        scoring_model: selectedModel,
+        paths: paths.map(toApiPath),
+      });
+      setPaths((data.paths ?? []).map(toUiPath));
       setScored(true);
+      flash(`已用 ${data.scoring_model} 对 ${data.path_count} 条路径打分`);
+    } catch (e) {
+      flash(e instanceof Error ? e.message : '批量打分失败', true);
+    } finally {
       setScoring(false);
-    }, 600);
+    }
   };
 
   const filteredSorted = useMemo(() => {
-    let list = [...(paths.length ? paths : workingPaths)];
+    let list = [...paths];
     if (scored) {
       list = list.filter((p) => (p.score ?? 0) >= minScore);
     }
@@ -362,72 +370,142 @@ export default function RelationMeasureRanking({
       return (b.score ?? -1) - (a.score ?? -1);
     });
     return list;
-  }, [paths, workingPaths, scored, minScore, maxLength, includeNode, excludeNode, includeRel, excludeRel, sortBy]);
+  }, [paths, scored, minScore, maxLength, includeNode, excludeNode, includeRel, excludeRel, sortBy]);
 
-  const exportRows = filteredSorted.length ? filteredSorted : workingPaths;
+  const exportRows = filteredSorted.length ? filteredSorted : paths;
 
-  const flashExport = (msg: string) => {
-    setExportMsg(msg);
-    window.setTimeout(() => setExportMsg(''), 2500);
+  const exportCsv = async () => {
+    if (!exportRows.length) {
+      flash('没有可导出的路径，请先发现路径', true);
+      return;
+    }
+    setExporting(true);
+    try {
+      const data = await relationMeasureApi.exportTable({
+        format: 'csv',
+        paths: exportRows.map(toApiPath),
+        filename_prefix: `relation-paths-${source}-${target}`,
+      });
+      flash(`已导出 CSV（${data.row_count ?? exportRows.length} 条）`);
+    } catch (e) {
+      // 接口失败时本地兜底
+      const header = 'path_id,length,score,path';
+      const lines = exportRows.map((p) =>
+        [p.id, p.length, p.score?.toFixed(4) ?? '', `"${pathText(p.hops).replace(/"/g, '""')}"`].join(','),
+      );
+      downloadBlob(`relation-paths-${source}-${target}.csv`, [header, ...lines].join('\n'), 'text/csv;charset=utf-8');
+      flash(`接口不可用，已本地导出 CSV（${exportRows.length} 条）`);
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const exportCsv = () => {
-    const header = 'path_id,length,score,path';
-    const lines = exportRows.map((p) =>
-      [p.id, p.length, p.score?.toFixed(4) ?? '', `"${pathText(p.hops).replace(/"/g, '""')}"`].join(','),
-    );
-    downloadBlob(`relation-paths-${source}-${target}.csv`, [header, ...lines].join('\n'), 'text/csv;charset=utf-8');
-    flashExport(`已导出 CSV（${exportRows.length} 条路径）`);
+  const exportExcel = async () => {
+    if (!exportRows.length) {
+      flash('没有可导出的路径，请先发现路径', true);
+      return;
+    }
+    setExporting(true);
+    try {
+      await relationMeasureApi.exportTable({
+        format: 'xlsx',
+        paths: exportRows.map(toApiPath),
+        filename_prefix: `relation-paths-${source}-${target}`,
+      });
+      flash(`已导出 Excel（${exportRows.length} 条）`);
+    } catch {
+      const header = 'path_id\tlength\tscore\tpath';
+      const lines = exportRows.map((p) =>
+        [p.id, p.length, p.score?.toFixed(4) ?? '', pathText(p.hops)].join('\t'),
+      );
+      downloadBlob(
+        `relation-paths-${source}-${target}.xls`,
+        `\ufeff${[header, ...lines].join('\n')}`,
+        'application/vnd.ms-excel;charset=utf-8',
+      );
+      flash(`接口不可用，已本地导出 Excel（${exportRows.length} 条）`);
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const exportExcel = () => {
-    const header = 'path_id\tlength\tscore\tpath';
-    const lines = exportRows.map((p) =>
-      [p.id, p.length, p.score?.toFixed(4) ?? '', pathText(p.hops)].join('\t'),
-    );
-    downloadBlob(
-      `relation-paths-${source}-${target}.xls`,
-      `\ufeff${[header, ...lines].join('\n')}`,
-      'application/vnd.ms-excel;charset=utf-8',
-    );
-    flashExport(`已导出 Excel（${exportRows.length} 条路径）`);
+  const exportSvg = async () => {
+    if (!exportRows.length) {
+      flash('没有可导出的路径', true);
+      return;
+    }
+    setExporting(true);
+    try {
+      await relationMeasureApi.exportImage({
+        format: 'svg',
+        paths: exportRows.map(toApiPath),
+        source_entity_name: source,
+        target_entity_name: target,
+      });
+      flash('已导出 SVG 网络图');
+    } catch {
+      const el = svgRef.current;
+      if (!el) {
+        flash('SVG 导出失败', true);
+        return;
+      }
+      const xml = new XMLSerializer().serializeToString(el);
+      downloadBlob(`relation-network-${source}-${target}.svg`, xml, 'image/svg+xml;charset=utf-8');
+      flash('接口不可用，已本地导出 SVG');
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const exportSvg = () => {
-    const el = svgRef.current;
-    if (!el) return;
-    const xml = new XMLSerializer().serializeToString(el);
-    downloadBlob(`relation-network-${source}-${target}.svg`, xml, 'image/svg+xml;charset=utf-8');
-    flashExport('已导出 SVG 网络图');
-  };
-
-  const exportPng = () => {
-    const el = svgRef.current;
-    if (!el) return;
-    const xml = new XMLSerializer().serializeToString(el);
-    const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
-    const img = new window.Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1120;
-      canvas.height = 560;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `relation-network-${source}-${target}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-        flashExport('已导出 PNG 网络图');
-      }, 'image/png');
-    };
-    img.src = svgUrl;
+  const exportPng = async () => {
+    if (!exportRows.length) {
+      flash('没有可导出的路径', true);
+      return;
+    }
+    setExporting(true);
+    try {
+      await relationMeasureApi.exportImage({
+        format: 'png',
+        paths: exportRows.map(toApiPath),
+        source_entity_name: source,
+        target_entity_name: target,
+        width: 1120,
+        height: 560,
+      });
+      flash('已导出 PNG 网络图');
+    } catch {
+      const el = svgRef.current;
+      if (!el) {
+        flash('PNG 导出失败', true);
+        return;
+      }
+      const xml = new XMLSerializer().serializeToString(el);
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1120;
+        canvas.height = 560;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `relation-network-${source}-${target}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+          flash('接口不可用，已本地导出 PNG');
+        }, 'image/png');
+      };
+      img.src = svgUrl;
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -437,9 +515,15 @@ export default function RelationMeasureRanking({
           <div className="text-[11px] text-gray-400 mb-0.5">{parentLabel}</div>
           <h1 className="text-xl font-semibold text-gray-900">{tabMeta.label}</h1>
           <p className="text-sm text-gray-500 mt-0.5 max-w-3xl leading-relaxed">{tabMeta.desc}</p>
+          <p className="text-[11px] text-gray-400 mt-1 font-mono truncate">
+            API {RELATION_MEASURE_BASE}
+            {meta.requestId ? ` · ${meta.requestId}` : ''}
+            {meta.elapsedMs != null ? ` · ${meta.elapsedMs}ms` : ''}
+            {meta.graphSource ? ` · ${meta.graphSource}` : ''}
+          </p>
         </div>
         <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex-shrink-0">
-          审计目录专用页
+          审计目录专用页 · 真实接口
         </span>
       </div>
 
@@ -476,10 +560,16 @@ export default function RelationMeasureRanking({
         ))}
       </div>
 
-      {exportMsg && (
+      {apiMsg && (
         <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 flex-shrink-0">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          {exportMsg}
+          {apiMsg}
+        </div>
+      )}
+      {apiError && (
+        <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2 flex-shrink-0">
+          <AlertCircle className="w-3.5 h-3.5" />
+          {apiError}
         </div>
       )}
 
@@ -509,28 +599,29 @@ export default function RelationMeasureRanking({
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <label className="flex flex-col gap-1.5">
                   <span className="text-xs text-gray-500">源实体</span>
-                  <select
+                  <input
+                    list="rm-entities"
                     value={source}
                     onChange={(e) => setSource(e.target.value)}
                     className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
-                  >
-                    {ENTITIES.map((e) => (
-                      <option key={e} value={e}>{e}</option>
-                    ))}
-                  </select>
+                    placeholder="实体名或可识别名称"
+                  />
                 </label>
                 <label className="flex flex-col gap-1.5">
                   <span className="text-xs text-gray-500">目标实体</span>
-                  <select
+                  <input
+                    list="rm-entities"
                     value={target}
                     onChange={(e) => setTarget(e.target.value)}
                     className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
-                  >
-                    {ENTITIES.map((e) => (
-                      <option key={e} value={e}>{e}</option>
-                    ))}
-                  </select>
+                    placeholder="实体名或可识别名称"
+                  />
                 </label>
+                <datalist id="rm-entities">
+                  {ENTITIES.map((e) => (
+                    <option key={e} value={e} />
+                  ))}
+                </datalist>
                 <label className="flex flex-col gap-1.5">
                   <span className="text-xs text-gray-500">最大深度（跳数）</span>
                   <input
@@ -546,11 +637,12 @@ export default function RelationMeasureRanking({
                 <div className="flex items-end">
                   <button
                     type="button"
-                    onClick={runDiscover}
-                    className="w-full flex items-center justify-center gap-2 text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-colors"
+                    onClick={() => void runDiscover()}
+                    disabled={discovering}
+                    className="w-full flex items-center justify-center gap-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
                   >
-                    <Search className="w-4 h-4" />
-                    发现路径
+                    {discovering ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    {discovering ? '发现中…' : '发现路径'}
                   </button>
                 </div>
               </div>
@@ -617,17 +709,17 @@ export default function RelationMeasureRanking({
                 </div>
                 <div className="w-full md:w-56 flex flex-col gap-3">
                   <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-xs text-gray-600 space-y-1">
-                    <div>待打分路径：{discovered ? paths.length : MOCK_PATHS.filter((p) => p.length <= maxDepth).length} 条</div>
+                    <div>待打分路径：{paths.length} 条</div>
                     <div>当前模型：{SCORING_MODELS.find((m) => m.id === selectedModel)?.name}</div>
-                    <div>状态：{scored ? '已完成' : scoring ? '计算中…' : '未打分'}</div>
+                    <div>状态：{scored ? '已完成' : scoring ? '计算中…' : discovered ? '未打分' : '请先发现路径'}</div>
                   </div>
                   <button
                     type="button"
-                    onClick={runBatchScore}
-                    disabled={scoring}
+                    onClick={() => void runBatchScore()}
+                    disabled={scoring || !paths.length}
                     className="flex items-center justify-center gap-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
                   >
-                    <Play className="w-4 h-4" />
+                    {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                     {scoring ? '批量计算中…' : '批量打分'}
                   </button>
                 </div>
@@ -645,7 +737,14 @@ export default function RelationMeasureRanking({
                     </tr>
                   </thead>
                   <tbody>
-                    {(discovered ? paths : MOCK_PATHS.filter((p) => p.length <= maxDepth)).map((p) => (
+                    {!paths.length ? (
+                      <tr>
+                        <td colSpan={3} className="px-3 py-8 text-center text-gray-400">
+                          暂无路径，请先在「多步路径发现」中调用接口
+                        </td>
+                      </tr>
+                    ) : (
+                      paths.map((p) => (
                       <tr key={p.id} className="border-b border-gray-50">
                         <td className="px-3 py-3">
                           <PathChips hops={p.hops} />
@@ -653,13 +752,14 @@ export default function RelationMeasureRanking({
                         <td className="px-3 py-3 text-gray-500">{p.length}</td>
                         <td className="px-3 py-3">
                           {p.score != null ? (
-                            <span className="font-semibold text-blue-700">{p.score.toFixed(2)}</span>
+                            <span className="font-semibold text-blue-700">{p.score.toFixed(4)}</span>
                           ) : (
                             <span className="text-gray-300">—</span>
                           )}
                         </td>
                       </tr>
-                    ))}
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -674,8 +774,9 @@ export default function RelationMeasureRanking({
                   <span>建议先完成路径发现与批量打分，以便按综合评分排序筛选。</span>
                   <button
                     type="button"
-                    onClick={runBatchScore}
-                    className="flex-shrink-0 text-amber-900 underline"
+                    onClick={() => void runBatchScore()}
+                    disabled={!paths.length || scoring}
+                    className="flex-shrink-0 text-amber-900 underline disabled:opacity-50"
                   >
                     一键打分
                   </button>
@@ -758,7 +859,7 @@ export default function RelationMeasureRanking({
 
               <div className="flex items-center justify-between">
                 <div className="text-xs text-gray-500">
-                  显示 {filteredSorted.length} / {(discovered ? paths : MOCK_PATHS).length} 条路径
+                  显示 {filteredSorted.length} / {paths.length} 条路径
                 </div>
                 <button
                   type="button"
@@ -813,8 +914,9 @@ export default function RelationMeasureRanking({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   type="button"
-                  onClick={exportCsv}
-                  className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left"
+                  onClick={() => void exportCsv()}
+                  disabled={exporting}
+                  className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left disabled:opacity-60"
                 >
                   <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
                     <FileSpreadsheet className="w-5 h-5" />
@@ -831,8 +933,9 @@ export default function RelationMeasureRanking({
                 </button>
                 <button
                   type="button"
-                  onClick={exportExcel}
-                  className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left"
+                  onClick={() => void exportExcel()}
+                  disabled={exporting}
+                  className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left disabled:opacity-60"
                 >
                   <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0">
                     <FileSpreadsheet className="w-5 h-5" />
@@ -883,8 +986,9 @@ export default function RelationMeasureRanking({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   type="button"
-                  onClick={exportPng}
-                  className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left"
+                  onClick={() => void exportPng()}
+                  disabled={exporting}
+                  className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left disabled:opacity-60"
                 >
                   <div className="w-10 h-10 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center flex-shrink-0">
                     <ImageIcon className="w-5 h-5" />
@@ -899,8 +1003,9 @@ export default function RelationMeasureRanking({
                 </button>
                 <button
                   type="button"
-                  onClick={exportSvg}
-                  className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left"
+                  onClick={() => void exportSvg()}
+                  disabled={exporting}
+                  className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left disabled:opacity-60"
                 >
                   <div className="w-10 h-10 rounded-lg bg-cyan-50 text-cyan-700 flex items-center justify-center flex-shrink-0">
                     <ImageIcon className="w-5 h-5" />

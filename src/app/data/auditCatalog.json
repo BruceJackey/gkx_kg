@@ -3023,27 +3023,27 @@
                           "name": "文本描述信息融合",
                           "type": "feature",
                           "reqId": "100",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/辅助信息/文本描述信息融合",
                           "featureDesc": "支持将实体的文本描述作为输入，与结构信息共同学习。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应编码模型训练 · 辅助信息 · 文本描述开关"
                         },
                         {
                           "id": "fp-100-223",
                           "name": "实体类型信息融合",
                           "type": "feature",
                           "reqId": "100",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/辅助信息/实体类型信息融合",
                           "featureDesc": "支持将实体的类别信息作为一种约束或特征，指导向量的学习过程。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应编码模型训练 · 辅助信息 · 实体类型开关"
                         },
                         {
                           "id": "fp-100-224",
                           "name": "多模态信息集成",
                           "type": "feature",
                           "reqId": "100",
-                          "pagePath": "",
+                          "pagePath": "知识表示学习/辅助信息/多模态信息集成",
                           "featureDesc": "提供框架，支持将与实体关联的图像、音频等其他模态信息集成到表示学习中。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应编码模型训练 · 辅助信息 · 多模态开关"
                         }
                       ]
                     }
@@ -4099,27 +4099,27 @@
                           "name": "规则评估指标展示",
                           "type": "feature",
                           "reqId": "130",
-                          "pagePath": "",
+                          "pagePath": "规则筛选与应用/规则评估指标展示",
                           "featureDesc": "为每条规则计算并展示支持度、置信度、提升度等多个评估指标。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则筛选与应用 · 评估指标"
                         },
                         {
                           "id": "fp-130-313",
                           "name": "规则库管理",
                           "type": "feature",
                           "reqId": "130",
-                          "pagePath": "",
+                          "pagePath": "规则筛选与应用/规则库管理",
                           "featureDesc": "支持用户将有价值的规则保存到规则库中，进行分类、搜索和版本管理。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应规则筛选与应用 · 规则库"
                         },
                         {
                           "id": "fp-130-314",
                           "name": "应用接口",
                           "type": "feature",
                           "reqId": "130",
-                          "pagePath": "",
+                          "pagePath": "规则筛选与应用/应用接口",
                           "featureDesc": "提供API接口，允许推荐系统或预警系统调用规则库进行推理。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "接口测试页 · POST /api/v1/rule-library/apply"
                         }
                       ]
                     }
@@ -5127,27 +5127,27 @@
                           "name": "协同注意力融合机制",
                           "type": "feature",
                           "reqId": "165",
-                          "pagePath": "",
+                          "pagePath": "多模态特征融合/协同注意力融合机制",
                           "featureDesc": "提供基于Co-Attention的模型，允许不同模态的特征相互引导注意力，学习彼此之间的细粒度交互。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态特征融合 · BAN / Co-Attention"
                         },
                         {
                           "id": "fp-165-380",
                           "name": "门控与双线性融合",
                           "type": "feature",
                           "reqId": "165",
-                          "pagePath": "",
+                          "pagePath": "多模态特征融合/门控与双线性融合",
                           "featureDesc": "提供门控机制或双线性池化等模型，用于控制不同模态信息的贡献度并捕捉其复杂的相乘关系。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态特征融合 · MFB + GMU"
                         },
                         {
                           "id": "fp-165-381",
                           "name": "融合模型训练与管理",
                           "type": "feature",
                           "reqId": "165",
-                          "pagePath": "",
+                          "pagePath": "多模态特征融合/融合模型训练与管理",
                           "featureDesc": "提供界面让用户选择上述融合模型，并对其本身进行训练和管理，以学习出最优的融合方式。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "对应多模态特征融合 · models:train / checkpoints / models:infer"
                         }
                       ]
                     },

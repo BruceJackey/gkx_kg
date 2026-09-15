@@ -9,23 +9,19 @@ import {
   Loader2,
   Circle,
   Layers,
+  AlertCircle,
 } from 'lucide-react';
 import type { AssociationRuleMiningFocus } from '../data/auditPageMap';
+import {
+  assocRulesApi,
+  RELATION_MEASURE_BASE,
+  type AssocAlgorithm,
+  type AssocJob,
+  type AssocRule,
+  type AssocSubset,
+} from '../api/relationMeasureApi';
 
 type AnalysisTab = AssociationRuleMiningFocus;
-
-const SUBSETS = [
-  { id: 'sci', name: '科技领域子图', entities: '12.4 万', triples: '86.2 万', desc: '实体类型：技术 / 概念 / 组织；关系：应用于、引用、研究' },
-  { id: 'bio', name: '生物医学子图', entities: '8.1 万', triples: '54.7 万', desc: '实体类型：基因 / 疾病 / 化合物；关系：关联、治疗、靶向' },
-  { id: 'mat', name: '材料科学子图', entities: '5.6 万', triples: '31.0 万', desc: '实体类型：材料 / 工艺 / 性能；关系：组成、制备、表征' },
-  { id: 'full', name: '全量知识图谱', entities: '210 万', triples: '1.4 亿', desc: '全库挖掘，耗时较长，建议提高最小支持度' },
-];
-
-const ALGORITHMS = [
-  { id: 'apriori', name: 'Apriori', desc: '经典频繁项集挖掘，适合中小规模子集' },
-  { id: 'fpgrowth', name: 'FP-Growth', desc: '压缩树结构，适合大规模图事务' },
-];
-
 type TaskStatus = 'queued' | 'running' | 'done' | 'failed';
 
 interface MiningTask {
@@ -40,51 +36,6 @@ interface MiningTask {
   rulesFound: number | null;
   createdAt: string;
 }
-
-const INITIAL_TASKS: MiningTask[] = [
-  {
-    id: 't1',
-    name: '科技子图-Apriori-v1',
-    subset: '科技领域子图',
-    algorithm: 'Apriori',
-    minSupport: 0.05,
-    minConfidence: 0.6,
-    status: 'done',
-    progress: 100,
-    rulesFound: 1284,
-    createdAt: '2026-09-08 14:22',
-  },
-  {
-    id: 't2',
-    name: '生物医学-FPGrowth',
-    subset: '生物医学子图',
-    algorithm: 'FP-Growth',
-    minSupport: 0.03,
-    minConfidence: 0.7,
-    status: 'running',
-    progress: 62,
-    rulesFound: null,
-    createdAt: '2026-09-09 10:05',
-  },
-  {
-    id: 't3',
-    name: '材料科学-试跑',
-    subset: '材料科学子图',
-    algorithm: 'Apriori',
-    minSupport: 0.08,
-    minConfidence: 0.55,
-    status: 'queued',
-    progress: 0,
-    rulesFound: null,
-    createdAt: '2026-09-09 16:40',
-  },
-];
-
-const SAMPLE_RULES = [
-  { ante: '{知识图谱, 嵌入}', cons: '{链路预测}', support: 0.12, confidence: 0.86, lift: 2.4 },
-  { ante: '{Transformer}', cons: '{注意力机制, 预训练}', support: 0.18, confidence: 0.91, lift: 1.9 },
-  { ante: '{基因G, 疾病D}', cons: '{化合物C}', support: 0.04, confidence: 0.73, lift: 3.1 },
-];
 
 const PIPELINE_STEPS = [
   { id: 'subset' as const, label: '数据子集选择', desc: '选定挖掘数据源', icon: Database },
@@ -120,63 +71,172 @@ const STATUS_META: Record<TaskStatus, { label: string; className: string; icon: 
   failed: { label: '失败', className: 'bg-red-50 text-red-600', icon: Circle },
 };
 
+function normalizeState(state: string): TaskStatus {
+  if (state === 'running' || state === 'queued' || state === 'done' || state === 'failed') return state;
+  if (state === 'cancelled') return 'failed';
+  return 'queued';
+}
+
+function formatCount(n: number) {
+  if (n >= 10000) return `${(n / 10000).toFixed(1)} 万`;
+  return String(n);
+}
+
+function jobToTask(job: AssocJob): MiningTask {
+  const pct =
+    job.progress_pct != null
+      ? job.progress_pct
+      : job.progress != null
+        ? Math.round(job.progress <= 1 ? job.progress * 100 : job.progress)
+        : job.state === 'done'
+          ? 100
+          : 0;
+  return {
+    id: job.job_id,
+    name: job.job_name || `${job.subset_id || 'job'}-${job.algorithm_id || 'algo'}`,
+    subset: job.subset_name || job.subset_id || '—',
+    algorithm: job.algorithm_id || '—',
+    minSupport: job.min_support ?? 0,
+    minConfidence: job.min_confidence ?? 0,
+    status: normalizeState(job.state),
+    progress: pct,
+    rulesFound: job.rules_found ?? null,
+    createdAt: (job.created_at || '').replace('T', ' ').slice(0, 16),
+  };
+}
+
 export default function AssociationRuleMining({
   initialFocus = 'subset',
 }: {
   initialFocus?: AssociationRuleMiningFocus | null;
 }) {
   const [activeTab, setActiveTab] = useState<AnalysisTab>(initialFocus ?? 'subset');
+  const [subsets, setSubsets] = useState<AssocSubset[]>([]);
+  const [algorithms, setAlgorithms] = useState<AssocAlgorithm[]>([]);
   const [subsetId, setSubsetId] = useState('sci');
   const [algorithm, setAlgorithm] = useState('apriori');
   const [minSupport, setMinSupport] = useState(0.05);
   const [minConfidence, setMinConfidence] = useState(0.6);
   const [maxItemset, setMaxItemset] = useState(3);
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<MiningTask[]>([]);
+  const [rules, setRules] = useState<AssocRule[]>([]);
+  const [loadingMeta, setLoadingMeta] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState('');
+  const [apiError, setApiError] = useState('');
 
   useEffect(() => {
     if (initialFocus) setActiveTab(initialFocus);
   }, [initialFocus]);
 
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      setLoadingMeta(true);
+      setApiError('');
+      try {
+        const [subRes, algoRes] = await Promise.all([
+          assocRulesApi.listSubsets(ac.signal),
+          assocRulesApi.listAlgorithms(ac.signal),
+        ]);
+        const nextSubsets = subRes.subsets ?? [];
+        const nextAlgos = algoRes.algorithms ?? [];
+        setSubsets(nextSubsets);
+        setAlgorithms(nextAlgos);
+        if (nextSubsets[0]) {
+          setSubsetId((prev) => nextSubsets.some((s) => s.subset_id === prev) ? prev : nextSubsets[0].subset_id);
+        }
+        if (nextAlgos[0]) {
+          setAlgorithm((prev) => nextAlgos.some((a) => a.algorithm_id === prev) ? prev : nextAlgos[0].algorithm_id);
+          const defs = nextAlgos[0].params || [];
+          const ms = defs.find((p) => p.name === 'min_support')?.default;
+          const mc = defs.find((p) => p.name === 'min_confidence')?.default;
+          const mi = defs.find((p) => p.name === 'max_itemset_size')?.default;
+          if (typeof ms === 'number') setMinSupport(ms);
+          if (typeof mc === 'number') setMinConfidence(mc);
+          if (typeof mi === 'number') setMaxItemset(mi);
+        }
+      } catch (e) {
+        setApiError(e instanceof Error ? e.message : '加载子集/算法失败');
+      } finally {
+        setLoadingMeta(false);
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  // 轮询未完成任务
+  useEffect(() => {
+    const pending = tasks.filter((t) => t.status === 'queued' || t.status === 'running');
+    if (!pending.length) return undefined;
+    const timer = window.setInterval(async () => {
+      for (const t of pending) {
+        try {
+          const job = await assocRulesApi.getJob(t.id);
+          const next = jobToTask(job);
+          setTasks((prev) => prev.map((x) => (x.id === t.id ? next : x)));
+          if (next.status === 'done') {
+            try {
+              const ruleRes = await assocRulesApi.getRules(t.id, { page: 1, page_size: 20 });
+              setRules(ruleRes.rules ?? []);
+            } catch {
+              /* ignore until ready */
+            }
+          }
+        } catch {
+          /* keep previous */
+        }
+      }
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [tasks]);
+
   const tabMeta = TABS.find((t) => t.id === activeTab)!;
-  const subset = SUBSETS.find((s) => s.id === subsetId)!;
-  const algo = ALGORITHMS.find((a) => a.id === algorithm)!;
+  const subset = subsets.find((s) => s.subset_id === subsetId);
+  const algo = algorithms.find((a) => a.algorithm_id === algorithm);
 
-  const submitTask = () => {
-    const id = `t${Date.now().toString(36).slice(-4)}`;
-    const task: MiningTask = {
-      id,
-      name: `${subset.name.split('子')[0]}-${algo.name}-${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`,
-      subset: subset.name,
-      algorithm: algo.name,
-      minSupport,
-      minConfidence,
-      status: 'queued',
-      progress: 0,
-      rulesFound: null,
-      createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-    };
-    setTasks((prev) => [task, ...prev]);
-    setSubmitMsg(`已提交任务 ${task.name}，进入后台队列`);
-    setActiveTab('execute');
-    window.setTimeout(() => setSubmitMsg(''), 2800);
-
-    // 模拟排队 → 运行 → 完成
-    window.setTimeout(() => {
-      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'running', progress: 28 } : t)));
-    }, 800);
-    window.setTimeout(() => {
-      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, progress: 71 } : t)));
-    }, 1800);
-    window.setTimeout(() => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? { ...t, status: 'done', progress: 100, rulesFound: Math.floor(400 + Math.random() * 900) }
-            : t,
-        ),
-      );
-    }, 3200);
+  const submitTask = async () => {
+    if (!subsetId || !algorithm) {
+      setApiError('请先选择子集与算法');
+      return;
+    }
+    setSubmitting(true);
+    setApiError('');
+    try {
+      const created = await assocRulesApi.createJob({
+        subset_id: subsetId,
+        algorithm_id: algorithm,
+        min_support: minSupport,
+        min_confidence: minConfidence,
+        max_itemset_size: maxItemset,
+        job_name: `${subset?.name || subsetId}-${algo?.name || algorithm}`,
+      });
+      const job = await assocRulesApi.getJob(created.job_id).catch(() => ({
+        job_id: created.job_id,
+        state: created.state,
+        created_at: created.created_at,
+        subset_id: subsetId,
+        subset_name: subset?.name,
+        algorithm_id: algorithm,
+        min_support: minSupport,
+        min_confidence: minConfidence,
+        progress_pct: created.state === 'done' ? 100 : 0,
+        rules_found: null,
+      } as AssocJob));
+      const task = jobToTask(job);
+      setTasks((prev) => [task, ...prev.filter((t) => t.id !== task.id)]);
+      setSubmitMsg(`已提交任务 ${task.name}`);
+      setActiveTab('execute');
+      window.setTimeout(() => setSubmitMsg(''), 3000);
+      if (task.status === 'done') {
+        const ruleRes = await assocRulesApi.getRules(task.id, { page: 1, page_size: 20 });
+        setRules(ruleRes.rules ?? []);
+      }
+    } catch (e) {
+      setApiError(e instanceof Error ? e.message : '提交任务失败');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -186,9 +246,10 @@ export default function AssociationRuleMining({
           <div className="text-[11px] text-gray-400 mb-0.5">关联规则挖掘</div>
           <h1 className="text-xl font-semibold text-gray-900">{tabMeta.label}</h1>
           <p className="text-sm text-gray-500 mt-0.5 max-w-3xl leading-relaxed">{tabMeta.desc}</p>
+          <p className="text-[11px] text-gray-400 mt-1 font-mono truncate">API {RELATION_MEASURE_BASE}</p>
         </div>
         <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex-shrink-0">
-          审计目录专用页
+          审计目录专用页 · 真实接口
         </span>
       </div>
 
@@ -231,6 +292,12 @@ export default function AssociationRuleMining({
           {submitMsg}
         </div>
       )}
+      {apiError && (
+        <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2 flex-shrink-0">
+          <AlertCircle className="w-3.5 h-3.5" />
+          {apiError}
+        </div>
+      )}
 
       <div className="flex-1 bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden min-h-0">
         <div className="flex border-b border-gray-100 flex-shrink-0 px-2 overflow-x-auto">
@@ -252,43 +319,56 @@ export default function AssociationRuleMining({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          {/* 数据子集选择 */}
+          {loadingMeta && (
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              正在从算法服务加载子集与算法…
+            </div>
+          )}
+
           {activeTab === 'subset' && (
             <div className="flex flex-col gap-4">
               <div className="text-xs text-gray-500">
                 选择知识图谱的特定部分作为「项集」事务来源，挖掘项集—项集之间的强关联模式。
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {SUBSETS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSubsetId(s.id)}
-                    className={`text-left p-4 rounded-xl border transition-colors ${
-                      subsetId === s.id
-                        ? 'border-blue-300 bg-blue-50/60'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        <Layers className={`w-4 h-4 ${subsetId === s.id ? 'text-blue-600' : 'text-gray-400'}`} />
-                        <span className={`text-sm font-medium ${subsetId === s.id ? 'text-blue-900' : 'text-gray-900'}`}>
-                          {s.name}
-                        </span>
+              {!subsets.length && !loadingMeta ? (
+                <div className="text-center py-12 text-sm text-gray-400 border border-dashed border-gray-200 rounded-xl">
+                  暂无可用子集
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {subsets.map((s) => (
+                    <button
+                      key={s.subset_id}
+                      type="button"
+                      onClick={() => {
+                        setSubsetId(s.subset_id);
+                        if (s.recommended_min_support != null) setMinSupport(s.recommended_min_support);
+                      }}
+                      className={`text-left p-4 rounded-xl border transition-colors ${
+                        subsetId === s.subset_id
+                          ? 'border-blue-300 bg-blue-50/60'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <Layers className={`w-4 h-4 ${subsetId === s.subset_id ? 'text-blue-600' : 'text-gray-400'}`} />
+                          <span className={`text-sm font-medium ${subsetId === s.subset_id ? 'text-blue-900' : 'text-gray-900'}`}>
+                            {s.name}
+                          </span>
+                        </div>
+                        {subsetId === s.subset_id && <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />}
                       </div>
-                      {subsetId === s.id && (
-                        <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 leading-relaxed mb-3">{s.desc}</p>
-                    <div className="flex gap-3 text-[11px] text-gray-500">
-                      <span>实体 {s.entities}</span>
-                      <span>三元组 {s.triples}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                      <p className="text-xs text-gray-500 leading-relaxed mb-3">{s.description}</p>
+                      <div className="flex gap-3 text-[11px] text-gray-500">
+                        <span>实体 {formatCount(s.entity_count)}</span>
+                        <span>三元组 {formatCount(s.triple_count)}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -302,30 +382,40 @@ export default function AssociationRuleMining({
             </div>
           )}
 
-          {/* 算法参数配置 */}
           {activeTab === 'params' && (
             <div className="flex flex-col gap-5 max-w-2xl">
               <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 text-xs text-gray-600">
-                当前数据源：<span className="font-medium text-gray-800">{subset.name}</span>
-                （实体 {subset.entities} · 三元组 {subset.triples}）
+                当前数据源：
+                <span className="font-medium text-gray-800">{subset?.name || subsetId}</span>
+                {subset && (
+                  <>
+                    （实体 {formatCount(subset.entity_count)} · 三元组 {formatCount(subset.triple_count)}）
+                  </>
+                )}
               </div>
 
               <div>
                 <div className="text-xs text-gray-500 mb-2">挖掘算法</div>
                 <div className="flex flex-col gap-2">
-                  {ALGORITHMS.map((a) => (
+                  {algorithms.map((a) => (
                     <button
-                      key={a.id}
+                      key={a.algorithm_id}
                       type="button"
-                      onClick={() => setAlgorithm(a.id)}
+                      onClick={() => {
+                        setAlgorithm(a.algorithm_id);
+                        const ms = a.params?.find((p) => p.name === 'min_support')?.default;
+                        const mc = a.params?.find((p) => p.name === 'min_confidence')?.default;
+                        if (typeof ms === 'number') setMinSupport(ms);
+                        if (typeof mc === 'number') setMinConfidence(mc);
+                      }}
                       className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
-                        algorithm === a.id ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                        algorithm === a.algorithm_id ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className={`text-sm font-medium ${algorithm === a.id ? 'text-blue-800' : 'text-gray-800'}`}>
+                      <div className={`text-sm font-medium ${algorithm === a.algorithm_id ? 'text-blue-800' : 'text-gray-800'}`}>
                         {a.name}
                       </div>
-                      <div className="text-xs text-gray-400 mt-0.5">{a.desc}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{a.description}</div>
                     </button>
                   ))}
                 </div>
@@ -344,7 +434,6 @@ export default function AssociationRuleMining({
                   value={minSupport}
                   onChange={(e) => setMinSupport(Number(e.target.value))}
                 />
-                <p className="text-[11px] text-gray-400">项集在事务中出现的最低频率阈值。</p>
               </label>
 
               <label className="flex flex-col gap-1.5">
@@ -360,7 +449,6 @@ export default function AssociationRuleMining({
                   value={minConfidence}
                   onChange={(e) => setMinConfidence(Number(e.target.value))}
                 />
-                <p className="text-[11px] text-gray-400">规则前件推出后件的最低条件概率。</p>
               </label>
 
               <label className="flex flex-col gap-1.5">
@@ -398,16 +486,15 @@ export default function AssociationRuleMining({
             </div>
           )}
 
-          {/* 规则挖掘任务执行 */}
           {activeTab === 'execute' && (
             <div className="flex flex-col gap-5">
               <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-gray-50 border border-gray-100 rounded-xl">
                 <div className="text-xs text-gray-600 space-y-1">
                   <div>
-                    数据源：<span className="font-medium text-gray-800">{subset.name}</span>
+                    数据源：<span className="font-medium text-gray-800">{subset?.name || subsetId}</span>
                   </div>
                   <div>
-                    算法：<span className="font-medium text-gray-800">{algo.name}</span>
+                    算法：<span className="font-medium text-gray-800">{algo?.name || algorithm}</span>
                     {' · '}
                     support≥{minSupport.toFixed(2)}
                     {' · '}
@@ -416,77 +503,99 @@ export default function AssociationRuleMining({
                 </div>
                 <button
                   type="button"
-                  onClick={submitTask}
-                  className="flex items-center gap-2 text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-colors"
+                  onClick={() => void submitTask()}
+                  disabled={submitting}
+                  className="flex items-center gap-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-4 py-2.5 rounded-lg transition-colors"
                 >
-                  <Play className="w-4 h-4" />
-                  提交挖掘任务
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                  {submitting ? '提交中…' : '提交挖掘任务'}
                 </button>
               </div>
 
               <div>
                 <div className="text-xs text-gray-500 mb-2 uppercase tracking-wider">后台任务</div>
-                <div className="flex flex-col gap-2">
-                  {tasks.map((t) => {
-                    const meta = STATUS_META[t.status];
-                    const Icon = meta.icon;
-                    return (
-                      <div key={t.id} className="border border-gray-200 rounded-lg p-3">
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">{t.name}</div>
-                            <div className="text-[11px] text-gray-400 mt-0.5">
-                              {t.subset} · {t.algorithm} · support {t.minSupport} · confidence {t.minConfidence}
+                {!tasks.length ? (
+                  <div className="text-center py-10 text-sm text-gray-400 border border-dashed border-gray-200 rounded-xl">
+                    尚未提交任务
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {tasks.map((t) => {
+                      const meta = STATUS_META[t.status];
+                      const Icon = meta.icon;
+                      return (
+                        <div key={t.id} className="border border-gray-200 rounded-lg p-3">
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">{t.name}</div>
+                              <div className="text-[11px] text-gray-400 mt-0.5">
+                                {t.subset} · {t.algorithm} · support {t.minSupport} · confidence {t.minConfidence}
+                              </div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">{t.id}</div>
                             </div>
+                            <span className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full flex-shrink-0 ${meta.className}`}>
+                              <Icon className={`w-3 h-3 ${t.status === 'running' ? 'animate-spin' : ''}`} />
+                              {meta.label}
+                            </span>
                           </div>
-                          <span className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full flex-shrink-0 ${meta.className}`}>
-                            <Icon className={`w-3 h-3 ${t.status === 'running' ? 'animate-spin' : ''}`} />
-                            {meta.label}
-                          </span>
-                        </div>
-                        {t.status === 'running' && (
-                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-                            <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${t.progress}%` }} />
+                          {(t.status === 'running' || t.status === 'queued') && (
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
+                              <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${t.progress}%` }} />
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between text-[11px] text-gray-400">
+                            <span>{t.createdAt || '—'}</span>
+                            <span>
+                              {t.rulesFound != null
+                                ? `发现规则 ${t.rulesFound.toLocaleString()} 条`
+                                : t.status === 'running'
+                                  ? `进度 ${t.progress}%`
+                                  : '等待调度'}
+                            </span>
                           </div>
-                        )}
-                        <div className="flex items-center justify-between text-[11px] text-gray-400">
-                          <span>{t.createdAt}</span>
-                          <span>
-                            {t.rulesFound != null ? `发现规则 ${t.rulesFound.toLocaleString()} 条` : t.status === 'running' ? `进度 ${t.progress}%` : '等待调度'}
-                          </span>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div>
-                <div className="text-xs text-gray-500 mb-2 uppercase tracking-wider">示例规则输出（已完成任务）</div>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        {['前件（项集）', '后件（项集）', '支持度', '置信度', '提升度'].map((h) => (
-                          <th key={h} className="text-left px-3 py-2.5 text-gray-500 font-medium border-b border-gray-200">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {SAMPLE_RULES.map((r, i) => (
-                        <tr key={i} className="border-b border-gray-50">
-                          <td className="px-3 py-2.5 font-mono text-gray-700">{r.ante}</td>
-                          <td className="px-3 py-2.5 font-mono text-gray-700">{r.cons}</td>
-                          <td className="px-3 py-2.5">{r.support.toFixed(2)}</td>
-                          <td className="px-3 py-2.5 text-blue-700 font-medium">{r.confidence.toFixed(2)}</td>
-                          <td className="px-3 py-2.5">{r.lift.toFixed(1)}</td>
+                <div className="text-xs text-gray-500 mb-2 uppercase tracking-wider">规则结果</div>
+                {!rules.length ? (
+                  <div className="text-center py-8 text-sm text-gray-400 border border-dashed border-gray-200 rounded-xl">
+                    任务完成后将展示规则列表
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          {['前件（项集）', '后件（项集）', '支持度', '置信度', '提升度'].map((h) => (
+                            <th key={h} className="text-left px-3 py-2.5 text-gray-500 font-medium border-b border-gray-200">
+                              {h}
+                            </th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {rules.map((r) => (
+                          <tr key={r.rule_id} className="border-b border-gray-50">
+                            <td className="px-3 py-2.5 font-mono text-gray-700">
+                              {r.antecedent_display || `{${r.antecedent.join(', ')}}`}
+                            </td>
+                            <td className="px-3 py-2.5 font-mono text-gray-700">
+                              {r.consequent_display || `{${r.consequent.join(', ')}}`}
+                            </td>
+                            <td className="px-3 py-2.5">{r.support.toFixed(3)}</td>
+                            <td className="px-3 py-2.5 text-blue-700 font-medium">{r.confidence.toFixed(3)}</td>
+                            <td className="px-3 py-2.5">{r.lift.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
