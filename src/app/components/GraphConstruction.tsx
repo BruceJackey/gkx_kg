@@ -638,11 +638,44 @@ export default function GraphConstruction({
 
     // ── 策略配置 ──
     if (activeTab === 'threshold') return (
-      <div className="max-w-2xl space-y-4">
+      <div className="w-full max-w-6xl mx-auto space-y-5">
+        <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-white to-violet-50 px-5 py-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                <SlidersHorizontal className="w-4 h-4 text-blue-600" />
+                策略配置工作台
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                按「抽取模型 → 规则挖掘 → 多策略融合 → 结果分流」完成配置，最后指定审核员与知识补全策略。
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+              {[
+                { label: '抽取模型', value: MODEL_OPTIONS.find(m => m.value === extractModel)?.label ?? extractModel },
+                { label: '预计候选', value: `${estimatedRules} 条` },
+                { label: '采纳阈值', value: `${threshold}%` },
+              ].map(item => (
+                <div key={item.label} className="min-w-[108px] rounded-xl border border-white bg-white/90 px-3 py-2 shadow-sm">
+                  <div className="text-[10px] text-gray-400">{item.label}</div>
+                  <div className="mt-0.5 truncate text-xs font-semibold text-gray-800">{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
 
         {/* 基于统计学习的抽取策略 */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <div className="text-sm font-semibold text-gray-800 mb-3">基于统计学习的抽取策略</div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-5">
+          <div className="mb-4 flex items-center gap-3 border-b border-gray-100 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold text-blue-700">01</span>
+            <div>
+              <div className="text-sm font-semibold text-gray-800">抽取模型</div>
+              <div className="text-[11px] text-gray-400">基于统计学习的抽取策略</div>
+            </div>
+          </div>
           <div className="space-y-2.5">
             {MODEL_OPTIONS.map(opt => {
               const selected = extractModel === opt.value;
@@ -685,10 +718,17 @@ export default function GraphConstruction({
         {/* 句法增强表示模块 */}
         <div
           id="gc-strategy-syntax"
-          className={`bg-white border rounded-xl p-5 ${
-            initialStrategyFocus === 'syntax' ? 'border-blue-300 ring-1 ring-blue-100' : 'border-gray-200'
+          className={`rounded-2xl border bg-white p-5 shadow-sm xl:col-span-7 ${
+            initialStrategyFocus === 'syntax' ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'
           }`}
         >
+          <div className="mb-4 flex items-center gap-3 border-b border-gray-100 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-xs font-bold text-indigo-700">02</span>
+            <div>
+              <div className="text-sm font-semibold text-gray-800">表示增强</div>
+              <div className="text-[11px] text-gray-400">句法结构特征开关与能力范围</div>
+            </div>
+          </div>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -739,7 +779,14 @@ export default function GraphConstruction({
         </div>
 
         {/* 挖掘算法核心参数 */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-7">
+          <div className="mb-4 flex items-center gap-3 border-b border-gray-100 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-50 text-xs font-bold text-cyan-700">03</span>
+            <div>
+              <div className="text-sm font-semibold text-gray-800">规则挖掘</div>
+              <div className="text-[11px] text-gray-400">算法与候选规则保留条件</div>
+            </div>
+          </div>
           <div className="flex items-center justify-between mb-1">
             <div className="text-sm font-semibold text-gray-800">挖掘算法参数</div>
             <span className="text-xs px-2.5 py-1 rounded-full font-medium border bg-slate-50 text-slate-600 border-slate-200">
@@ -873,7 +920,14 @@ export default function GraphConstruction({
         </div>
 
         {/* 多策略融合识别 */}
-        <div id="gc-strategy-fusion" className="bg-white border border-gray-200 rounded-xl p-5">
+        <div id="gc-strategy-fusion" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-5">
+          <div className="mb-4 flex items-center gap-3 border-b border-gray-100 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-xs font-bold text-violet-700">04</span>
+            <div>
+              <div className="text-sm font-semibold text-gray-800">策略融合</div>
+              <div className="text-[11px] text-gray-400">规则、词典与模型结果加权</div>
+            </div>
+          </div>
           <div className="flex items-center justify-between mb-4">
             <div className="text-sm font-semibold text-gray-800">多策略融合识别</div>
             <div className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
@@ -958,7 +1012,14 @@ export default function GraphConstruction({
         </div>
 
         {/* 审核员配置 */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-5">
+          <div className="mb-4 flex items-center gap-3 border-b border-gray-100 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-xs font-bold text-amber-700">05</span>
+            <div>
+              <div className="text-sm font-semibold text-gray-800">人工复核</div>
+              <div className="text-[11px] text-gray-400">配置任务审核人与协作范围</div>
+            </div>
+          </div>
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <Users className="w-4 h-4 text-blue-600" />审核员配置
@@ -1014,7 +1075,14 @@ export default function GraphConstruction({
         </div>
 
         {/* 综合置信度阈值 */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-7">
+          <div className="mb-4 flex items-center gap-3 border-b border-gray-100 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-xs font-bold text-emerald-700">06</span>
+            <div>
+              <div className="text-sm font-semibold text-gray-800">结果分流</div>
+              <div className="text-[11px] text-gray-400">自动采纳与人工审核阈值</div>
+            </div>
+          </div>
           <div className="flex items-center justify-between mb-4">
             <div className="text-sm font-semibold text-gray-800">综合置信度阈值</div>
             <div className={`text-xl font-bold tabular-nums ${thresholdColor}`}>{threshold}%</div>
@@ -1053,7 +1121,14 @@ export default function GraphConstruction({
         </div>
 
         {/* 知识补全配置 */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-12">
+          <div className="mb-4 flex items-center gap-3 border-b border-gray-100 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-fuchsia-50 text-xs font-bold text-fuchsia-700">07</span>
+            <div>
+              <div className="text-sm font-semibold text-gray-800">知识补全</div>
+              <div className="text-[11px] text-gray-400">构造完成后的可选增强流程</div>
+            </div>
+          </div>
           <div className="flex items-start justify-between gap-4 mb-1">
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
@@ -1079,8 +1154,8 @@ export default function GraphConstruction({
             </span>
           </div>
 
-          <div className={`space-y-2.5 ${enableKnowledgeCompletion ? '' : 'opacity-45 pointer-events-none'}`}>
-            <div className="text-xs font-medium text-gray-600 mb-1">补全大模型</div>
+          <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 ${enableKnowledgeCompletion ? '' : 'opacity-45 pointer-events-none'}`}>
+            <div className="col-span-full text-xs font-medium text-gray-600">补全大模型</div>
             {COMPLETION_MODEL_OPTIONS.map(opt => {
               const selected = completionModel === opt.value;
               return (
@@ -1116,6 +1191,7 @@ export default function GraphConstruction({
               );
             })}
           </div>
+        </div>
         </div>
       </div>
     );

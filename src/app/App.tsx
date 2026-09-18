@@ -68,6 +68,7 @@ import RuleMappedInstanceWorkbench from './components/RuleMappedInstanceWorkbenc
 import ScoringFunctionWorkbench from './components/ScoringFunctionWorkbench';
 import HeterogeneousMultimodalFusion from './components/HeterogeneousMultimodalFusion';
 import MultimodalFeatureFusion from './components/MultimodalFeatureFusion';
+import AdversarialTransferKgc from './components/AdversarialTransferKgc';
 import RLFrameworkIntegration from './components/RLFrameworkIntegration';
 import FewShotTripleGeneration from './components/FewShotTripleGeneration';
 import AuxiliaryInfoEncoding from './components/AuxiliaryInfoEncoding';
@@ -157,6 +158,7 @@ import {
   resolveScoringFunctionFocus,
   resolveHeterogeneousFusionFocus,
   resolveMultimodalFeatureFusionFocus,
+  resolveAdversarialTransferFocus,
   resolveRLFrameworkFocus,
   resolveFewShotTripleFocus,
   resolveAuxiliaryInfoFocus,
@@ -259,6 +261,7 @@ import {
   type ScoringFunctionFocus,
   type HeterogeneousFusionFocus,
   type MultimodalFeatureFusionFocus,
+  type AdversarialTransferFocus,
   type RLFrameworkFocus,
   type FewShotTripleFocus,
   type AuxiliaryInfoFocus,
@@ -362,6 +365,8 @@ export default function App() {
   const [heterogeneousFusionFocus, setHeterogeneousFusionFocus] = useState<HeterogeneousFusionFocus | null>(null);
   const [multimodalFeatureFusionFocus, setMultimodalFeatureFusionFocus] =
     useState<MultimodalFeatureFusionFocus | null>(null);
+  const [adversarialTransferFocus, setAdversarialTransferFocus] =
+    useState<AdversarialTransferFocus | null>(null);
   const [rlFrameworkFocus, setRLFrameworkFocus] = useState<RLFrameworkFocus | null>(null);
   const [fewShotTripleFocus, setFewShotTripleFocus] = useState<FewShotTripleFocus | null>(null);
   const [auxiliaryInfoFocus, setAuxiliaryInfoFocus] = useState<AuxiliaryInfoFocus | null>(null);
@@ -448,6 +453,7 @@ export default function App() {
     setScoringFunctionFocus(null);
     setHeterogeneousFusionFocus(null);
     setMultimodalFeatureFusionFocus(null);
+    setAdversarialTransferFocus(null);
     setRLFrameworkFocus(null);
     setFewShotTripleFocus(null);
     setAuxiliaryInfoFocus(null);
@@ -499,7 +505,7 @@ export default function App() {
   const handleAuditFeatureSelect = (feature: AuditFeatureSelection, pageId: string | null) => {
     setSelectedAuditFeature(feature);
     // 审计专用独立页优先（不与产品页共用）
-    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'high-performance-inference-kernel' || pageId === 'fact-change-listening' || pageId === 'inference-task-management' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'future-state-prediction' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'patent-module-decomposition' || pageId === 'patent-literature-match' || pageId === 'similarity-computation-engine' || pageId === 'kg-integrated-workbench' || pageId === 'corpus-selection-config' || pageId === 'context-pattern-extraction-engine' || pageId === 'pattern-preview-management' || pageId === 'pattern-application-engine' || pageId === 'new-instance-extraction' || pageId === 'instance-confidence-evaluation' || pageId === 'pending-instance-review' || pageId === 'entity-alignment-disambiguation' || pageId === 'batch-instance-ingest' || pageId === 'rule-learning-workbench' || pageId === 'rule-mapped-instance' || pageId === 'scoring-function-workbench' || pageId === 'heterogeneous-multimodal-fusion' || pageId === 'multimodal-feature-fusion' || pageId === 'rl-framework-integration' || pageId === 'few-shot-triple-generation' || pageId === 'auxiliary-info-encoding' || pageId === 'dual-factor-rank' || pageId === 'term-confidence-graph' || pageId === 'quadruple-structure' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation' || pageId === 'literature-processing' || pageId === 'patent-processing' || pageId === 'relation-measure-ranking' || pageId === 'association-rule-mining' || pageId === 'rule-filter-apply' || pageId === 'rule-apply-api') {
+    if (pageId === 'interactive-review-adoption' || pageId === 'concept-cooccurrence-index' || pageId === 'hypernym-generation-audit' || pageId === 'knowledge-consistency-validation' || pageId === 'high-performance-inference-kernel' || pageId === 'fact-change-listening' || pageId === 'inference-task-management' || pageId === 'api-integration-inference' || pageId === 'time-entity-normalization' || pageId === 'future-state-prediction' || pageId === 'temporal-relation-audit' || pageId === 'literature-multidim-parse' || pageId === 'patent-technical-parse' || pageId === 'patent-module-decomposition' || pageId === 'patent-literature-match' || pageId === 'similarity-computation-engine' || pageId === 'kg-integrated-workbench' || pageId === 'corpus-selection-config' || pageId === 'context-pattern-extraction-engine' || pageId === 'pattern-preview-management' || pageId === 'pattern-application-engine' || pageId === 'new-instance-extraction' || pageId === 'instance-confidence-evaluation' || pageId === 'pending-instance-review' || pageId === 'entity-alignment-disambiguation' || pageId === 'batch-instance-ingest' || pageId === 'rule-learning-workbench' || pageId === 'rule-mapped-instance' || pageId === 'scoring-function-workbench' || pageId === 'heterogeneous-multimodal-fusion' || pageId === 'multimodal-feature-fusion' || pageId === 'adversarial-transfer-kgc' || pageId === 'rl-framework-integration' || pageId === 'few-shot-triple-generation' || pageId === 'auxiliary-info-encoding' || pageId === 'dual-factor-rank' || pageId === 'term-confidence-graph' || pageId === 'quadruple-structure' || pageId === 'local-learning-annotator' || pageId === 'event-annotation-mgmt' || pageId === 'event-ingest-workflow' || pageId === 'entity-attr-api' || pageId === 'text-highlight-seed' || pageId === 'mapping-transform-fn' || pageId === 'attribute-precise-extract' || pageId === 'multi-format-lit-parse' || pageId === 'multimodal-content-transcribe' || pageId === 'llm-semantic-refine' || pageId === 'sci-core-tuple-extract' || pageId === 'standard-graph-api' || pageId === 'upper-intelligent-tools' || pageId === 'text-instance-matching' || pageId === 'structure-instance-matching' || pageId === 'instance-feature-engineering' || pageId === 'text-entity-recognition' || pageId === 'candidate-entity-generation' || pageId === 'entity-link-judgment' || pageId === 'link-annotation-mapping' || pageId === 'cross-lingual-instance-matching' || pageId === 'cross-lingual-query-fusion' || pageId === 'cross-lingual-attribute-alignment' || pageId === 'cross-lingual-kb-alignment' || pageId === 'entity-matching-disambiguation' || pageId === 'literature-processing' || pageId === 'patent-processing' || pageId === 'relation-measure-ranking' || pageId === 'association-rule-mining' || pageId === 'rule-filter-apply' || pageId === 'rule-apply-api') {
       if (pageId === 'temporal-relation-audit') {
         setTemporalAuditMode(resolveTemporalAuditMode(feature.pagePath) ?? 'extraction');
       }
@@ -535,6 +541,9 @@ export default function App() {
       }
       if (pageId === 'multimodal-feature-fusion') {
         setMultimodalFeatureFusionFocus(resolveMultimodalFeatureFusionFocus(feature.pagePath) ?? 'coattn');
+      }
+      if (pageId === 'adversarial-transfer-kgc') {
+        setAdversarialTransferFocus(resolveAdversarialTransferFocus(feature.pagePath) ?? 'transfer');
       }
       if (pageId === 'rl-framework-integration') {
         setRLFrameworkFocus(resolveRLFrameworkFocus(feature.pagePath) ?? 'env');
@@ -1233,6 +1242,13 @@ export default function App() {
           <MultimodalFeatureFusion
             key={multimodalFeatureFusionFocus ?? 'coattn'}
             initialFocus={multimodalFeatureFusionFocus ?? 'coattn'}
+          />
+        );
+      case 'adversarial-transfer-kgc':
+        return (
+          <AdversarialTransferKgc
+            key={adversarialTransferFocus ?? 'transfer'}
+            initialFocus={adversarialTransferFocus ?? 'transfer'}
           />
         );
       case 'rl-framework-integration':

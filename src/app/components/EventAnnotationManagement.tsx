@@ -1,67 +1,120 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Plus, Play, Users, BarChart3, CheckCircle2, Loader2, RefreshCw,
-  Upload, FileText, Database, ChevronRight,
+  Upload, FileText, Database, ChevronRight, Tag,
 } from 'lucide-react';
 
 export type EventAnnotationMgmtTab = 'projects' | 'training';
 
-/** 待标注事件固定格式（JSONL 每行一条） */
+/** 与算法接口 events:annotate 对齐的标注结构（本地模拟） */
+interface EventAnnotation {
+  eventType: string;
+  trigger: string;
+  arguments: Record<string, string>;
+}
+
+/** 待标注事件：上传 JSONL 仍用 snake_case；内部展示用 camelCase 对齐详情接口 */
 interface PendingEvent {
-  event_id: string;
-  doc_id: string;
+  eventId: string;
+  docId: string;
   text: string;
   status: 'pending' | 'annotated';
-  annotation?: {
-    event_type: string;
-    trigger: string;
-    arguments: Record<string, string>;
-  };
+  annotation?: EventAnnotation;
 }
 
 interface AnnProject {
-  id: string;
+  projectId: string;
   name: string;
   assignees: string[];
   events: PendingEvent[];
   status: '待分配' | '进行中' | '已完成';
   createdAt: string;
   datasetId?: string;
+  classes: string[];
 }
+
+/** 对齐 POST …/events:annotate 请求体中的单条 annotation */
+type AnnotateItem = {
+  eventId: string;
+  eventType: string;
+  trigger: string;
+  arguments: Record<string, string>;
+};
 
 const EVENT_FORMAT_SAMPLE = `{"event_id":"evt-001","doc_id":"doc-001","text":"2024年3月，该公司完成了A轮融资，融资金额5000万元。"}
 {"event_id":"evt-002","doc_id":"doc-001","text":"融资完成后，团队规模迅速扩张，并于同年6月正式发布了首款产品。"}
 {"event_id":"evt-003","doc_id":"doc-002","text":"产品发布后的两个月内，用户数量突破了百万大关。"}`;
 
 const SAMPLE_EVENTS: PendingEvent[] = [
-  { event_id: 'evt-001', doc_id: 'doc-001', text: '2024年3月，该公司完成了A轮融资，融资金额5000万元。', status: 'annotated', annotation: { event_type: '投融资', trigger: '完成', arguments: { 金额: '5000万元', 轮次: 'A轮' } } },
-  { event_id: 'evt-002', doc_id: 'doc-001', text: '融资完成后，团队规模迅速扩张，并于同年6月正式发布了首款产品。', status: 'annotated', annotation: { event_type: '产品发布', trigger: '发布', arguments: { 产品: '首款产品' } } },
-  { event_id: 'evt-003', doc_id: 'doc-002', text: '产品发布后的两个月内，用户数量突破了百万大关。', status: 'pending' },
-  { event_id: 'evt-004', doc_id: 'doc-002', text: 'CEO在发布会上宣布将与三家头部企业达成战略合作。', status: 'pending' },
-  { event_id: 'evt-005', doc_id: 'doc-003', text: '公司获得ISO 27001信息安全管理体系认证。', status: 'pending' },
+  {
+    eventId: 'evt-001',
+    docId: 'doc-001',
+    text: '2024年3月，该公司完成了A轮融资，融资金额5000万元。',
+    status: 'annotated',
+    annotation: { eventType: '投融资', trigger: '融资', arguments: { 金额: '5000万元', 轮次: 'A轮' } },
+  },
+  {
+    eventId: 'evt-002',
+    docId: 'doc-001',
+    text: '融资完成后，团队规模迅速扩张，并于同年6月正式发布了首款产品。',
+    status: 'annotated',
+    annotation: { eventType: '产品发布', trigger: '发布', arguments: { 产品: '首款产品' } },
+  },
+  {
+    eventId: 'evt-003',
+    docId: 'doc-002',
+    text: '产品发布后的两个月内，用户数量突破了百万大关。',
+    status: 'pending',
+  },
+  {
+    eventId: 'evt-004',
+    docId: 'doc-002',
+    text: 'CEO在发布会上宣布将与三家头部企业达成战略合作。',
+    status: 'pending',
+  },
+  {
+    eventId: 'evt-005',
+    docId: 'doc-003',
+    text: '公司获得ISO 27001信息安全管理体系认证。',
+    status: 'pending',
+  },
 ];
 
 const INITIAL_PROJECTS: AnnProject[] = [
   {
-    id: 'P001',
+    projectId: 'P001',
     name: '产品发布事件标注',
     assignees: ['张三', '王研'],
-    events: SAMPLE_EVENTS.map((e) => ({ ...e })),
+    events: SAMPLE_EVENTS.map((e) => ({ ...e, annotation: e.annotation ? { ...e.annotation, arguments: { ...e.annotation.arguments } } : undefined })),
     status: '进行中',
     createdAt: '2026-08-20',
     datasetId: 'ds-p001',
+    classes: ['投融资', '产品发布'],
   },
   {
-    id: 'P002',
+    projectId: 'P002',
     name: '投融资事件标注',
     assignees: ['赵六'],
     events: [
-      { event_id: 'evt-101', doc_id: 'doc-010', text: '字节跳动宣布完成新一轮战略融资。', status: 'annotated', annotation: { event_type: '投融资', trigger: '融资', arguments: { 主体: '字节跳动' } } },
-      { event_id: 'evt-102', doc_id: 'doc-011', text: '该轮融资由红杉资本领投。', status: 'annotated', annotation: { event_type: '投融资', trigger: '领投', arguments: { 投资方: '红杉资本' } } },
+      {
+        eventId: 'evt-101',
+        docId: 'doc-010',
+        text: '字节跳动宣布完成新一轮战略融资。',
+        status: 'annotated',
+        annotation: { eventType: '投融资', trigger: '融资', arguments: { 主体: '字节跳动' } },
+      },
+      {
+        eventId: 'evt-102',
+        docId: 'doc-011',
+        text: '该轮融资由红杉资本领投。',
+        status: 'annotated',
+        annotation: { eventType: '投融资', trigger: '领投', arguments: { 投资方: '红杉资本' } },
+      },
     ],
     status: '已完成',
     createdAt: '2026-08-10',
     datasetId: 'ds-p002',
+    classes: ['投融资'],
   },
 ];
 
@@ -73,11 +126,13 @@ function parseEventJsonl(raw: string): PendingEvent[] {
   for (const line of lines) {
     try {
       const obj = JSON.parse(line);
-      if (obj.event_id && obj.text) {
+      const eventId = obj.eventId ?? obj.event_id;
+      const text = obj.text;
+      if (eventId && text) {
         events.push({
-          event_id: String(obj.event_id),
-          doc_id: String(obj.doc_id ?? 'doc-unknown'),
-          text: String(obj.text),
+          eventId: String(eventId),
+          docId: String(obj.docId ?? obj.doc_id ?? 'doc-unknown'),
+          text: String(text),
           status: 'pending',
         });
       }
@@ -91,6 +146,40 @@ function parseEventJsonl(raw: string): PendingEvent[] {
 function projectProgress(p: AnnProject) {
   const done = p.events.filter((e) => e.status === 'annotated').length;
   return { done, total: p.events.length, pct: p.events.length ? Math.round((done / p.events.length) * 100) : 0 };
+}
+
+function collectClasses(events: PendingEvent[]): string[] {
+  const set = new Set<string>();
+  for (const e of events) {
+    if (e.annotation?.eventType) set.add(e.annotation.eventType);
+  }
+  return Array.from(set);
+}
+
+/** 本地模拟：等价于 POST /api/v1/events/projects/{id}/events:annotate */
+function applyAnnotate(project: AnnProject, annotations: AnnotateItem[]): AnnProject {
+  const byId = new Map(annotations.map((a) => [a.eventId, a]));
+  const events = project.events.map((e) => {
+    const ann = byId.get(e.eventId);
+    if (!ann) return e;
+    return {
+      ...e,
+      status: 'annotated' as const,
+      annotation: {
+        eventType: ann.eventType,
+        trigger: ann.trigger,
+        arguments: { ...ann.arguments },
+      },
+    };
+  });
+  const { done, total } = { done: events.filter((x) => x.status === 'annotated').length, total: events.length };
+  const status: AnnProject['status'] = done >= total && total > 0 ? '已完成' : project.status === '待分配' ? '进行中' : project.status;
+  return {
+    ...project,
+    events,
+    classes: collectClasses(events),
+    status,
+  };
 }
 
 function ProjectsPanel({
@@ -110,7 +199,15 @@ function ProjectsPanel({
   const [uploadFileName, setUploadFileName] = useState<string | null>(null);
   const [parseError, setParseError] = useState('');
 
-  const selected = projects.find((p) => p.id === selectedId) ?? null;
+  const [annotatingId, setAnnotatingId] = useState<string | null>(null);
+  const [eventType, setEventType] = useState('');
+  const [trigger, setTrigger] = useState('');
+  const [argKey, setArgKey] = useState('');
+  const [argVal, setArgVal] = useState('');
+  const [argPairs, setArgPairs] = useState<Array<{ key: string; value: string }>>([]);
+  const [formError, setFormError] = useState('');
+
+  const selected = projects.find((p) => p.projectId === selectedId) ?? null;
 
   const toggleAssignee = (t: string) => {
     setAssignees((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -120,8 +217,7 @@ function ProjectsPanel({
     setUploadFileName(file.name);
     const reader = new FileReader();
     reader.onload = () => {
-      const text = String(reader.result ?? '');
-      setUploadRaw(text);
+      setUploadRaw(String(reader.result ?? ''));
       setParseError('');
     };
     reader.readAsText(file);
@@ -134,62 +230,71 @@ function ProjectsPanel({
       return;
     }
     if (!name.trim()) return;
-    const id = `P${String(projects.length + 1).padStart(3, '0')}`;
+    const projectId = `P${String(projects.length + 1).padStart(3, '0')}`;
     const project: AnnProject = {
-      id,
+      projectId,
       name: name.trim(),
       assignees: assignees.length ? assignees : [TRAINERS[0]],
       events,
       status: assignees.length ? '进行中' : '待分配',
       createdAt: new Date().toISOString().slice(0, 10),
+      classes: [],
     };
     setProjects((prev) => [project, ...prev]);
-    setSelectedId(id);
+    setSelectedId(projectId);
     setName('');
     setUploadRaw('');
     setUploadFileName(null);
     setParseError('');
   };
 
-  const simulateAnnotate = (projectId: string, count = 1) => {
+  const startAnnotate = (ev: PendingEvent) => {
+    setAnnotatingId(ev.eventId);
+    setEventType(ev.annotation?.eventType ?? '');
+    setTrigger(ev.annotation?.trigger ?? '');
+    const args = ev.annotation?.arguments ?? {};
+    setArgPairs(Object.entries(args).map(([key, value]) => ({ key, value })));
+    setArgKey('');
+    setArgVal('');
+    setFormError('');
+  };
+
+  const submitAnnotate = () => {
+    if (!selected || !annotatingId) return;
+    if (!eventType.trim() || !trigger.trim()) {
+      setFormError('请填写事件类型 eventType（自定义类）与触发词 trigger');
+      return;
+    }
+    const argumentsMap: Record<string, string> = {};
+    for (const pair of argPairs) {
+      if (pair.key.trim()) argumentsMap[pair.key.trim()] = pair.value;
+    }
+    // 模拟算法请求体：{ annotations: [{ eventId, eventType, trigger, arguments }] }
+    const payload: AnnotateItem = {
+      eventId: annotatingId,
+      eventType: eventType.trim(),
+      trigger: trigger.trim(),
+      arguments: argumentsMap,
+    };
     setProjects((prev) =>
-      prev.map((p) => {
-        if (p.id !== projectId) return p;
-        let remaining = count;
-        const events = p.events.map((e) => {
-          if (remaining <= 0 || e.status === 'annotated') return e;
-          remaining -= 1;
-          return {
-            ...e,
-            status: 'annotated' as const,
-            annotation: {
-              event_type: '待审核类型',
-              trigger: e.text.slice(0, 6),
-              arguments: { 来源: e.doc_id },
-            },
-          };
-        });
-        const { done, total } = { done: events.filter((e) => e.status === 'annotated').length, total: events.length };
-        const status = done >= total ? '已完成' : p.status === '待分配' ? '进行中' : p.status;
-        const datasetId = done >= total ? `ds-${p.id.toLowerCase()}` : p.datasetId;
-        return { ...p, events, status, datasetId };
-      }),
+      prev.map((p) => (p.projectId === selected.projectId ? applyAnnotate(p, [payload]) : p)),
     );
+    setAnnotatingId(null);
+    setFormError('');
   };
 
   const exportDataset = (projectId: string) => {
     setProjects((prev) =>
       prev.map((p) => {
-        if (p.id !== projectId) return p;
-        return { ...p, datasetId: p.datasetId ?? `ds-${p.id.toLowerCase()}` };
+        if (p.projectId !== projectId) return p;
+        return { ...p, datasetId: p.datasetId ?? `ds-${p.projectId.toLowerCase()}` };
       }),
     );
   };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4">
+    <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-4">
       <div className="space-y-4">
-        {/* 创建项目 + 上传 */}
         <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
           <div className="text-sm font-semibold text-gray-800">创建标注项目 · 上传待标注事件</div>
 
@@ -276,7 +381,6 @@ function ProjectsPanel({
           </button>
         </div>
 
-        {/* 项目列表 */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2 bg-gray-50">
             <Users className="w-4 h-4 text-blue-600" />
@@ -297,13 +401,16 @@ function ProjectsPanel({
                 const { done, total, pct } = projectProgress(p);
                 return (
                   <tr
-                    key={p.id}
-                    className={`cursor-pointer hover:bg-gray-50 ${selectedId === p.id ? 'bg-blue-50/50' : ''}`}
-                    onClick={() => setSelectedId(p.id)}
+                    key={p.projectId}
+                    className={`cursor-pointer hover:bg-gray-50 ${selectedId === p.projectId ? 'bg-blue-50/50' : ''}`}
+                    onClick={() => setSelectedId(p.projectId)}
                   >
                     <td className="px-4 py-3">
                       <div className="font-medium text-gray-800">{p.name}</div>
-                      <div className="text-[11px] text-gray-400">{p.id} · {total} 条事件</div>
+                      <div className="text-[11px] text-gray-400">
+                        {p.projectId} · {total} 条
+                        {p.classes.length ? ` · 类：${p.classes.join('、')}` : ''}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-gray-600 text-xs">{p.assignees.join('、')}</td>
                     <td className="px-4 py-3">
@@ -340,47 +447,149 @@ function ProjectsPanel({
         </div>
       </div>
 
-      {/* 右侧：选中项目详情 */}
       <div className="bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden min-h-[320px]">
         <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 text-sm font-semibold text-gray-800">
           {selected ? selected.name : '选择项目查看事件'}
         </div>
         {selected ? (
           <>
-            <div className="px-4 py-2 flex gap-2 border-b border-gray-100">
-              <button
-                type="button"
-                onClick={() => simulateAnnotate(selected.id, 1)}
-                className="text-xs px-2.5 py-1 bg-blue-600 text-white rounded-lg"
-              >
-                模拟标注 +1
-              </button>
+            <div className="px-4 py-2 flex flex-wrap gap-2 border-b border-gray-100 items-center">
+              <code className="text-[10px] text-gray-400 font-mono">
+                模拟 POST …/events:annotate
+              </code>
               {projectProgress(selected).done > 0 && (
                 <button
                   type="button"
-                  onClick={() => exportDataset(selected.id)}
-                  className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-700 flex items-center gap-1"
+                  onClick={() => exportDataset(selected.projectId)}
+                  className="ml-auto text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-700 flex items-center gap-1"
                 >
                   <Database className="w-3 h-3" />
                   生成训练数据集
                 </button>
               )}
             </div>
+
+            {annotatingId && (
+              <div className="px-4 py-3 border-b border-blue-100 bg-blue-50/40 space-y-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-800">
+                  <Tag className="w-3.5 h-3.5" />
+                  标注自定义类 · {annotatingId}
+                </div>
+                <p className="text-[10px] text-blue-700/80 font-mono">
+                  {`{"eventId","eventType","trigger","arguments"}`}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-[11px] text-gray-600 space-y-1">
+                    <span>事件类型 eventType</span>
+                    <input
+                      value={eventType}
+                      onChange={(e) => setEventType(e.target.value)}
+                      placeholder="如：投融资"
+                      className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs bg-white"
+                    />
+                  </label>
+                  <label className="text-[11px] text-gray-600 space-y-1">
+                    <span>触发词 trigger</span>
+                    <input
+                      value={trigger}
+                      onChange={(e) => setTrigger(e.target.value)}
+                      placeholder="如：融资"
+                      className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs bg-white"
+                    />
+                  </label>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="text-[11px] text-gray-600">论元 arguments</div>
+                  {argPairs.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {argPairs.map((pair, i) => (
+                        <button
+                          key={`${pair.key}-${i}`}
+                          type="button"
+                          onClick={() => setArgPairs((prev) => prev.filter((_, j) => j !== i))}
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-white border border-gray-200 text-gray-600"
+                          title="点击移除"
+                        >
+                          {pair.key}={pair.value} ×
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-1.5">
+                    <input
+                      value={argKey}
+                      onChange={(e) => setArgKey(e.target.value)}
+                      placeholder="角色"
+                      className="w-20 border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
+                    />
+                    <input
+                      value={argVal}
+                      onChange={(e) => setArgVal(e.target.value)}
+                      placeholder="文本"
+                      className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!argKey.trim()) return;
+                        setArgPairs((prev) => [...prev, { key: argKey.trim(), value: argVal }]);
+                        setArgKey('');
+                        setArgVal('');
+                      }}
+                      className="text-xs px-2 py-1 border border-gray-200 rounded-md bg-white"
+                    >
+                      添加
+                    </button>
+                  </div>
+                </div>
+                {formError && <p className="text-xs text-red-600">{formError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={submitAnnotate}
+                    className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg"
+                  >
+                    提交标注（模拟）
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnnotatingId(null)}
+                    className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
+
             <ul className="flex-1 overflow-y-auto divide-y divide-gray-50 text-xs">
               {selected.events.map((e) => (
-                <li key={e.event_id} className="px-4 py-2.5">
+                <li key={e.eventId} className="px-4 py-2.5">
                   <div className="flex items-center gap-2 mb-1">
-                    <code className="text-[10px] text-gray-400">{e.event_id}</code>
+                    <code className="text-[10px] text-gray-400">{e.eventId}</code>
                     <span className={`text-[10px] px-1 py-0.5 rounded ${
                       e.status === 'annotated' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                     }`}>
                       {e.status === 'annotated' ? '已标注' : '待标注'}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => startAnnotate(e)}
+                      className="ml-auto text-[10px] text-blue-600 hover:underline"
+                    >
+                      {e.status === 'annotated' ? '修改标注' : '标注'}
+                    </button>
                   </div>
                   <p className="text-gray-700 leading-relaxed">{e.text}</p>
                   {e.annotation && (
                     <p className="text-gray-500 mt-1">
-                      {e.annotation.event_type} · 触发词「{e.annotation.trigger}」
+                      {e.annotation.eventType} · 触发词「{e.annotation.trigger}」
+                      {Object.keys(e.annotation.arguments).length > 0 && (
+                        <span className="text-gray-400">
+                          {' · '}
+                          {Object.entries(e.annotation.arguments).map(([k, v]) => `${k}=${v}`).join('，')}
+                        </span>
+                      )}
                     </p>
                   )}
                 </li>
@@ -404,25 +613,26 @@ function ProjectsPanel({
 }
 
 function TrainingPanel({ projects }: { projects: AnnProject[] }) {
-  const datasets = projects.filter((p) => projectProgress(p).done > 0);
+  const datasets = projects.filter((p) => projectProgress(p).done >= 2);
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>(
-    datasets[0]?.datasetId ?? datasets[0]?.id ?? '',
+    datasets[0]?.datasetId ?? datasets[0]?.projectId ?? '',
   );
   const [running, setRunning] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'train' | 'eval' | 'done'>('idle');
   const [version, setVersion] = useState('v1.2.0');
 
-  const selectedProject = datasets.find((p) => (p.datasetId ?? p.id) === selectedDatasetId) ?? datasets[0];
+  const selectedProject =
+    datasets.find((p) => (p.datasetId ?? p.projectId) === selectedDatasetId) ?? datasets[0];
   const annotatedCount = selectedProject ? projectProgress(selectedProject).done : 0;
 
   useEffect(() => {
-    if (datasets.length && !datasets.some((p) => (p.datasetId ?? p.id) === selectedDatasetId)) {
-      setSelectedDatasetId(datasets[0].datasetId ?? datasets[0].id);
+    if (datasets.length && !datasets.some((p) => (p.datasetId ?? p.projectId) === selectedDatasetId)) {
+      setSelectedDatasetId(datasets[0].datasetId ?? datasets[0].projectId);
     }
   }, [datasets, selectedDatasetId]);
 
   const start = () => {
-    if (!selectedProject || annotatedCount === 0) return;
+    if (!selectedProject || annotatedCount < 2) return;
     setRunning(true);
     setPhase('train');
     setTimeout(() => setPhase('eval'), 1200);
@@ -441,9 +651,12 @@ function TrainingPanel({ projects }: { projects: AnnProject[] }) {
     <div className="space-y-4 max-w-3xl">
       <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
         <div className="flex items-center gap-2 text-xs">
-          <span className="px-2 py-0.5 bg-green-500 text-white rounded font-bold">POST</span>
-          <code className="font-mono text-gray-700">/api/v1/events/models:train</code>
+          <span className="px-2 py-0.5 bg-amber-500 text-white rounded font-bold">模拟</span>
+          <code className="font-mono text-gray-700">POST /api/v1/events/models:train</code>
         </div>
+        <p className="text-xs text-gray-500">
+          本地模拟 GLM-ICL：至少 2 条已标注；请求体形态为 {`{"projectId","seed"}`}。
+        </p>
 
         <div>
           <label className="text-xs font-medium text-gray-600 mb-1.5 block">
@@ -451,7 +664,7 @@ function TrainingPanel({ projects }: { projects: AnnProject[] }) {
           </label>
           {datasets.length === 0 ? (
             <p className="text-sm text-gray-400 py-2">
-              暂无可用数据集，请先在「事件标注项目管理」中上传事件并完成标注
+              暂无可用数据集，请先在「事件标注项目管理」中完成至少 2 条标注
             </p>
           ) : (
             <select
@@ -462,8 +675,8 @@ function TrainingPanel({ projects }: { projects: AnnProject[] }) {
               {datasets.map((p) => {
                 const { done } = projectProgress(p);
                 return (
-                  <option key={p.id} value={p.datasetId ?? p.id}>
-                    {p.name} · 已标注 {done} 条 · {p.datasetId ?? p.id}
+                  <option key={p.projectId} value={p.datasetId ?? p.projectId}>
+                    {p.name} · 已标注 {done} 条 · {p.datasetId ?? p.projectId}
                   </option>
                 );
               })}
@@ -473,8 +686,9 @@ function TrainingPanel({ projects }: { projects: AnnProject[] }) {
 
         {selectedProject && (
           <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-            数据集含 {annotatedCount} 条标注样本，事件类型覆盖投融资、产品发布等；
-            标注员：{selectedProject.assignees.join('、')}
+            数据集含 {annotatedCount} 条标注样本
+            {selectedProject.classes.length ? ` · 类：${selectedProject.classes.join('、')}` : ''}
+            {' · '}标注员：{selectedProject.assignees.join('、')}
           </div>
         )}
 
@@ -490,7 +704,7 @@ function TrainingPanel({ projects }: { projects: AnnProject[] }) {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm rounded-lg"
         >
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-          {running ? '训练 / 评估中…' : '一键启动训练、评估与版本迭代'}
+          {running ? '训练 / 评估中…' : '一键启动训练、评估与版本迭代（模拟）'}
         </button>
       </div>
 
@@ -503,7 +717,7 @@ function TrainingPanel({ projects }: { projects: AnnProject[] }) {
           <div className="space-y-2 text-sm">
             <div className={`flex items-center gap-2 ${phase === 'train' || phase === 'eval' || phase === 'done' ? 'text-gray-800' : 'text-gray-400'}`}>
               {phase === 'train' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" /> : <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
-              模型训练（基于 {annotatedCount} 条标注数据）
+              GLM-ICL 训练（基于 {annotatedCount} 条标注）
             </div>
             <div className={`flex items-center gap-2 ${phase === 'eval' || phase === 'done' ? 'text-gray-800' : 'text-gray-400'}`}>
               {phase === 'eval' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" /> : phase === 'done' ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <RefreshCw className="w-3.5 h-3.5" />}
@@ -516,8 +730,8 @@ function TrainingPanel({ projects }: { projects: AnnProject[] }) {
           </div>
           {phase === 'done' && (
             <div className="mt-2 text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
-              完成 · 新版本 <strong>{version}</strong> 已发布 · F1=0.84 · P=0.86 · R=0.82
-              · 训练集 {annotatedCount} 条
+              完成 · 新版本 <strong>{version}</strong> · engine=glm-icl · F1=0.84 · P=0.86 · R=0.82
+              · 训练集 {Math.max(1, annotatedCount - 1)} / 测试集 {Math.min(1, annotatedCount)} 条
             </div>
           )}
         </div>
@@ -528,6 +742,7 @@ function TrainingPanel({ projects }: { projects: AnnProject[] }) {
 
 /**
  * 审计目录专用：事件标注项目管理 / 模型训练与迭代
+ * 标注交互对齐算法 events:annotate 字段，数据仍为本地模拟
  */
 export default function EventAnnotationManagement({
   initialTab = 'projects',
@@ -536,7 +751,16 @@ export default function EventAnnotationManagement({
 }) {
   const [tab, setTab] = useState<EventAnnotationMgmtTab>(initialTab);
   const [projects, setProjects] = useState<AnnProject[]>(() =>
-    INITIAL_PROJECTS.map((p) => ({ ...p, events: p.events.map((e) => ({ ...e })) })),
+    INITIAL_PROJECTS.map((p) => ({
+      ...p,
+      events: p.events.map((e) => ({
+        ...e,
+        annotation: e.annotation
+          ? { ...e.annotation, arguments: { ...e.annotation.arguments } }
+          : undefined,
+      })),
+      classes: [...p.classes],
+    })),
   );
   const [selectedId, setSelectedId] = useState<string | null>('P001');
 
@@ -553,12 +777,12 @@ export default function EventAnnotationManagement({
           </h1>
           <p className="text-sm text-gray-500">
             {tab === 'training'
-              ? '基于标注项目产出的数据集，一键启动模型训练、评估与版本迭代'
-              : '上传固定格式待标注事件，分配标注任务，统计进度并生成训练数据集'}
+              ? '基于标注项目产出的数据集，模拟 GLM-ICL 训练、评估与版本迭代'
+              : '上传待标注事件，按算法 annotate 字段（eventType / trigger / arguments）本地模拟标注'}
           </p>
         </div>
         <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex-shrink-0">
-          审计目录专用页
+          本地模拟 · 字段对齐算法
         </span>
       </div>
 

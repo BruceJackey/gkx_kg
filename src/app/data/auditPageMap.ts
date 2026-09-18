@@ -260,9 +260,15 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   'Schema约束规则定义': 'schema-constraint-rules',
   '数据一致性自动扫描': 'data-consistency-scan',
   '校验结果报告': 'validation-report',
-  '数据的统一建模与表示融合/基于对抗迁移学习的知识图谱补全/补全结果审核': 'completion-result-review',
-  '基于对抗迁移学习的知识图谱补全/补全结果审核': 'completion-result-review',
-  '补全结果审核': 'completion-result-review',
+  '数据的统一建模与表示融合/基于对抗迁移学习的知识图谱补全/跨领域知识迁移': 'adversarial-transfer-kgc',
+  '数据的统一建模与表示融合/基于对抗迁移学习的知识图谱补全/知识补全任务配置': 'adversarial-transfer-kgc',
+  '数据的统一建模与表示融合/基于对抗迁移学习的知识图谱补全/补全结果审核': 'adversarial-transfer-kgc',
+  '基于对抗迁移学习的知识图谱补全/跨领域知识迁移': 'adversarial-transfer-kgc',
+  '基于对抗迁移学习的知识图谱补全/知识补全任务配置': 'adversarial-transfer-kgc',
+  '基于对抗迁移学习的知识图谱补全/补全结果审核': 'adversarial-transfer-kgc',
+  '跨领域知识迁移': 'adversarial-transfer-kgc',
+  '知识补全任务配置': 'adversarial-transfer-kgc',
+  '补全结果审核': 'adversarial-transfer-kgc',
   '语义理解模型/实体定位/文本实体定位': 'text-entity-localization',
   '语义理解模型/实体定位/视觉实体定位': 'visual-entity-localization',
   '实体定位/文本实体定位': 'text-entity-localization',
@@ -1010,6 +1016,20 @@ export function resolveMultimodalFeatureFusionFocus(
   if (path.includes('协同注意力')) return 'coattn';
   if (path.includes('门控与双线性') || path.includes('门控')) return 'gate';
   if (path.includes('融合模型训练') || path.includes('训练与管理')) return 'train';
+  return null;
+}
+
+/** 对抗迁移知识图谱补全：跨领域迁移 / 任务配置 / 结果审核 */
+export type AdversarialTransferFocus = 'transfer' | 'task' | 'review';
+
+export function resolveAdversarialTransferFocus(
+  pagePath: string | undefined,
+): AdversarialTransferFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('跨领域知识迁移') || path.includes('跨领域')) return 'transfer';
+  if (path.includes('知识补全任务配置') || path.includes('任务配置')) return 'task';
+  if (path.includes('补全结果审核') || path.includes('结果审核')) return 'review';
   return null;
 }
 
