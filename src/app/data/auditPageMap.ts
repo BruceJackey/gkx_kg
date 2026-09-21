@@ -440,9 +440,11 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '可视化流程画布': 'graph-fusion',
   '本体匹配主体/本体子集选择': 'graph-fusion',
   '本体匹配主体/核心概念定义': 'graph-fusion',
+  '本体匹配流程组件': 'graph-fusion',
   '本体匹配流程组件/可视化流程画布': 'graph-fusion',
   '图谱融合/原子组件库': 'graph-fusion',
   '图谱融合/流程模板管理': 'graph-fusion',
+  '图谱融合/流程模版管理': 'graph-fusion',
   '原子组件库': 'graph-fusion',
   '流程模板管理': 'graph-fusion',
   '流程模版管理': 'graph-fusion',
@@ -1982,9 +1984,9 @@ export function resolveGraphFusionFocus(pagePath: string | undefined): GraphFusi
   if (path.includes('人工审核与反馈')) return 'review';
   if (path.includes('本体子集选择')) return 'subset';
   if (path.includes('核心概念定义')) return 'core';
-  if (path.includes('可视化流程画布')) return 'canvas';
   if (path.includes('原子组件库')) return 'atoms';
   if (path.includes('流程模板管理') || path.includes('流程模版管理')) return 'templates';
+  if (path.includes('可视化流程画布') || path.includes('本体匹配流程组件')) return 'canvas';
   if (path.includes('策略权重配置')) return 'fusion-weight';
   if (path.includes('结果投票与排序')) return 'fusion-vote';
   if (path.includes('三元组生成')) return 'triple-gen';

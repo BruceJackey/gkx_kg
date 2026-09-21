@@ -8,6 +8,12 @@ import {
   CheckSquare, Square, ThumbsUp, ThumbsDown,
   Workflow, Settings2, Database, Upload, AlertCircle, Network, AlertTriangle,
 } from 'lucide-react';
+import MatchPipelineModal, {
+  SEED_PIPELINE_TEMPLATES,
+  type PipelineConfig,
+  type PipelineRunResult,
+  type PipelineTemplate,
+} from './MatchPipelineModal';
 
 // ─── Prediction helpers ───────────────────────────────────────────────────────
 
@@ -979,15 +985,13 @@ export default function OntologyEditor({
   initialMode = 'structure',
   lockMode = false,
   initialRightPanelTab = 'detail',
-  initialShowDrawer = false,
-  initialDrawerTab = 'components',
+  initialPipelineTab = null,
   hideHypernymPrediction = false,
 }: {
   initialMode?: 'structure' | 'schema-match';
   lockMode?: boolean;
   initialRightPanelTab?: 'detail' | 'recommend' | 'review' | 'fusion';
-  initialShowDrawer?: boolean;
-  initialDrawerTab?: 'components' | 'templates';
+  initialPipelineTab?: 'canvas' | 'atoms' | 'templates' | null;
   hideHypernymPrediction?: boolean;
 }) {
   const [entityTypes, setEntityTypes] = useState<EntityType[]>(initEntityTypes);
@@ -1078,7 +1082,8 @@ export default function OntologyEditor({
   const [sourceOntology, setSourceOntology] = useState('科研知识图谱 v2.1');
   const [targetOntology, setTargetOntology] = useState('W3C SOSA Ontology');
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
-  const [showDrawer, setShowDrawer] = useState(initialShowDrawer);
+  const [showPipeline, setShowPipeline] = useState(initialPipelineTab != null);
+  const [pipelineTab, setPipelineTab] = useState<'canvas' | 'atoms' | 'templates'>(initialPipelineTab ?? 'canvas');
   const [rightPanelTab, setRightPanelTab] = useState<'detail' | 'recommend' | 'review' | 'fusion'>(initialRightPanelTab);
   const [isMatching, setIsMatching] = useState(false);
   const [matchDone, setMatchDone] = useState(true);
@@ -1169,78 +1174,25 @@ export default function OntologyEditor({
     })
     .sort((a, b) => b.score - a.score);
 
-  // ── Fusion templates ──────────────────────────────────────────────────────
-  interface FusionTemplate {
-    id: string;
-    name: string;
-    savedAt: string;
-    sourceOntology: string;
-    targetOntology: string;
-    checkedEntities: string[];
-    starredEntities: string[];
-    matchThreshold: number;
-    matchDepth: string;
-  }
-  const [fusionTemplates, setFusionTemplates] = useState<FusionTemplate[]>([
-    {
-      id: 'tpl-1',
-      name: '科研→SOSA 标准映射',
-      savedAt: '2026-07-15 10:30',
-      sourceOntology: '科研知识图谱 v2.1',
-      targetOntology: 'W3C SOSA Ontology',
-      checkedEntities: ['person', 'organization', 'technology', 'event'],
-      starredEntities: ['person', 'organization'],
-      matchThreshold: 0.7,
-      matchDepth: '包含子节点',
-    },
-    {
-      id: 'tpl-2',
-      name: '全实体高精度融合',
-      savedAt: '2026-07-22 14:05',
-      sourceOntology: '科研知识图谱 v2.1',
-      targetOntology: 'Schema.org',
-      checkedEntities: ['person', 'organization', 'technology', 'event', 'paper', 'patent'],
-      starredEntities: ['person', 'technology'],
-      matchThreshold: 0.85,
-      matchDepth: '包含关联节点',
-    },
-  ]);
-  const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
-  const [newTemplateName, setNewTemplateName] = useState('');
-  const [matchDepth, setMatchDepth] = useState('仅当前节点');
-  const [drawerTab, setDrawerTab] = useState<'components' | 'templates'>(initialDrawerTab);
-  const [applyingTemplateId, setApplyingTemplateId] = useState<string | null>(null);
+  const [pipelineTemplates, setPipelineTemplates] = useState<PipelineTemplate[]>(SEED_PIPELINE_TEMPLATES);
 
-  const handleSaveTemplate = () => {
-    if (!newTemplateName.trim()) return;
-    const tpl: FusionTemplate = {
+  const handleSavePipelineTemplate = (name: string, config: PipelineConfig, result: PipelineRunResult) => {
+    const tpl: PipelineTemplate = {
       id: `tpl-${Date.now()}`,
-      name: newTemplateName.trim(),
-      savedAt: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-'),
-      sourceOntology,
-      targetOntology,
-      checkedEntities: Array.from(checkedEntities),
-      starredEntities: Array.from(starredEntities),
-      matchThreshold,
-      matchDepth,
+      name,
+      savedAt: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-'),
+      config,
+      result,
     };
-    setFusionTemplates(prev => [tpl, ...prev]);
-    setNewTemplateName('');
-    setShowSaveTemplateDialog(false);
+    setPipelineTemplates((prev) => [tpl, ...prev]);
+    setSourceOntology(config.sourceOntology);
+    setTargetOntology(config.targetOntology);
   };
 
-  const handleApplyTemplate = (tpl: FusionTemplate) => {
-    setApplyingTemplateId(tpl.id);
-    setTimeout(() => {
-      setSourceOntology(tpl.sourceOntology);
-      setTargetOntology(tpl.targetOntology);
-      setCheckedEntities(new Set(tpl.checkedEntities));
-      setStarredEntities(new Set(tpl.starredEntities));
-      setMatchThreshold(tpl.matchThreshold);
-      setMatchDepth(tpl.matchDepth);
-      setMatchDone(false);
-      setApplyingTemplateId(null);
-    }, 600);
+  const handleApplyPipelineTemplate = (tpl: PipelineTemplate) => {
+    setSourceOntology(tpl.config.sourceOntology);
+    setTargetOntology(tpl.config.targetOntology);
+    setMatchDone(false);
   };
 
   const REVIEW_ITEMS = [
@@ -1325,9 +1277,12 @@ export default function OntologyEditor({
             )}
           </>
         )}
-        <button onClick={() => setShowDrawer(v => !v)}
-          className={`ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${showDrawer ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
-          <Workflow className="w-3.5 h-3.5" />原子组件库
+        <button
+          type="button"
+          onClick={() => { setPipelineTab('canvas'); setShowPipeline(true); }}
+          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 ${viewMode === 'schema-match' ? 'ml-auto' : 'ml-2'}`}
+        >
+          <Workflow className="w-3.5 h-3.5" />本体匹配流程组件
         </button>
       </div>
 
@@ -1876,141 +1831,18 @@ export default function OntologyEditor({
             </div>
           )}
         </div>
-
-        {/* ── 原子组件库 / 流程模板 Drawer ── */}
-        {showDrawer && (
-          <div className="absolute right-0 top-0 h-full w-72 bg-white border-l border-gray-200 shadow-lg rounded-r-lg flex flex-col z-10 overflow-hidden"
-            style={{ right: '-1px' }}>
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-              <Workflow className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-medium text-gray-800">流程 / 模板</span>
-              <button onClick={() => setShowDrawer(false)} className="ml-auto text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-            </div>
-            {/* Drawer tabs */}
-            <div className="flex border-b border-gray-200 flex-shrink-0">
-              {([['components', '原子组件库'], ['templates', '流程模板管理']] as const).map(([k, l]) => (
-                <button key={k} onClick={() => setDrawerTab(k)}
-                  className={`flex-1 py-2 text-xs font-medium transition-colors ${drawerTab === k ? 'text-blue-600 border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-600'}`}>
-                  {l}
-                </button>
-              ))}
-            </div>
-
-            {drawerTab === 'components' && (<>
-            {/* Mini flow preview */}
-            <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0">
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">当前流程预览</div>
-              <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                {['加载本体', '主体选择', '语义匹配', '人工审核'].map((step, i, arr) => (
-                  <div key={step} className="flex items-center gap-1 flex-shrink-0">
-                    <div className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 rounded px-2 py-1 whitespace-nowrap">{step}</div>
-                    {i < arr.length - 1 && <ArrowRight className="w-3 h-3 text-gray-300 flex-shrink-0" />}
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Component list */}
-            <div className="flex-1 overflow-y-auto p-3">
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">原子组件</div>
-              <div className="flex flex-col gap-1.5">
-                {[
-                  { name: '加载本体', icon: Database, color: 'text-blue-500 bg-blue-50 border-blue-200' },
-                  { name: '主体选择', icon: Settings2, color: 'text-purple-500 bg-purple-50 border-purple-200' },
-                  { name: '文本匹配', icon: Tag, color: 'text-cyan-500 bg-cyan-50 border-cyan-200' },
-                  { name: '语义匹配', icon: Sparkles, color: 'text-amber-500 bg-amber-50 border-amber-200' },
-                  { name: '结构匹配', icon: GitMerge, color: 'text-green-500 bg-green-50 border-green-200' },
-                  { name: '人工审核', icon: CheckSquare, color: 'text-red-500 bg-red-50 border-red-200' },
-                ].map(comp => (
-                  <div key={comp.name} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border ${comp.color} cursor-grab`}>
-                    <comp.icon className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="text-xs font-medium">{comp.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="p-3 border-t border-gray-200 flex-shrink-0">
-              <button onClick={() => { setNewTemplateName(''); setShowSaveTemplateDialog(true); setDrawerTab('templates'); }}
-                className="w-full text-xs py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                保存当前配置为模板
-              </button>
-            </div>
-            </>)}
-
-            {drawerTab === 'templates' && (<>
-            <div className="flex-1 overflow-y-auto flex flex-col gap-0 min-h-0">
-              {/* Save new template inline form */}
-              {showSaveTemplateDialog ? (
-                <div className="p-3 border-b border-gray-100 bg-blue-50 flex-shrink-0">
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">保存当前融合配置</div>
-                  <input value={newTemplateName} onChange={e => setNewTemplateName(e.target.value)}
-                    placeholder="模板名称…"
-                    className="w-full text-xs border border-blue-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-blue-500 mb-2"
-                    onKeyDown={e => e.key === 'Enter' && handleSaveTemplate()} />
-                  <div className="flex gap-1.5">
-                    <div className="flex-1 text-[10px] text-gray-400 bg-white border border-gray-200 rounded px-2 py-1 truncate">
-                      {sourceOntology} → {targetOntology}
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5 mt-2">
-                    <button onClick={() => setShowSaveTemplateDialog(false)}
-                      className="flex-1 text-xs py-1.5 border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 transition-colors">取消</button>
-                    <button onClick={handleSaveTemplate} disabled={!newTemplateName.trim()}
-                      className="flex-1 text-xs py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors">保存</button>
-                  </div>
-                </div>
-              ) : (
-                <button onClick={() => setShowSaveTemplateDialog(true)}
-                  className="flex items-center justify-center gap-1.5 mx-3 mt-3 py-2 text-xs text-blue-600 border border-dashed border-blue-300 hover:border-blue-500 rounded-lg transition-colors flex-shrink-0">
-                  <Plus className="w-3.5 h-3.5" />保存当前配置为模板
-                </button>
-              )}
-
-              {/* Template list */}
-              <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
-                {fusionTemplates.length === 0 && (
-                  <div className="text-center py-8 text-xs text-gray-400">暂无已保存模板</div>
-                )}
-                {fusionTemplates.map(tpl => {
-                  const isApplying = applyingTemplateId === tpl.id;
-                  return (
-                    <div key={tpl.id} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                      <div className="px-3 py-2.5">
-                        <div className="flex items-start justify-between gap-1 mb-1">
-                          <span className="text-xs font-medium text-gray-800 leading-snug">{tpl.name}</span>
-                          <button onClick={() => setFusionTemplates(prev => prev.filter(t => t.id !== tpl.id))}
-                            className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                        <div className="text-[10px] text-gray-400 mb-2">{tpl.savedAt}</div>
-                        <div className="flex items-center gap-1 text-[10px] text-gray-500 mb-1">
-                          <span className="bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded truncate max-w-[90px]">{tpl.sourceOntology}</span>
-                          <ArrowRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
-                          <span className="bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded truncate max-w-[90px]">{tpl.targetOntology}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                          <span>{tpl.checkedEntities.length} 个实体</span>
-                          <span>阈值 {(tpl.matchThreshold * 100).toFixed(0)}%</span>
-                          <span>{tpl.matchDepth}</span>
-                        </div>
-                      </div>
-                      <div className="border-t border-gray-100 px-3 py-2">
-                        <button onClick={() => handleApplyTemplate(tpl)} disabled={isApplying}
-                          className="w-full flex items-center justify-center gap-1.5 text-xs py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg transition-colors">
-                          {isApplying
-                            ? <><Loader2 className="w-3 h-3 animate-spin" />应用中…</>
-                            : <><Play className="w-3 h-3" />应用此模板</>}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            </>)}
-          </div>
-        )}
       </div>
+
+      <MatchPipelineModal
+        open={showPipeline}
+        onClose={() => setShowPipeline(false)}
+        initialTab={pipelineTab}
+        templates={pipelineTemplates}
+        onSaveTemplate={handleSavePipelineTemplate}
+        onApplyTemplate={handleApplyPipelineTemplate}
+        sourceOntology={sourceOntology}
+        targetOntology={targetOntology}
+      />
 
       {/* ── 选择本体匹配主体 Dialog ── */}
       {showSubjectDialog && (
@@ -2066,13 +1898,8 @@ export default function OntologyEditor({
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">匹配深度</div>
-                  <select value={matchDepth} onChange={e => setMatchDepth(e.target.value)}
-                    className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-gray-700 focus:outline-none">
-                    <option>仅当前节点</option>
-                    <option>包含子节点</option>
-                    <option>包含关联节点</option>
-                  </select>
+                  <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1.5">已选实体</div>
+                  <div className="text-xs text-gray-700 py-1">{checkedEntities.size} 个类</div>
                 </div>
               </div>
             </div>

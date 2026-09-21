@@ -21,8 +21,11 @@ export default function GraphFusion({
           ? 'fusion'
           : 'detail';
 
-  const openDrawer = initialFocus === 'atoms' || initialFocus === 'templates';
-  const drawerTab = initialFocus === 'templates' ? 'templates' : 'components';
+  const pipelineTab: 'canvas' | 'atoms' | 'templates' | null =
+    initialFocus === 'canvas' ? 'canvas'
+      : initialFocus === 'atoms' ? 'atoms'
+        : initialFocus === 'templates' ? 'templates'
+          : null;
 
   return (
     <div className="h-full flex flex-col gap-5">
@@ -37,8 +40,7 @@ export default function GraphFusion({
           lockMode={true}
           hideHypernymPrediction={true}
           initialRightPanelTab={rightTab}
-          initialShowDrawer={openDrawer}
-          initialDrawerTab={drawerTab}
+          initialPipelineTab={pipelineTab}
         />
       </div>
     </div>
