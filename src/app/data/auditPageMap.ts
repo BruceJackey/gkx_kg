@@ -224,6 +224,10 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '图谱应用中心/图谱可视化/技术演进路径展示': 'graph-visualization',
   '图谱应用中心/图谱可视化/学派关联与学术交叉点分析': 'graph-visualization',
   '图谱应用中心/图谱可视化/动态主题追踪': 'graph-visualization',
+  '主题科技知识图谱分析应用/技术-产业关联分析': 'graph-visualization',
+  '主题科技知识图谱分析应用/专利-产品映射': 'graph-visualization',
+  '主题科技知识图谱分析应用/科研-市场转化路径分析': 'graph-visualization',
+  '主题科技知识图谱分析应用': 'graph-visualization',
   '图谱应用中心/应用中心': 'app-center',
   '图谱应用中心/应用中心/文献智能推荐': 'app-center',
   '图谱应用中心/应用中心/文献智能推荐/检索输入': 'app-center',
@@ -1504,12 +1508,25 @@ export function resolveTemporalAuditMode(pagePath: string | undefined): Temporal
   return null;
 }
 
-/** 图谱可视化底部模块：技术演进 / 学派关联 / 动态主题 / 统计联动 / 地图联动 */
-export type GraphVizDockFocus = 'timeline' | 'schools' | 'topic' | 'stats' | 'map';
+/** 图谱可视化底部模块：学术 dock + 科技主题分析 dock */
+export type GraphVizDockFocus =
+  | 'timeline'
+  | 'schools'
+  | 'topic'
+  | 'stats'
+  | 'map'
+  | 'research-market'
+  | 'tech-industry'
+  | 'patent-product';
 
 export function resolveGraphVizDockFocus(pagePath: string | undefined): GraphVizDockFocus | null {
   const path = (pagePath ?? '').trim();
   if (!path) return null;
+  if (path.includes('技术-产业') || path.includes('技术产业关联')) return 'tech-industry';
+  if (path.includes('专利-产品') || path.includes('专利产品映射')) return 'patent-product';
+  if (path.includes('科研-市场') || path.includes('科研市场转化') || path.includes('主题科技知识图谱')) {
+    return 'research-market';
+  }
   if (path.includes('统计图联动')) return 'stats';
   if (path.includes('地图联动')) return 'map';
   if (path.includes('学派关联') || path.includes('学术交叉')) return 'schools';

@@ -5504,27 +5504,27 @@
                           "name": "技术-产业关联分析",
                           "type": "feature",
                           "reqId": "176",
-                          "pagePath": "",
+                          "pagePath": "主题科技知识图谱分析应用/技术-产业关联分析",
                           "featureDesc": "分析特定技术在不同产业中的应用情况和成熟度。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "图谱可视化 · 科技知识图谱 · 技术-产业关联分析（静态适配 tech-industry:analyze）"
                         },
                         {
                           "id": "fp-176-411",
                           "name": "专利-产品映射",
                           "type": "feature",
                           "reqId": "176",
-                          "pagePath": "",
+                          "pagePath": "主题科技知识图谱分析应用/专利-产品映射",
                           "featureDesc": "将企业的专利布局，与其发布的产品进行关联映射。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "图谱可视化 · 科技知识图谱 · 专利-产品映射（由转化路径派生）"
                         },
                         {
                           "id": "fp-176-412",
                           "name": "科研-市场转化路径分析",
                           "type": "feature",
                           "reqId": "176",
-                          "pagePath": "",
+                          "pagePath": "主题科技知识图谱分析应用/科研-市场转化路径分析",
                           "featureDesc": "分析一项科研成果是如何通过专利、初创公司、最终被市场采纳的完整转化路径。",
-                          "auditNote": "需补充页面路由"
+                          "auditNote": "图谱可视化 · 科技知识图谱 · 科研-市场转化路径（静态适配 research-market-paths:analyze）"
                         }
                       ]
                     },

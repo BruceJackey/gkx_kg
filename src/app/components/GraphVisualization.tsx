@@ -6,7 +6,9 @@ import {
   Move, ZoomIn, ZoomOut, Minimize2, Ruler, GitBranch, Network as NetIcon,
   Circle as CircleIcon, Grid3x3, Layers, Sparkles, Tag, Eye, Save, Share,
   PanelLeft, PanelRight, Layout, X, Star, TrendingUp, Route, BookOpen, Zap,
+  Factory, Link2,
 } from 'lucide-react';
+import { ThemeTechDockPanel, type ThemeTechDockTab } from './ThemeTechAnalysisDock';
 
 // ── Knowledge graph types ────────────────────────────────────────────────────
 type AcademicNodeType = 'concept' | 'paper' | 'method' | 'dataset' | 'researcher' | 'venue';
@@ -328,14 +330,23 @@ type Mode = 'explore' | 'analysis' | 'story';
 type Tool = 'select' | 'box' | 'lasso' | 'pan' | 'measure';
 type LayoutMode = 'force' | 'hierarchical' | 'concentric' | 'grid' | 'circle' | 'tree';
 type RightTab = 'entity' | 'critical' | 'analysis' | 'filter' | 'style' | 'snapshot' | 'story';
-type DockTab = 'timeline' | 'schools' | 'topic' | 'stats' | 'map';
+type DockTab = 'timeline' | 'schools' | 'topic' | 'stats' | 'map' | ThemeTechDockTab;
 
-type GraphVizDockFocus = 'timeline' | 'schools' | 'topic' | 'stats' | 'map';
+type GraphVizDockFocus = 'timeline' | 'schools' | 'topic' | 'stats' | 'map' | ThemeTechDockTab;
 
-export function GraphVisualization({ initialDockTab }: { initialDockTab?: GraphVizDockFocus | null } = {}) {
-  const [graphTheme, setGraphTheme] = useState<GraphTheme>('academic');
-  const [nodes, setNodes] = useState<GNode[]>(initialNodes);
-  const [edges, setEdges] = useState<GEdge[]>(initialEdges);
+function isThemeTechDock(tab: DockTab | null | undefined): tab is ThemeTechDockTab {
+  return tab === 'research-market' || tab === 'tech-industry' || tab === 'patent-product';
+}
+
+export function GraphVisualization({
+  initialDockTab,
+}: {
+  initialDockTab?: GraphVizDockFocus | null;
+} = {}) {
+  const startTech = isThemeTechDock(initialDockTab);
+  const [graphTheme, setGraphTheme] = useState<GraphTheme>(startTech ? 'tech' : 'academic');
+  const [nodes, setNodes] = useState<GNode[]>(startTech ? techNodes : initialNodes);
+  const [edges, setEdges] = useState<GEdge[]>(startTech ? techEdges : initialEdges);
 
   const switchTheme = (theme: GraphTheme) => {
     setGraphTheme(theme);
@@ -350,6 +361,7 @@ export function GraphVisualization({ initialDockTab }: { initialDockTab?: GraphV
     setSubgraphCenter(null);
     setSelectedNodeTypes(new Set());
     setSelectedEdgeTypes(new Set());
+    setDockTab(theme === 'tech' ? 'research-market' : 'timeline');
   };
   const svgRef = useRef<SVGSVGElement>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -365,15 +377,19 @@ export function GraphVisualization({ initialDockTab }: { initialDockTab?: GraphV
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
   const [rightTab, setRightTab] = useState<RightTab>('critical');
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [dockTab, setDockTab] = useState<DockTab | null>(initialDockTab ?? 'timeline');
+  const [dockTab, setDockTab] = useState<DockTab | null>(initialDockTab ?? (startTech ? 'research-market' : 'timeline'));
   const [topicQuery, setTopicQuery] = useState('大语言模型');
   const [topicTracked, setTopicTracked] = useState(false);
 
   useEffect(() => {
-    if (initialDockTab) {
-      setDockTab(initialDockTab);
-      if (initialDockTab === 'topic') setTopicTracked(false);
+    if (!initialDockTab) return;
+    setDockTab(initialDockTab);
+    if (isThemeTechDock(initialDockTab)) {
+      setGraphTheme('tech');
+      setNodes(techNodes);
+      setEdges(techEdges);
     }
+    if (initialDockTab === 'topic') setTopicTracked(false);
   }, [initialDockTab]);
   const [activeTool, setActiveTool] = useState<Tool>('select');
   const [activeLayout, setActiveLayout] = useState<LayoutMode>('force');
@@ -996,9 +1012,19 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
             <ToolGroup title="联动面板" expanded={toolbarExpanded}>
               <ToolButton icon={BarChart3} label="统计图联动" active={dockTab === 'stats'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'stats' ? null : 'stats')} />
               <ToolButton icon={Map} label="地图联动" active={dockTab === 'map'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'map' ? null : 'map')} />
-              <ToolButton icon={Play} label="技术演进路径展示" active={dockTab === 'timeline'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'timeline' ? null : 'timeline')} />
-              <ToolButton icon={Users} label="学派关联与学术交叉点分析" active={dockTab === 'schools'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'schools' ? null : 'schools')} />
-              <ToolButton icon={BookOpen} label="动态主题追踪" active={dockTab === 'topic'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'topic' ? null : 'topic')} />
+              {graphTheme === 'tech' ? (
+                <>
+                  <ToolButton icon={Route} label="科研-市场转化路径" active={dockTab === 'research-market'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'research-market' ? null : 'research-market')} />
+                  <ToolButton icon={Factory} label="技术-产业关联" active={dockTab === 'tech-industry'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'tech-industry' ? null : 'tech-industry')} />
+                  <ToolButton icon={Link2} label="专利-产品映射" active={dockTab === 'patent-product'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'patent-product' ? null : 'patent-product')} />
+                </>
+              ) : (
+                <>
+                  <ToolButton icon={Play} label="技术演进路径展示" active={dockTab === 'timeline'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'timeline' ? null : 'timeline')} />
+                  <ToolButton icon={Users} label="学派关联与学术交叉点分析" active={dockTab === 'schools'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'schools' ? null : 'schools')} />
+                  <ToolButton icon={BookOpen} label="动态主题追踪" active={dockTab === 'topic'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'topic' ? null : 'topic')} />
+                </>
+              )}
             </ToolGroup>
             <ToolGroup title="快照与报告" expanded={toolbarExpanded}>
               <ToolButton icon={Camera} label="创建快照" expanded={toolbarExpanded} onClick={createSnapshot} />
@@ -1343,13 +1369,20 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
           {/* Bottom Dock */}
           <div className="border-t border-gray-200 bg-gray-50 flex-shrink-0">
             <div className="flex items-center bg-white border-b border-gray-200 px-2">
-              {([
-                ['timeline', '技术演进路径展示', Play],
-                ['schools', '学派关联与学术交叉点分析', Users],
-                ['topic', '动态主题追踪', BookOpen],
-                ['stats', '研究领域联动', BarChart3],
-                ['map', '机构分布', Map],
-              ] as const).map(([k, l, Ic]) => (
+              {(graphTheme === 'tech'
+                ? ([
+                    ['research-market', '科研-市场转化路径分析', Route],
+                    ['tech-industry', '技术-产业关联分析', Factory],
+                    ['patent-product', '专利-产品映射', Link2],
+                  ] as const)
+                : ([
+                    ['timeline', '技术演进路径展示', Play],
+                    ['schools', '学派关联与学术交叉点分析', Users],
+                    ['topic', '动态主题追踪', BookOpen],
+                    ['stats', '研究领域联动', BarChart3],
+                    ['map', '机构分布', Map],
+                  ] as const)
+              ).map(([k, l, Ic]) => (
                 <button key={k} onClick={() => setDockTab(dockTab === k ? null : k)}
                   className={`flex items-center gap-1.5 px-3 py-2 text-xs ${dockTab === k ? 'text-blue-700 border-b-2 border-blue-600 -mb-px' : 'text-gray-600 hover:bg-gray-50'}`}>
                   <Ic className="w-3.5 h-3.5" />{l}
@@ -1357,10 +1390,18 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
               ))}
               <div className="flex-1" />
               {dockTab && <button onClick={() => setDockTab(null)} className="text-xs text-gray-500 px-2 hover:text-gray-700"><ChevronDown className="w-4 h-4 inline" />收起</button>}
-              {!dockTab && <button onClick={() => setDockTab('timeline')} className="text-xs text-gray-500 px-2 hover:text-gray-700"><ChevronUp className="w-4 h-4 inline" />展开</button>}
+              {!dockTab && (
+                <button
+                  onClick={() => setDockTab(graphTheme === 'tech' ? 'research-market' : 'timeline')}
+                  className="text-xs text-gray-500 px-2 hover:text-gray-700"
+                >
+                  <ChevronUp className="w-4 h-4 inline" />展开
+                </button>
+              )}
             </div>
             {dockTab && (
-              <div className="h-[200px] overflow-y-auto bg-white px-4 py-3">
+              <div className={`${isThemeTechDock(dockTab) ? 'h-[280px]' : 'h-[220px]'} overflow-y-auto bg-white px-4 py-3`}>
+                {isThemeTechDock(dockTab) && <ThemeTechDockPanel tab={dockTab} />}
                 {dockTab === 'timeline' && (
                   <div className="space-y-3">
                     <div className="text-xs font-medium text-gray-700">技术演进路径展示</div>
