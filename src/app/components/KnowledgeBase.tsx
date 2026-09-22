@@ -29,65 +29,39 @@ interface Folder {
   id: string; name: string; parentId?: string; color: string;
 }
 
-type RuleField = 'title' | 'tags' | 'authors' | 'journal' | 'abstract' | 'type' | 'doi';
-type RuleOp = 'contains' | 'not_contains' | 'equals' | 'starts_with';
-
+/** IF：年份区间 / 期刊名 / 关键词；THEN：移入文件夹；可启用停用 */
 interface ArchiveRule {
   id: string;
   enabled: boolean;
-  ifField: RuleField;
-  ifOp: RuleOp;
-  ifValue: string;
+  name?: string;
+  yearFrom?: number | null;
+  yearTo?: number | null;
+  journal?: string;
+  keywords?: string;
   thenFolderId: string;
 }
 
-const RULE_FIELDS: { id: RuleField; label: string }[] = [
-  { id: 'title', label: '标题' },
-  { id: 'tags', label: '标签' },
-  { id: 'authors', label: '作者' },
-  { id: 'journal', label: '期刊' },
-  { id: 'abstract', label: '摘要' },
-  { id: 'type', label: '类型' },
-  { id: 'doi', label: 'DOI' },
-];
-
-const RULE_OPS: { id: RuleOp; label: string }[] = [
-  { id: 'contains', label: '包含' },
-  { id: 'not_contains', label: '不包含' },
-  { id: 'equals', label: '等于' },
-  { id: 'starts_with', label: '开头是' },
-];
-
-function fieldLabel(id: RuleField) {
-  return RULE_FIELDS.find(f => f.id === id)?.label ?? id;
-}
-function opLabel(id: RuleOp) {
-  return RULE_OPS.find(o => o.id === id)?.label ?? id;
-}
-
-function getDocFieldText(doc: KnowledgeDoc, field: RuleField): string {
-  switch (field) {
-    case 'title': return doc.title ?? '';
-    case 'tags': return (doc.tags ?? []).join(' ');
-    case 'authors': return (doc.authors ?? []).join(' ');
-    case 'journal': return doc.journal ?? '';
-    case 'abstract': return doc.abstract ?? '';
-    case 'type': return doc.type ?? '';
-    case 'doi': return doc.doi ?? '';
-  }
-}
-
 function matchArchiveRule(doc: KnowledgeDoc, rule: ArchiveRule): boolean {
-  if (!rule.enabled || !rule.ifValue.trim() || !rule.thenFolderId) return false;
-  const raw = getDocFieldText(doc, rule.ifField);
-  const hay = raw.toLowerCase();
-  const needle = rule.ifValue.trim().toLowerCase();
-  switch (rule.ifOp) {
-    case 'contains': return hay.includes(needle);
-    case 'not_contains': return !hay.includes(needle);
-    case 'equals': return hay === needle;
-    case 'starts_with': return hay.startsWith(needle);
+  if (!rule.enabled || !rule.thenFolderId) return false;
+  const hasYear = rule.yearFrom != null || rule.yearTo != null;
+  const journal = (rule.journal ?? '').trim();
+  const keywords = (rule.keywords ?? '').trim();
+  if (!hasYear && !journal && !keywords) return false;
+
+  if (hasYear) {
+    const year = doc.year;
+    if (year == null) return false;
+    if (rule.yearFrom != null && year < rule.yearFrom) return false;
+    if (rule.yearTo != null && year > rule.yearTo) return false;
   }
+  if (journal) {
+    if (!(doc.journal ?? '').toLowerCase().includes(journal.toLowerCase())) return false;
+  }
+  if (keywords) {
+    const hay = [doc.title, ...(doc.tags ?? []), doc.abstract ?? ''].join(' ').toLowerCase();
+    if (!hay.includes(keywords.toLowerCase())) return false;
+  }
+  return true;
 }
 
 /** First matching enabled rule wins. */
@@ -128,10 +102,42 @@ const initFolders: Folder[] = [
 ];
 
 const initArchiveRules: ArchiveRule[] = [
-  { id: 'ar1', enabled: true, ifField: 'title', ifOp: 'contains', ifValue: 'AI', thenFolderId: 'f5' },
-  { id: 'ar2', enabled: false, ifField: 'title', ifOp: 'contains', ifValue: '知识图谱', thenFolderId: 'f1' },
-  { id: 'ar3', enabled: false, ifField: 'journal', ifOp: 'equals', ifValue: 'Nature', thenFolderId: 'f4' },
+  {
+    id: 'ar1',
+    enabled: true,
+    name: 'AI 相关文献',
+    keywords: 'AI',
+    thenFolderId: 'f5',
+  },
+  {
+    id: 'ar2',
+    enabled: false,
+    name: '知识图谱专题',
+    keywords: '知识图谱',
+    thenFolderId: 'f1',
+  },
+  {
+    id: 'ar3',
+    enabled: false,
+    name: '近年 Nature',
+    yearFrom: 2020,
+    yearTo: 2026,
+    journal: 'Nature',
+    thenFolderId: 'f4',
+  },
 ];
+
+function describeRuleIf(rule: Pick<ArchiveRule, 'yearFrom' | 'yearTo' | 'journal' | 'keywords'>): string {
+  const parts: string[] = [];
+  if (rule.yearFrom != null || rule.yearTo != null) {
+    const from = rule.yearFrom ?? '…';
+    const to = rule.yearTo ?? '…';
+    parts.push(`年份在 ${from}–${to}`);
+  }
+  if ((rule.journal ?? '').trim()) parts.push(`期刊名包含「${rule.journal!.trim()}」`);
+  if ((rule.keywords ?? '').trim()) parts.push(`关键词包含「${rule.keywords!.trim()}」`);
+  return parts.length ? parts.join(' 且 ') : '（请填写至少一个 IF 条件）';
+}
 
 const initDocs: KnowledgeDoc[] = [
   {
@@ -445,17 +451,36 @@ interface ArchiveRulesModalProps {
 }
 
 function ArchiveRulesModal({ open, onOpenChange, rules, folders, onChange, onRunNow }: ArchiveRulesModalProps) {
-  const [draft, setDraft] = useState<Omit<ArchiveRule, 'id' | 'enabled'>>({
-    ifField: 'title', ifOp: 'contains', ifValue: '', thenFolderId: folders[0]?.id ?? '',
-  });
+  const emptyDraft = {
+    yearFrom: null as number | null,
+    yearTo: null as number | null,
+    journal: '',
+    keywords: '',
+    thenFolderId: folders[0]?.id ?? '',
+  };
+  const [draft, setDraft] = useState(emptyDraft);
   const [runMsg, setRunMsg] = useState<string | null>(null);
 
   const folderName = (id: string) => folders.find(f => f.id === id)?.name ?? '未知文件夹';
+  const draftValid =
+    Boolean(draft.thenFolderId) &&
+    (draft.yearFrom != null || draft.yearTo != null || draft.journal.trim() || draft.keywords.trim());
 
   const addRule = () => {
-    if (!draft.ifValue.trim() || !draft.thenFolderId) return;
-    onChange([{ id: uid(), enabled: true, ...draft, ifValue: draft.ifValue.trim() }, ...rules]);
-    setDraft({ ifField: 'title', ifOp: 'contains', ifValue: '', thenFolderId: draft.thenFolderId });
+    if (!draftValid) return;
+    onChange([
+      {
+        id: uid(),
+        enabled: true,
+        yearFrom: draft.yearFrom,
+        yearTo: draft.yearTo,
+        journal: draft.journal.trim() || undefined,
+        keywords: draft.keywords.trim() || undefined,
+        thenFolderId: draft.thenFolderId,
+      },
+      ...rules,
+    ]);
+    setDraft({ ...emptyDraft, thenFolderId: draft.thenFolderId });
   };
 
   const handleRun = () => {
@@ -468,48 +493,62 @@ function ArchiveRulesModal({ open, onOpenChange, rules, folders, onChange, onRun
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40 z-40" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[640px] max-h-[82vh] bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden">
+        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[720px] max-h-[82vh] bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between flex-shrink-0">
             <div>
               <Dialog.Title className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                <Workflow className="w-4 h-4 text-blue-600" />自动化归档规则
+                <Workflow className="w-4 h-4 text-blue-600" />自动化归档策略
               </Dialog.Title>
-              <p className="text-xs text-gray-400 mt-1">用「若 IF … 则 THEN …」把文献自动分到文件夹。上传完成或点击立即执行时生效，按列表从上到下命中第一条。</p>
+              <p className="text-xs text-gray-400 mt-1">
+                创建「IF … THEN …」规则：可按年份区间、期刊名、关键词自动把文献移入指定文件夹；每条规则可单独启用或停用。
+              </p>
             </div>
             <Dialog.Close className="p-1 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></Dialog.Close>
           </div>
 
-          <div className="px-5 py-4 border-b border-gray-100 bg-slate-50 flex-shrink-0">
-            <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-2">新建规则</div>
+          <div className="px-5 py-4 border-b border-gray-100 bg-slate-50 flex-shrink-0 space-y-3">
+            <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">新建规则</div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-[11px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">IF</span>
-              <select
-                value={draft.ifField}
-                onChange={e => setDraft(d => ({ ...d, ifField: e.target.value as RuleField }))}
-                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400"
-              >
-                {RULE_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
-              <select
-                value={draft.ifOp}
-                onChange={e => setDraft(d => ({ ...d, ifOp: e.target.value as RuleOp }))}
-                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400"
-              >
-                {RULE_OPS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
+              <span className="text-xs text-gray-500">年份</span>
               <input
-                value={draft.ifValue}
-                onChange={e => setDraft(d => ({ ...d, ifValue: e.target.value }))}
+                type="number"
+                placeholder="起"
+                value={draft.yearFrom ?? ''}
+                onChange={e => setDraft(d => ({ ...d, yearFrom: e.target.value ? Number(e.target.value) : null }))}
+                className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400"
+              />
+              <span className="text-xs text-gray-400">–</span>
+              <input
+                type="number"
+                placeholder="止"
+                value={draft.yearTo ?? ''}
+                onChange={e => setDraft(d => ({ ...d, yearTo: e.target.value ? Number(e.target.value) : null }))}
+                className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400"
+              />
+              <span className="text-xs text-gray-500">期刊名</span>
+              <input
+                value={draft.journal}
+                onChange={e => setDraft(d => ({ ...d, journal: e.target.value }))}
+                placeholder="例如 Nature"
+                className="w-36 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-400"
+              />
+              <span className="text-xs text-gray-500">关键词包括</span>
+              <input
+                value={draft.keywords}
+                onChange={e => setDraft(d => ({ ...d, keywords: e.target.value }))}
                 onKeyDown={e => { if (e.key === 'Enter') addRule(); }}
                 placeholder="例如 AI"
-                className="flex-1 min-w-[120px] border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-400"
+                className="flex-1 min-w-[100px] border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-400"
               />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">THEN</span>
-              <span className="text-xs text-gray-500">移入</span>
+              <span className="text-xs text-gray-500">移动到文件夹</span>
               <select
                 value={draft.thenFolderId}
                 onChange={e => setDraft(d => ({ ...d, thenFolderId: e.target.value }))}
-                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400 max-w-[160px]"
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-400 max-w-[200px]"
               >
                 {folders.map(f => (
                   <option key={f.id} value={f.id}>{f.parentId ? `└ ${f.name}` : f.name}</option>
@@ -517,14 +556,14 @@ function ArchiveRulesModal({ open, onOpenChange, rules, folders, onChange, onRun
               </select>
               <button
                 onClick={addRule}
-                disabled={!draft.ifValue.trim() || !draft.thenFolderId}
+                disabled={!draftValid}
                 className="ml-auto flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg transition-colors"
               >
-                <Plus className="w-3.5 h-3.5" />添加
+                <Plus className="w-3.5 h-3.5" />添加规则
               </button>
             </div>
-            <p className="text-[11px] text-gray-400 mt-2">
-              预览：若{fieldLabel(draft.ifField)}{opLabel(draft.ifOp)}「{draft.ifValue.trim() || '…'}」，则自动移入「{folderName(draft.thenFolderId)}」
+            <p className="text-[11px] text-gray-400">
+              预览：若 {describeRuleIf(draft)}，则自动移入「{folderName(draft.thenFolderId)}」
             </p>
           </div>
 
@@ -545,9 +584,7 @@ function ArchiveRulesModal({ open, onOpenChange, rules, folders, onChange, onRun
                     <div className="flex-1 min-w-0 text-xs text-gray-700 leading-relaxed">
                       <div className="flex flex-wrap items-center gap-1">
                         <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded">IF</span>
-                        <span>{fieldLabel(rule.ifField)}</span>
-                        <span className="text-gray-400">{opLabel(rule.ifOp)}</span>
-                        <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">「{rule.ifValue}」</span>
+                        <span>{describeRuleIf(rule)}</span>
                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">THEN</span>
                         <span>移入</span>
                         <span className="inline-flex items-center gap-1 font-medium text-gray-800">
@@ -805,7 +842,7 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                 onClick={() => setArchiveRulesOpen(true)}
                 className="flex items-center gap-2 px-3 py-2 border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 text-sm rounded-lg transition-colors"
               >
-                <Workflow className="w-4 h-4 text-blue-600" />归档规则
+                <Workflow className="w-4 h-4 text-blue-600" />自动化归档策略
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">
                   {archiveRules.filter(r => r.enabled).length}
                 </span>
@@ -971,7 +1008,7 @@ export default function KnowledgeBase({ onNavigate }: Props) {
                 className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
               >
                 <Workflow className="w-3.5 h-3.5" />
-                <span className="flex-1 text-left">归档规则</span>
+                <span className="flex-1 text-left">自动化归档策略</span>
                 <span className="text-[10px] text-gray-400">{archiveRules.filter(r => r.enabled).length} 启用</span>
               </button>
             </div>

@@ -415,6 +415,7 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '图谱可视化/统计图联动关联图分析': 'graph-visualization',
   '图谱可视化/地图联动关联图分析': 'graph-visualization',
   '知识库构建/元数据自动标注': 'knowledge-base',
+  '知识库构建/自动化归档规则': 'knowledge-base',
   '知识库构建/树状文件夹管理': 'knowledge-base',
   '知识库构建/知识库发布广场': 'knowledge-base',
   '文献要点总结/高效阅读，深度理解': 'literature-reader',

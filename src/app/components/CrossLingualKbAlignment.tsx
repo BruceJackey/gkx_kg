@@ -1,11 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Play, Pause, XCircle, Plus, Terminal, Database, CheckCircle2,
-  Clock, Loader2, HardDrive, Layers, FileJson,
+  Play, Pause, XCircle, Plus, Terminal,
+  Loader2, HardDrive, Layers, Database, Library,
 } from 'lucide-react';
 
-type Tab = 'tasks' | 'storage';
 type TaskStatus = 'idle' | 'running' | 'paused' | 'cancelled' | 'completed';
+
+interface BilingualDoc {
+  id: string;
+  titleZh: string;
+  titleEn: string;
+  abstractZh: string;
+  abstractEn: string;
+  journal?: string;
+  year?: number;
+  type?: string;
+}
+
+interface KnowledgeBaseOption {
+  id: string;
+  name: string;
+  desc: string;
+  docs: BilingualDoc[];
+}
 
 interface AlignPair {
   zh: string;
@@ -16,6 +33,9 @@ interface AlignPair {
 interface AlignTask {
   id: string;
   name: string;
+  kbId: string;
+  kbName: string;
+  docs: BilingualDoc[];
   pairs: AlignPair[];
   status: TaskStatus;
   progress: number;
@@ -25,14 +45,119 @@ interface AlignTask {
   stored: boolean;
 }
 
-const SAMPLE_JSON = `[
-  { "zh": "清华大学", "en": "Tsinghua University", "type": "机构" },
-  { "zh": "北京大学", "en": "Peking University", "type": "机构" },
-  { "zh": "深度学习", "en": "Deep Learning", "type": "概念" },
-  { "zh": "卷积神经网络", "en": "Convolutional Neural Network", "type": "概念" },
-  { "zh": "图神经网络", "en": "Graph Neural Network", "type": "概念" },
-  { "zh": "联邦学习", "en": "Federated Learning", "type": "概念" }
-]`;
+const KNOWLEDGE_BASES: KnowledgeBaseOption[] = [
+  {
+    id: 'kb_ai',
+    name: '人工智能前沿文献库',
+    desc: '深度学习 / 大模型 / 知识图谱方向中英文献',
+    docs: [
+      {
+        id: 'd1',
+        titleZh: '大规模预训练语言模型综述',
+        titleEn: 'A Survey of Large-Scale Pre-trained Language Models',
+        abstractZh: '本文系统梳理了预训练语言模型的发展脉络，覆盖 BERT、GPT、T5 等代表性架构，并讨论其在自然语言理解与生成任务中的表现。',
+        abstractEn: 'This survey reviews the evolution of pre-trained language models, covering BERT, GPT, T5 and related architectures, and discusses their performance on NLU and NLG tasks.',
+        journal: '计算机学报',
+        year: 2024,
+        type: '综述',
+      },
+      {
+        id: 'd2',
+        titleZh: '图神经网络在知识图谱补全中的应用',
+        titleEn: 'Graph Neural Networks for Knowledge Graph Completion',
+        abstractZh: '针对知识图谱中缺失三元组问题，提出基于消息传递的图神经网络补全框架，在基准数据集上显著优于传统嵌入方法。',
+        abstractEn: 'We propose a message-passing GNN framework for completing missing triples in knowledge graphs, outperforming classical embedding methods on standard benchmarks.',
+        journal: 'AAAI',
+        year: 2023,
+        type: '论文',
+      },
+      {
+        id: 'd3',
+        titleZh: '跨语言实体对齐的多策略融合方法',
+        titleEn: 'Multi-Strategy Fusion for Cross-Lingual Entity Alignment',
+        abstractZh: '融合翻译增强、跨语言嵌入空间对齐与结构相似度三类信号，实现高精度的跨语言实体对齐。',
+        abstractEn: 'We fuse translation enhancement, cross-lingual embedding alignment and structural similarity to achieve high-precision cross-lingual entity alignment.',
+        journal: 'ACL',
+        year: 2024,
+        type: '论文',
+      },
+      {
+        id: 'd4',
+        titleZh: '联邦学习中的隐私保护机制',
+        titleEn: 'Privacy-Preserving Mechanisms in Federated Learning',
+        abstractZh: '分析差分隐私、安全聚合与同态加密在联邦学习中的权衡，给出面向科研场景的部署建议。',
+        abstractEn: 'We analyze the trade-offs among differential privacy, secure aggregation and homomorphic encryption in federated learning, and provide deployment guidance for research settings.',
+        journal: 'Nature Machine Intelligence',
+        year: 2022,
+        type: '论文',
+      },
+    ],
+  },
+  {
+    id: 'kb_bio',
+    name: '生物医学双语知识库',
+    desc: '药物发现 / 分子活性相关中英文献',
+    docs: [
+      {
+        id: 'b1',
+        titleZh: '小分子药物虚拟筛选方法进展',
+        titleEn: 'Advances in Virtual Screening for Small-Molecule Drugs',
+        abstractZh: '综述基于结构与基于配体的虚拟筛选技术，比较对接打分与深度学习预测模型的精度与吞吐。',
+        abstractEn: 'This review covers structure-based and ligand-based virtual screening, comparing docking scores with deep learning predictors in accuracy and throughput.',
+        journal: '药学学报',
+        year: 2023,
+        type: '综述',
+      },
+      {
+        id: 'b2',
+        titleZh: '蛋白质-配体相互作用的图表示学习',
+        titleEn: 'Graph Representation Learning for Protein–Ligand Interactions',
+        abstractZh: '将蛋白质口袋与配体建模为异构图，通过图注意力网络预测结合亲和力。',
+        abstractEn: 'We model protein pockets and ligands as heterogeneous graphs and predict binding affinity with graph attention networks.',
+        journal: 'Bioinformatics',
+        year: 2024,
+        type: '论文',
+      },
+      {
+        id: 'b3',
+        titleZh: '多模态生物医学知识图谱构建',
+        titleEn: 'Building Multimodal Biomedical Knowledge Graphs',
+        abstractZh: '整合文献、实验数据与本体，构建覆盖疾病—基因—药物的多模态知识图谱。',
+        abstractEn: 'We integrate literature, experimental data and ontologies to build a multimodal knowledge graph covering disease–gene–drug relations.',
+        journal: 'Nucleic Acids Research',
+        year: 2022,
+        type: '论文',
+      },
+    ],
+  },
+  {
+    id: 'kb_energy',
+    name: '新能源材料知识库',
+    desc: '电池 / 催化 / 光伏方向中英文献',
+    docs: [
+      {
+        id: 'e1',
+        titleZh: '固态锂电池电解质界面稳定性研究',
+        titleEn: 'Interface Stability of Solid-State Lithium Battery Electrolytes',
+        abstractZh: '通过原位表征与第一性原理计算，阐明固态电解质—电极界面副反应路径并提出抑制策略。',
+        abstractEn: 'Combining in-situ characterization and first-principles calculations, we elucidate side-reaction pathways at the solid electrolyte–electrode interface and propose mitigation strategies.',
+        journal: 'Advanced Energy Materials',
+        year: 2024,
+        type: '论文',
+      },
+      {
+        id: 'e2',
+        titleZh: '钙钛矿太阳能电池材料设计进展',
+        titleEn: 'Progress in Materials Design for Perovskite Solar Cells',
+        abstractZh: '总结组分工程与界面钝化对器件效率与稳定性的影响，展望产业化路径。',
+        abstractEn: 'We summarize how compositional engineering and interface passivation affect device efficiency and stability, and outline paths toward industrialization.',
+        journal: 'Science',
+        year: 2023,
+        type: '综述',
+      },
+    ],
+  },
+];
 
 const STATUS_META: Record<TaskStatus, { label: string; color: string; bg: string }> = {
   idle: { label: '待执行', color: 'text-gray-600', bg: 'bg-gray-100' },
@@ -46,43 +171,20 @@ function nowStr() {
   return new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
 }
 
-function parseBatchJson(raw: string): { ok: true; pairs: AlignPair[] } | { ok: false; error: string } {
-  try {
-    const data = JSON.parse(raw);
-    if (!Array.isArray(data)) return { ok: false, error: 'JSON 根节点必须是数组' };
-    if (data.length === 0) return { ok: false, error: '数组不能为空' };
-    const pairs: AlignPair[] = [];
-    for (let i = 0; i < data.length; i++) {
-      const item = data[i];
-      if (!item || typeof item !== 'object') return { ok: false, error: `第 ${i + 1} 条不是对象` };
-      const zh = String(item.zh ?? item.source ?? '').trim();
-      const en = String(item.en ?? item.target ?? '').trim();
-      if (!zh || !en) return { ok: false, error: `第 ${i + 1} 条缺少 zh/en 字段` };
-      pairs.push({ zh, en, type: item.type ? String(item.type) : undefined });
-    }
-    return { ok: true, pairs };
-  } catch {
-    return { ok: false, error: 'JSON 解析失败，请检查格式' };
-  }
-}
-
 export type CrossLingualKbFocus = 'tasks' | 'storage';
 
 export default function CrossLingualKbAlignment({
-  initialFocus,
+  initialFocus: _initialFocus,
 }: {
   initialFocus?: CrossLingualKbFocus | null;
 }) {
-  const [tab, setTab] = useState<Tab>(initialFocus ?? 'tasks');
-
-  const [taskName, setTaskName] = useState('中英实体批量对齐');
-  const [jsonInput, setJsonInput] = useState(SAMPLE_JSON);
-  const [parseError, setParseError] = useState<string | null>(null);
+  const [selectedKbId, setSelectedKbId] = useState(KNOWLEDGE_BASES[0]?.id ?? '');
   const [tasks, setTasks] = useState<AlignTask[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const selectedKb = KNOWLEDGE_BASES.find((k) => k.id === selectedKbId) ?? null;
   const selected = tasks.find((t) => t.id === selectedId) ?? null;
 
   const appendLog = (msg: string) => {
@@ -99,18 +201,21 @@ export default function CrossLingualKbAlignment({
   useEffect(() => () => clearTimer(), []);
 
   const createTask = () => {
-    const parsed = parseBatchJson(jsonInput);
-    if (!parsed.ok) {
-      setParseError(parsed.error);
-      return;
-    }
+    if (!selectedKb) return;
     clearTimer();
-    setParseError(null);
     const id = `BAT-${Date.now().toString(36).toUpperCase()}`;
+    const pairs = selectedKb.docs.map((d) => ({
+      zh: d.titleZh,
+      en: d.titleEn,
+      type: d.type,
+    }));
     const task: AlignTask = {
       id,
-      name: taskName.trim() || '未命名对齐任务',
-      pairs: parsed.pairs,
+      name: `${selectedKb.name} · 跨语言对齐`,
+      kbId: selectedKb.id,
+      kbName: selectedKb.name,
+      docs: selectedKb.docs,
+      pairs,
       status: 'idle',
       progress: 0,
       aligned: 0,
@@ -120,7 +225,7 @@ export default function CrossLingualKbAlignment({
     setTasks((prev) => [task, ...prev]);
     setSelectedId(id);
     setLogs([]);
-    appendLog(`任务已创建：${task.name}（${parsed.pairs.length} 条待对齐）`);
+    appendLog(`已从知识库「${selectedKb.name}」创建任务（${selectedKb.docs.length} 篇文献）`);
   };
 
   const runTaskTick = (taskId: string) => {
@@ -132,16 +237,16 @@ export default function CrossLingualKbAlignment({
           clearTimer();
           return prev;
         }
-        const step = Math.max(1, Math.ceil(task.pairs.length / 8));
-        const nextAligned = Math.min(task.pairs.length, task.aligned + step);
-        const nextProgress = Math.round((nextAligned / task.pairs.length) * 100);
-        const done = nextAligned >= task.pairs.length;
+        const step = Math.max(1, Math.ceil(task.docs.length / 6));
+        const nextAligned = Math.min(task.docs.length, task.aligned + step);
+        const nextProgress = Math.round((nextAligned / task.docs.length) * 100);
+        const done = nextAligned >= task.docs.length;
 
         if (done) {
           clearTimer();
           setLogs((prevLogs) => [
             ...prevLogs,
-            `[${nowStr()}] 对齐完成：共 ${task.pairs.length} 条`,
+            `[${nowStr()}] 对齐完成：共 ${task.docs.length} 篇文献`,
             `[${nowStr()}] 正在写入对齐结果库…`,
             `[${nowStr()}] 入库成功：对齐关系已持久化存储`,
           ]);
@@ -159,11 +264,11 @@ export default function CrossLingualKbAlignment({
           );
         }
 
-        const pair = task.pairs[nextAligned - 1];
-        if (pair) {
+        const doc = task.docs[nextAligned - 1];
+        if (doc) {
           setLogs((prevLogs) => [
             ...prevLogs,
-            `[${nowStr()}] 对齐 ${nextAligned}/${task.pairs.length}：${pair.zh} ↔ ${pair.en}`,
+            `[${nowStr()}] 对齐 ${nextAligned}/${task.docs.length}：${doc.titleZh} ↔ ${doc.titleEn}`,
           ]);
         }
 
@@ -210,168 +315,197 @@ export default function CrossLingualKbAlignment({
       <div className="flex-shrink-0">
         <h1 className="text-2xl text-white mb-1">跨语言知识库生成与对齐</h1>
         <p className="text-sm text-gray-400">
-          批量对齐任务创建、执行与管理，以及对齐结果持久化存储
+          选择知识库创建对齐任务；点击任务列表中的任务，即可在右侧「对齐结果存储」中查看文献双语内容
         </p>
       </div>
 
-      <div className="flex gap-1 bg-white/10 rounded-lg p-1 max-w-lg flex-shrink-0">
-        {([
-          ['tasks', '批量对齐任务管理', Layers],
-          ['storage', '对齐结果存储', Database],
-        ] as const).map(([id, label, Icon]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-md transition-colors ${
-              tab === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-300 hover:text-white'
-            }`}
-          >
-            <Icon className="w-3.5 h-3.5" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'tasks' && (
-        <div className="max-w-5xl space-y-4 pb-8">
-          {/* Create */}
+      <div className="max-w-6xl space-y-4 pb-8">
           <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
             <div>
-              <div className="text-sm font-medium text-gray-800 mb-1">创建批量对齐任务</div>
+              <div className="text-sm font-medium text-gray-800 mb-1">创建对齐任务</div>
               <p className="text-xs text-gray-500">
-                在 JSON 中填写多条跨语言实体对，创建任务后执行，可暂停或取消
+                选择已有知识库即可，无需上传批量数据；创建后可执行 / 暂停 / 取消
               </p>
             </div>
             <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-gray-600">任务名称</span>
-              <input
-                value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400"
-                placeholder="如：中英实体批量对齐"
-              />
-            </label>
-            <label className="block space-y-1.5">
               <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
-                <FileJson className="w-3.5 h-3.5" />
-                批量数据（JSON 数组）
+                <Library className="w-3.5 h-3.5" />
+                选择知识库
               </span>
-              <textarea
-                value={jsonInput}
-                onChange={(e) => {
-                  setJsonInput(e.target.value);
-                  setParseError(null);
-                }}
-                rows={10}
-                className="w-full text-xs font-mono border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400 resize-y"
-                spellCheck={false}
-              />
+              <select
+                value={selectedKbId}
+                onChange={(e) => setSelectedKbId(e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400 bg-white"
+              >
+                {KNOWLEDGE_BASES.map((kb) => (
+                  <option key={kb.id} value={kb.id}>
+                    {kb.name}（{kb.docs.length} 篇）
+                  </option>
+                ))}
+              </select>
             </label>
-            {parseError && <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{parseError}</div>}
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setJsonInput(SAMPLE_JSON);
-                  setParseError(null);
-                }}
-                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-700 transition-colors"
-              >
-                载入示例 JSON
-              </button>
-              <button
-                type="button"
-                onClick={createTask}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                创建任务
-              </button>
-            </div>
-          </div>
-
-          {/* Task list */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-800">任务列表</span>
-              <span className="text-xs text-gray-400 ml-auto">{tasks.length} 个任务</span>
-            </div>
-            {tasks.length === 0 ? (
-              <div className="px-4 py-10 text-center text-sm text-gray-400">暂无任务，请先创建批量对齐任务</div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {tasks.map((t) => {
-                  const meta = STATUS_META[t.status];
-                  const active = selectedId === t.id;
-                  return (
-                    <div
-                      key={t.id}
-                      className={`px-4 py-3 space-y-2 cursor-pointer transition-colors ${active ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}
-                      onClick={() => setSelectedId(t.id)}
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">{t.name}</span>
-                        <span className="text-[11px] font-mono text-gray-400">{t.id}</span>
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full ${meta.bg} ${meta.color}`}>{meta.label}</span>
-                        {t.stored && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 inline-flex items-center gap-1">
-                            <HardDrive className="w-3 h-3" /> 已入库
-                          </span>
-                        )}
-                        <span className="ml-auto text-[11px] text-gray-400">{t.pairs.length} 条 · {t.createdAt}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              t.status === 'cancelled' ? 'bg-red-400' : t.status === 'paused' ? 'bg-amber-400' : t.status === 'completed' ? 'bg-emerald-500' : 'bg-blue-500'
-                            }`}
-                            style={{ width: `${t.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-[11px] tabular-nums text-gray-500 w-20 text-right">
-                          {t.aligned}/{t.pairs.length} ({t.progress}%)
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-                        {(t.status === 'idle' || t.status === 'paused') && (
-                          <button
-                            type="button"
-                            onClick={() => startTask(t.id)}
-                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-                          >
-                            <Play className="w-3 h-3" /> {t.status === 'paused' ? '恢复' : '执行'}
-                          </button>
-                        )}
-                        {t.status === 'running' && (
-                          <button
-                            type="button"
-                            onClick={() => pauseTask(t.id)}
-                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100"
-                          >
-                            <Pause className="w-3 h-3" /> 暂停
-                          </button>
-                        )}
-                        {(t.status === 'idle' || t.status === 'running' || t.status === 'paused') && (
-                          <button
-                            type="button"
-                            onClick={() => cancelTask(t.id)}
-                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"
-                          >
-                            <XCircle className="w-3 h-3" /> 取消
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+            {selectedKb && (
+              <div className="rounded-lg border border-gray-100 bg-slate-50 px-3 py-3 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-gray-800">{selectedKb.name}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                    {selectedKb.docs.length} 篇文献
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">zh ↔ en</span>
+                </div>
+                <p className="text-xs text-gray-500">{selectedKb.desc}</p>
+                <ul className="text-xs text-gray-600 space-y-1">
+                  {selectedKb.docs.slice(0, 3).map((d) => (
+                    <li key={d.id}>
+                      {d.titleZh}
+                      <span className="text-gray-400"> / {d.titleEn}</span>
+                    </li>
+                  ))}
+                  {selectedKb.docs.length > 3 && (
+                    <li className="text-gray-400">… 共 {selectedKb.docs.length} 篇</li>
+                  )}
+                </ul>
               </div>
             )}
+            <button
+              type="button"
+              onClick={createTask}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              创建对齐任务
+            </button>
           </div>
 
-          {/* Logs */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-800">任务列表</span>
+                <span className="text-xs text-gray-400 ml-auto">{tasks.length} 个任务</span>
+              </div>
+              <p className="px-4 pt-2 text-[11px] text-gray-400">点击任务查看对齐结果存储</p>
+              {tasks.length === 0 ? (
+                <div className="px-4 py-10 text-center text-sm text-gray-400">暂无任务，请先选择知识库并创建</div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {tasks.map((t) => {
+                    const meta = STATUS_META[t.status];
+                    const active = selectedId === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        className={`px-4 py-3 space-y-2 cursor-pointer transition-colors ${active ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}
+                        onClick={() => setSelectedId(t.id)}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900">{t.name}</span>
+                          <span className="text-[11px] font-mono text-gray-400">{t.id}</span>
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${meta.bg} ${meta.color}`}>{meta.label}</span>
+                          {t.stored && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 inline-flex items-center gap-1">
+                              <HardDrive className="w-3 h-3" /> 已入库
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-gray-400">
+                          {t.kbName} · {t.docs.length} 篇 · {t.createdAt}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                t.status === 'cancelled' ? 'bg-red-400' : t.status === 'paused' ? 'bg-amber-400' : t.status === 'completed' ? 'bg-emerald-500' : 'bg-blue-500'
+                              }`}
+                              style={{ width: `${t.progress}%` }}
+                            />
+                          </div>
+                          <span className="text-[11px] tabular-nums text-gray-500 w-20 text-right">
+                            {t.aligned}/{t.docs.length} ({t.progress}%)
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+                          {(t.status === 'idle' || t.status === 'paused') && (
+                            <button
+                              type="button"
+                              onClick={() => startTask(t.id)}
+                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              <Play className="w-3 h-3" /> {t.status === 'paused' ? '恢复' : '执行'}
+                            </button>
+                          )}
+                          {t.status === 'running' && (
+                            <button
+                              type="button"
+                              onClick={() => pauseTask(t.id)}
+                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                            >
+                              <Pause className="w-3 h-3" /> 暂停
+                            </button>
+                          )}
+                          {(t.status === 'idle' || t.status === 'running' || t.status === 'paused') && (
+                            <button
+                              type="button"
+                              onClick={() => cancelTask(t.id)}
+                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 bg-red-50 hover:bg-red-100"
+                            >
+                              <XCircle className="w-3 h-3" /> 取消
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 bg-indigo-50 flex items-center gap-2">
+                <Database className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-medium text-indigo-900">对齐结果存储</span>
+              </div>
+              {!selected ? (
+                <div className="px-4 py-12 text-center text-sm text-gray-400">
+                  点击左侧任务，查看该知识库文献的双语对齐结果
+                </div>
+              ) : (
+                <div className="p-4 space-y-3 max-h-[560px] overflow-y-auto">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                    <span>
+                      知识库：<strong className="text-gray-800">{selected.kbName}</strong>
+                    </span>
+                    <span className="font-mono text-gray-400">{selected.id}</span>
+                    <span className={`px-2 py-0.5 rounded-full ${STATUS_META[selected.status].bg} ${STATUS_META[selected.status].color}`}>
+                      {STATUS_META[selected.status].label}
+                    </span>
+                  </div>
+                  {selected.docs.map((doc) => (
+                    <article key={doc.id} className="rounded-lg border border-gray-100 p-3 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
+                        {doc.year && <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{doc.year}</span>}
+                        {doc.journal && <span>{doc.journal}</span>}
+                        {doc.type && <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{doc.type}</span>}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-[10px] font-semibold text-blue-600 mb-1">中文</div>
+                          <div className="text-sm font-medium text-gray-900 mb-1">{doc.titleZh}</div>
+                          <p className="text-xs text-gray-600 leading-relaxed">{doc.abstractZh}</p>
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-semibold text-blue-600 mb-1">English</div>
+                          <div className="text-sm font-medium text-gray-900 mb-1">{doc.titleEn}</div>
+                          <p className="text-xs text-gray-600 leading-relaxed">{doc.abstractEn}</p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 bg-slate-50 flex items-center gap-2">
               <Terminal className="w-4 h-4 text-slate-600" />
@@ -391,74 +525,7 @@ export default function CrossLingualKbAlignment({
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {tab === 'storage' && (
-        <div className="max-w-3xl space-y-4 pb-8">
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-5 py-4 border-b border-indigo-100 bg-indigo-50 flex items-center gap-2">
-              <Database className="w-4 h-4 text-indigo-600" />
-              <span className="text-sm font-medium text-indigo-900">对齐结果存储</span>
-            </div>
-            <div className="p-5 space-y-5 text-sm text-gray-700 leading-relaxed">
-              <p>
-                批量对齐任务执行完成后，系统会自动将生成的跨语言对齐关系<strong className="font-medium text-gray-900">持久化写入对齐结果库</strong>，
-                形成可检索、可复用的多语言知识对齐资产。
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { icon: CheckCircle2, title: '自动入库', desc: '任务状态变为「已完成」后立即写入，无需人工导出导入' },
-                  { icon: HardDrive, title: '持久化关系', desc: '存储实体对、语言对、对齐类型、置信度与来源任务 ID' },
-                  { icon: Clock, title: '可追溯', desc: '保留创建时间与任务上下文，支持按任务回溯对齐结果' },
-                ].map(({ icon: Icon, title, desc }) => (
-                  <div key={title} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-indigo-700 text-xs font-medium">
-                      <Icon className="w-3.5 h-3.5" />
-                      {title}
-                    </div>
-                    <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="rounded-lg border border-gray-100 bg-slate-50 px-4 py-3 space-y-2">
-                <div className="text-xs font-medium text-gray-800">存储内容概要</div>
-                <ul className="text-xs text-gray-600 space-y-1.5 list-disc pl-4">
-                  <li>源实体名称与目标实体名称（跨语言对应关系）</li>
-                  <li>对齐关系类型（如 sameAs / closeMatch）与置信度分数</li>
-                  <li>所属批量任务 ID，便于任务级管理与审计</li>
-                  <li>入库时间戳，支持增量同步与下游图谱融合消费</li>
-                </ul>
-              </div>
-
-              <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-xs text-emerald-800">
-                在「批量对齐任务管理」中执行任务至完成后，任务卡片会标记「已入库」，表示对齐关系已成功持久化。
-                可在任务列表中查看完成时间与入库状态。
-              </div>
-
-              {tasks.some((t) => t.stored) && (
-                <div className="rounded-lg border border-gray-200 overflow-hidden">
-                  <div className="px-3 py-2 bg-gray-50 text-xs font-medium text-gray-700 border-b border-gray-100">
-                    本会话已入库任务
-                  </div>
-                  <ul className="divide-y divide-gray-100">
-                    {tasks.filter((t) => t.stored).map((t) => (
-                      <li key={t.id} className="px-3 py-2 text-xs flex items-center gap-2">
-                        <HardDrive className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="font-medium text-gray-800">{t.name}</span>
-                        <span className="text-gray-400 font-mono">{t.id}</span>
-                        <span className="ml-auto text-gray-500">{t.aligned} 条关系 · {t.finishedAt}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
