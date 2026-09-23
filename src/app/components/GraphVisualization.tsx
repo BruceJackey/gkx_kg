@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  Share2, Search, Activity, Users, BarChart3, Map, Filter, Palette, Play, Pause,
+  Share2, Search, Activity, Users, BarChart3, Filter, Palette, Play, Pause,
   Camera, FileText, Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   Plus, Trash2, GripVertical, RotateCcw, Wand2, MousePointer, Square, Lasso,
   Move, ZoomIn, ZoomOut, Minimize2, Ruler, GitBranch, Network as NetIcon,
@@ -210,12 +210,6 @@ const TECH_CRITICAL_PATHS: CriticalPath[] = [
   },
 ];
 
-const TECH_STATS_DATA = [
-  { region: 'AI大模型',  count: 6, nodeIds: ['t1', 't2', 't3', 't4', 't5', 't6'] },
-  { region: '生物医药',  count: 6, nodeIds: ['t7', 't8', 't9', 't10', 't11', 't12'] },
-  { region: '新能源光伏', count: 6, nodeIds: ['t13', 't14', 't15', 't16', 't17', 't18'] },
-];
-
 // ── Recommended critical research paths ──────────────────────────────────────
 const CRITICAL_PATHS: CriticalPath[] = [
   {
@@ -320,12 +314,6 @@ const EDGE_META: Record<GEdgeType, { color: string; dash: string }> = {
 
 const COMMUNITY_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b'];
 
-const STATS_DATA = [
-  { region: '计算机视觉',  count: 5, nodeIds: ['n6', 'n7', 'n9', 'n10', 'n11'] },
-  { region: '自然语言处理', count: 5, nodeIds: ['n12', 'n13', 'n14', 'n15', 'n17'] },
-  { region: '基础理论',    count: 4, nodeIds: ['n1', 'n2', 'n4', 'n5'] },
-];
-
 type Mode = 'explore' | 'analysis' | 'story';
 type Tool = 'select' | 'box' | 'lasso' | 'pan' | 'measure';
 type LayoutMode = 'force' | 'hierarchical' | 'concentric' | 'grid' | 'circle' | 'tree';
@@ -377,12 +365,26 @@ export function GraphVisualization({
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
   const [rightTab, setRightTab] = useState<RightTab>('critical');
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [dockTab, setDockTab] = useState<DockTab | null>(initialDockTab ?? (startTech ? 'research-market' : 'timeline'));
+  const [dockTab, setDockTab] = useState<DockTab | null>(
+    initialDockTab === 'stats' || initialDockTab === 'map'
+      ? null
+      : (initialDockTab ?? (startTech ? 'research-market' : 'timeline'))
+  );
   const [topicQuery, setTopicQuery] = useState('大语言模型');
   const [topicTracked, setTopicTracked] = useState(false);
+  const [activeTool, setActiveTool] = useState<Tool>(initialDockTab === 'map' ? 'box' : 'select');
 
   useEffect(() => {
     if (!initialDockTab) return;
+    if (initialDockTab === 'stats') {
+      setDockTab(null);
+      return;
+    }
+    if (initialDockTab === 'map') {
+      setDockTab(null);
+      setActiveTool('box');
+      return;
+    }
     setDockTab(initialDockTab);
     if (isThemeTechDock(initialDockTab)) {
       setGraphTheme('tech');
@@ -391,7 +393,6 @@ export function GraphVisualization({
     }
     if (initialDockTab === 'topic') setTopicTracked(false);
   }, [initialDockTab]);
-  const [activeTool, setActiveTool] = useState<Tool>('select');
   const [activeLayout, setActiveLayout] = useState<LayoutMode>('force');
   const [showLegend, setShowLegend] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
@@ -430,6 +431,9 @@ export function GraphVisualization({
   // Linkage
   const [activeStats, setActiveStats] = useState<string | null>(null);
   const [mapSelection, setMapSelection] = useState<string | null>(null);
+  /** 框选矩形（图谱坐标系） */
+  const [boxRect, setBoxRect] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [boxing, setBoxing] = useState(false);
 
   // Export
   const [exportOpen, setExportOpen] = useState(false);
@@ -485,6 +489,7 @@ export function GraphVisualization({
 
   const handleNodeMouseDown = (e: React.MouseEvent, node: GNode) => {
     e.stopPropagation();
+    if (activeTool === 'box' || activeTool === 'lasso') return;
     if (activeTool !== 'select' && activeTool !== 'pan') return;
     if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
@@ -539,13 +544,51 @@ export function GraphVisualization({
     }
   };
 
+  const screenToGraph = (clientX: number, clientY: number) => {
+    if (!svgRef.current) return { x: 0, y: 0 };
+    const rect = svgRef.current.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - transform.x) / transform.k,
+      y: (clientY - rect.top - transform.y) / transform.k,
+    };
+  };
+
+  /** 高亮给定节点/边，并扩展其一跳关联节点与边 */
+  const highlightWithAssociates = (seedNodeIds: string[], seedEdgeIds: string[]) => {
+    const nodeSet = new Set(seedNodeIds);
+    const edgeSet = new Set(seedEdgeIds);
+    edges.forEach((e) => {
+      if (edgeSet.has(e.id)) {
+        nodeSet.add(e.source);
+        nodeSet.add(e.target);
+      }
+    });
+    const seeds = Array.from(nodeSet);
+    edges.forEach((e) => {
+      if (seeds.includes(e.source) || seeds.includes(e.target)) {
+        edgeSet.add(e.id);
+        nodeSet.add(e.source);
+        nodeSet.add(e.target);
+      }
+    });
+    setHighlightedNodes(nodeSet);
+    setHighlightedEdges(edgeSet);
+    setSelectedNodes(Array.from(nodeSet).slice(0, 20));
+  };
+
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (activeTool === 'pan') {
       setPanning(true);
       setPanStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
-    } else {
-      setSelectedNodes([]);
+      return;
     }
+    if (activeTool === 'box' || activeTool === 'lasso') {
+      const p = screenToGraph(e.clientX, e.clientY);
+      setBoxing(true);
+      setBoxRect({ x1: p.x, y1: p.y, x2: p.x, y2: p.y });
+      return;
+    }
+    setSelectedNodes([]);
   };
 
   // Path finding
@@ -639,6 +682,8 @@ export function GraphVisualization({
     setSelectedNodes([]);
     setActiveStats(null);
     setMapSelection(null);
+    setBoxRect(null);
+    setBoxing(false);
     setPathEndpoints([]);
     setAnalysisActive(null);
     setSubgraphCenter(null);
@@ -722,6 +767,67 @@ export function GraphVisualization({
     [edges, visibleNodeIds, timelineYear, selectedEdgeTypes]
   );
 
+  const finishBoxSelect = (rect: { x1: number; y1: number; x2: number; y2: number }) => {
+    const minX = Math.min(rect.x1, rect.x2);
+    const maxX = Math.max(rect.x1, rect.x2);
+    const minY = Math.min(rect.y1, rect.y2);
+    const maxY = Math.max(rect.y1, rect.y2);
+    if (maxX - minX < 4 && maxY - minY < 4) {
+      setBoxRect(null);
+      return;
+    }
+    const inBox = (x: number, y: number) => x >= minX && x <= maxX && y >= minY && y <= maxY;
+    const hitNodes = visibleNodes.filter((n) => inBox(n.x, n.y));
+    const hitNodeIds = new Set(hitNodes.map((n) => n.id));
+    const hitEdges = visibleEdges.filter((e) => {
+      const s = visibleNodes.find((n) => n.id === e.source);
+      const t = visibleNodes.find((n) => n.id === e.target);
+      if (!s || !t) return false;
+      if (hitNodeIds.has(e.source) || hitNodeIds.has(e.target)) return true;
+      return inBox((s.x + t.x) / 2, (s.y + t.y) / 2);
+    });
+    if (hitNodes.length === 0 && hitEdges.length === 0) {
+      setBoxRect(null);
+      setHighlightedNodes(new Set());
+      setHighlightedEdges(new Set());
+      setMapSelection(null);
+      return;
+    }
+    setMapSelection('box');
+    setActiveStats(null);
+    highlightWithAssociates(
+      hitNodes.map((n) => n.id),
+      hitEdges.map((e) => e.id),
+    );
+    setBoxRect(null);
+  };
+
+  // 框选拖拽
+  useEffect(() => {
+    if (!boxing) return;
+    const handleMove = (e: MouseEvent) => {
+      const p = screenToGraph(e.clientX, e.clientY);
+      setBoxRect((prev) => (prev ? { ...prev, x2: p.x, y2: p.y } : prev));
+    };
+    const handleUp = (e: MouseEvent) => {
+      setBoxing(false);
+      const p = screenToGraph(e.clientX, e.clientY);
+      setBoxRect((prev) => {
+        if (!prev) return null;
+        const finalRect = { ...prev, x2: p.x, y2: p.y };
+        window.setTimeout(() => finishBoxSelect(finalRect), 0);
+        return null;
+      });
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boxing, transform, visibleNodes, visibleEdges, edges]);
+
   const getNodeColor = (n: GNode) => {
     for (const rule of styleRules) {
       if (rule.target === 'node' && rule.style === 'color' && String((n as any)[rule.field] ?? '') === rule.value)
@@ -789,33 +895,91 @@ export function GraphVisualization({
     setDraggingSnap(null);
   };
 
-  // Linkage
-  const activeStatsData = graphTheme === 'tech' ? TECH_STATS_DATA : STATS_DATA;
-  const activeCriticalPaths = graphTheme === 'tech' ? TECH_CRITICAL_PATHS : CRITICAL_PATHS;
+  // Linkage — 统计图按当前可见图聚合实体类型 / 关系类型
+  const entityTypeBars = useMemo(() => {
+    const counts: Record<string, number> = {};
+    visibleNodes.forEach((n) => {
+      counts[n.type] = (counts[n.type] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([type, count]) => ({
+        key: `entity:${type}`,
+        type,
+        label: TYPE_META[type as GNodeType]?.label || type,
+        count,
+        color: nodeColors[type as GNodeType] || '#64748b',
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [visibleNodes, nodeColors]);
 
-  const handleStatsClick = (region: string) => {
-    if (activeStats === region) { setActiveStats(null); clearHighlights(); return; }
-    setActiveStats(region);
-    const item = activeStatsData.find((s) => s.region === region);
-    if (item) {
-      const nodeSet = new Set(item.nodeIds);
-      const edgeSet = new Set<string>();
-      edges.forEach((e) => { if (nodeSet.has(e.source) && nodeSet.has(e.target)) edgeSet.add(e.id); });
-      setHighlightedNodes(nodeSet);
-      setHighlightedEdges(edgeSet);
+  const relationTypeBars = useMemo(() => {
+    const counts: Record<string, number> = {};
+    visibleEdges.forEach((e) => {
+      counts[e.type] = (counts[e.type] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([type, count]) => ({
+        key: `relation:${type}`,
+        type,
+        label: type,
+        count,
+        color: edgeColors[type as GEdgeType] || '#64748b',
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [visibleEdges, edgeColors]);
+
+  const handleEntityTypeBarClick = (type: GNodeType) => {
+    const key = `entity:${type}`;
+    if (activeStats === key) {
+      setActiveStats(null);
+      clearHighlights();
+      return;
     }
-  };
-
-  const handleMapClick = (region: string) => {
-    if (mapSelection === region) { setMapSelection(null); clearHighlights(); return; }
-    setMapSelection(region);
-    const regionNodes = nodes.filter((n) => n.region === region).map((n) => n.id);
-    const nodeSet = new Set(regionNodes);
+    setActiveStats(key);
+    setMapSelection(null);
+    const hit = visibleNodes.filter((n) => n.type === type);
+    const nodeSet = new Set(hit.map((n) => n.id));
     const edgeSet = new Set<string>();
-    edges.forEach((e) => { if (nodeSet.has(e.source) && nodeSet.has(e.target)) edgeSet.add(e.id); });
+    visibleEdges.forEach((e) => {
+      if (nodeSet.has(e.source) || nodeSet.has(e.target)) edgeSet.add(e.id);
+    });
     setHighlightedNodes(nodeSet);
     setHighlightedEdges(edgeSet);
+    setSelectedNodes(hit.map((n) => n.id));
   };
+
+  const handleRelationTypeBarClick = (type: GEdgeType) => {
+    const key = `relation:${type}`;
+    if (activeStats === key) {
+      setActiveStats(null);
+      clearHighlights();
+      return;
+    }
+    setActiveStats(key);
+    setMapSelection(null);
+    const hit = visibleEdges.filter((e) => e.type === type);
+    const edgeSet = new Set(hit.map((e) => e.id));
+    const nodeSet = new Set<string>();
+    hit.forEach((e) => {
+      nodeSet.add(e.source);
+      nodeSet.add(e.target);
+    });
+    setHighlightedNodes(nodeSet);
+    setHighlightedEdges(edgeSet);
+    setSelectedNodes(Array.from(nodeSet));
+  };
+
+  const openMapLinkage = () => {
+    setActiveTool('box');
+    setDockTab(null);
+  };
+
+  const openStatsLinkage = () => {
+    setDockTab(null);
+    document.getElementById('graph-stats-chart')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  const activeCriticalPaths = graphTheme === 'tech' ? TECH_CRITICAL_PATHS : CRITICAL_PATHS;
 
   // Filter mutators
   const addFilter = () => setFilters((prev) => [...prev, { id: Date.now().toString(), field: 'type', op: 'eq', value: 'paper', logic: 'AND' }]);
@@ -1009,9 +1173,9 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
               <ToolButton icon={Palette} label="样式规则" expanded={toolbarExpanded} onClick={() => { setRightTab('style'); setRightPanelOpen(true); }} />
               <ToolButton icon={Tag} label={showLabels ? '隐藏标签' : '显示标签'} expanded={toolbarExpanded} onClick={() => setShowLabels(!showLabels)} />
             </ToolGroup>
-            <ToolGroup title="联动面板" expanded={toolbarExpanded}>
-              <ToolButton icon={BarChart3} label="统计图联动" active={dockTab === 'stats'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'stats' ? null : 'stats')} />
-              <ToolButton icon={Map} label="地图联动" active={dockTab === 'map'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'map' ? null : 'map')} />
+            <ToolGroup title="联动分析" expanded={toolbarExpanded}>
+              <ToolButton icon={BarChart3} label="统计图联动" expanded={toolbarExpanded} onClick={openStatsLinkage} />
+              <ToolButton icon={Square} label="地图联动·框选" active={activeTool === 'box'} expanded={toolbarExpanded} onClick={openMapLinkage} />
               {graphTheme === 'tech' ? (
                 <>
                   <ToolButton icon={Route} label="科研-市场转化路径" active={dockTab === 'research-market'} expanded={toolbarExpanded} onClick={() => setDockTab(dockTab === 'research-market' ? null : 'research-market')} />
@@ -1040,7 +1204,7 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
             <svg
               ref={svgRef}
               className="w-full h-full"
-              style={{ cursor: activeTool === 'pan' ? (panning ? 'grabbing' : 'grab') : 'default' }}
+              style={{ cursor: activeTool === 'pan' ? (panning ? 'grabbing' : 'grab') : activeTool === 'box' || activeTool === 'lasso' ? 'crosshair' : 'default' }}
               onMouseDown={handleCanvasMouseDown}
             >
               <defs>
@@ -1161,6 +1325,19 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
                     </g>
                   );
                 })}
+                {boxRect && (
+                  <rect
+                    x={Math.min(boxRect.x1, boxRect.x2)}
+                    y={Math.min(boxRect.y1, boxRect.y2)}
+                    width={Math.abs(boxRect.x2 - boxRect.x1)}
+                    height={Math.abs(boxRect.y2 - boxRect.y1)}
+                    fill="rgba(37, 99, 235, 0.12)"
+                    stroke="#2563eb"
+                    strokeWidth={1.5 / transform.k}
+                    strokeDasharray={`${4 / transform.k} ${3 / transform.k}`}
+                    pointerEvents="none"
+                  />
+                )}
               </g>
             </svg>
 
@@ -1168,6 +1345,12 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
             <div className="absolute top-3 left-3 bg-white/95 backdrop-blur rounded-lg shadow border border-gray-200 px-3 py-1.5 text-xs text-gray-700">
               已选中 <span className="text-blue-600 font-medium">{selectedNodes.length}</span> 节点 · 工具：
               <span className="text-blue-600 ml-1">{navTools.find((t) => t.id === activeTool)?.label}</span>
+              {mapSelection === 'box' && highlightedNodes.size > 0 && (
+                <span className="ml-2 text-violet-600">· 框选联动 {highlightedNodes.size} 节点 / {highlightedEdges.size} 边</span>
+              )}
+              {activeStats && (
+                <span className="ml-2 text-emerald-600">· 统计图联动</span>
+              )}
               {activeCriticalPathObj && (
                 <span className="ml-2 px-2 py-0.5 rounded-full text-white text-[10px]" style={{ background: activeCriticalPathObj.color }}>
                   {activeCriticalPathObj.name}
@@ -1366,6 +1549,100 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
             </div>
           </div>
 
+          {/* 统计图联动：常驻柱状图 */}
+          <div id="graph-stats-chart" className="border-t border-gray-200 bg-white px-4 py-3 flex-shrink-0">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-2 gap-2 flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <BarChart3 className="w-3.5 h-3.5 text-blue-600" />
+                <span className="font-medium text-gray-800">统计图联动</span>
+                <span>· 当前 {visibleNodes.length} 实体 / {visibleEdges.length} 关系 · 点击柱条高亮</span>
+              </span>
+              <div className="flex items-center gap-2">
+                {(activeTool === 'box' || mapSelection === 'box') && (
+                  <span className="text-violet-600">
+                    框选已启用{mapSelection === 'box' ? ` · 高亮 ${highlightedNodes.size} 节点 / ${highlightedEdges.size} 边` : ' · 在画布拖拽矩形'}
+                  </span>
+                )}
+                {(activeStats || mapSelection === 'box') && (
+                  <button type="button" onClick={clearHighlights} className="text-blue-600 hover:underline">清除高亮</button>
+                )}
+                <button
+                  type="button"
+                  onClick={openMapLinkage}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded border ${activeTool === 'box' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                >
+                  <Square className="w-3 h-3" />地图联动·框选
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-xs font-medium text-gray-700 mb-1.5">实体类型</div>
+                {entityTypeBars.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-6 text-center">暂无可见实体</p>
+                ) : (
+                  <div className="flex items-end gap-2 h-28 px-1">
+                    {entityTypeBars.map((bar) => {
+                      const max = Math.max(...entityTypeBars.map((x) => x.count), 1);
+                      const h = Math.max(10, (bar.count / max) * 100);
+                      const active = activeStats === bar.key;
+                      return (
+                        <button
+                          key={bar.key}
+                          type="button"
+                          title={`${bar.label}：${bar.count}`}
+                          onClick={() => handleEntityTypeBarClick(bar.type as GNodeType)}
+                          className="flex-1 min-w-0 flex flex-col items-center gap-1"
+                        >
+                          <span className={`text-[10px] tabular-nums ${active ? 'text-blue-700 font-semibold' : 'text-gray-500'}`}>{bar.count}</span>
+                          <div className="w-full flex items-end justify-center h-16">
+                            <div
+                              className={`w-full max-w-[40px] rounded-t transition-all ${active ? 'ring-2 ring-blue-500 ring-offset-1' : ''}`}
+                              style={{ height: `${h}%`, background: bar.color }}
+                            />
+                          </div>
+                          <span className={`text-[10px] truncate w-full text-center ${active ? 'text-blue-700 font-medium' : 'text-gray-600'}`}>{bar.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-700 mb-1.5">关系类型</div>
+                {relationTypeBars.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-6 text-center">暂无可见关系</p>
+                ) : (
+                  <div className="flex items-end gap-2 h-28 px-1 overflow-x-auto">
+                    {relationTypeBars.map((bar) => {
+                      const max = Math.max(...relationTypeBars.map((x) => x.count), 1);
+                      const h = Math.max(10, (bar.count / max) * 100);
+                      const active = activeStats === bar.key;
+                      return (
+                        <button
+                          key={bar.key}
+                          type="button"
+                          title={`${bar.label}：${bar.count}`}
+                          onClick={() => handleRelationTypeBarClick(bar.type as GEdgeType)}
+                          className="flex-1 min-w-[36px] flex flex-col items-center gap-1"
+                        >
+                          <span className={`text-[10px] tabular-nums ${active ? 'text-violet-700 font-semibold' : 'text-gray-500'}`}>{bar.count}</span>
+                          <div className="w-full flex items-end justify-center h-16">
+                            <div
+                              className={`w-full max-w-[40px] rounded-t transition-all ${active ? 'ring-2 ring-violet-500 ring-offset-1' : ''}`}
+                              style={{ height: `${h}%`, background: bar.color }}
+                            />
+                          </div>
+                          <span className={`text-[10px] truncate w-full text-center ${active ? 'text-violet-700 font-medium' : 'text-gray-600'}`}>{bar.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Bottom Dock */}
           <div className="border-t border-gray-200 bg-gray-50 flex-shrink-0">
             <div className="flex items-center bg-white border-b border-gray-200 px-2">
@@ -1379,8 +1656,6 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
                     ['timeline', '技术演进路径展示', Play],
                     ['schools', '学派关联与学术交叉点分析', Users],
                     ['topic', '动态主题追踪', BookOpen],
-                    ['stats', '研究领域联动', BarChart3],
-                    ['map', '机构分布', Map],
                   ] as const)
               ).map(([k, l, Ic]) => (
                 <button key={k} onClick={() => setDockTab(dockTab === k ? null : k)}
@@ -1399,7 +1674,7 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
                 </button>
               )}
             </div>
-            {dockTab && (
+            {dockTab && dockTab !== 'stats' && dockTab !== 'map' && (
               <div className={`${isThemeTechDock(dockTab) ? 'h-[280px]' : 'h-[220px]'} overflow-y-auto bg-white px-4 py-3`}>
                 {isThemeTechDock(dockTab) && <ThemeTechDockPanel tab={dockTab} />}
                 {dockTab === 'timeline' && (
@@ -1496,61 +1771,6 @@ ${snapshots.map((s, i) => `<div class="snap"><h3>${i + 1}. ${s.name}</h3><p clas
                     {!topicTracked && (
                       <p className="text-xs text-gray-400">输入主题词后点击「开始追踪」，将以文本形式展示热度、成果与领军人物。</p>
                     )}
-                  </div>
-                )}
-                {dockTab === 'stats' && (
-                  <div className="grid grid-cols-[160px_1fr] gap-3 h-full">
-                    <div className="space-y-1">
-                      <div className="text-xs text-gray-500 mb-1">研究方向</div>
-                      {[{ k: 'bar', l: '节点分布', Ic: BarChart3 }, { k: 'pie', l: '类型占比', Ic: CircleIcon }, { k: 'line', l: '时序趋势', Ic: Activity }].map((c) => (
-                        <button key={c.k} className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs text-left rounded hover:bg-gray-50">
-                          <c.Ic className="w-3.5 h-3.5 text-blue-600" />{c.l}
-                        </button>
-                      ))}
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 mb-2">点击联动高亮图谱 · 维度：研究方向</div>
-                      <div className="space-y-2">
-                        {activeStatsData.map((s) => {
-                          const max = Math.max(...activeStatsData.map((x) => x.count));
-                          const isActive = activeStats === s.region;
-                          return (
-                            <button key={s.region} onClick={() => handleStatsClick(s.region)} className={`w-full text-left p-2 rounded border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}>
-                              <div className="flex items-center justify-between text-xs mb-1">
-                                <span className="font-medium text-gray-700">{s.region}</span>
-                                <span className="text-gray-500">{s.count} 节点</span>
-                              </div>
-                              <div className="h-2 bg-gray-100 rounded">
-                                <div className={`h-2 rounded ${isActive ? 'bg-blue-600' : 'bg-blue-400'}`} style={{ width: `${(s.count / max) * 100}%` }} />
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {dockTab === 'map' && (
-                  <div className="grid grid-cols-[1fr_180px] gap-3 h-full">
-                    <div>
-                      <div className="text-xs text-gray-500 mb-2">点击机构类型，联动显示该类别实体</div>
-                      <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 border border-gray-200 rounded-lg h-32">
-                        {[{ region: '学术机构', left: '25%', top: '35%' }, { region: '科技企业', left: '65%', top: '30%' }, { region: '前沿领域', left: '80%', top: '65%' }].map((p) => (
-                          <button key={p.region} onClick={() => handleMapClick(p.region)} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: p.left, top: p.top }}>
-                            <div className={`flex flex-col items-center ${mapSelection === p.region ? 'scale-110' : ''} transition-transform`}>
-                              <div className={`w-3 h-3 rounded-full ring-4 ${mapSelection === p.region ? 'bg-blue-600 ring-blue-200' : 'bg-violet-500 ring-violet-100'}`} />
-                              <span className="text-xs text-gray-700 mt-0.5 whitespace-nowrap">{p.region}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5 text-xs">
-                      <div className="text-gray-500 mb-1">框选工具</div>
-                      <button className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded border border-gray-200 hover:bg-gray-50"><Square className="w-3.5 h-3.5" />矩形框选</button>
-                      <button className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded border border-gray-200 hover:bg-gray-50"><CircleIcon className="w-3.5 h-3.5" />圆形框选</button>
-                      <button className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded border border-gray-200 hover:bg-gray-50"><Lasso className="w-3.5 h-3.5" />多边形框选</button>
-                    </div>
                   </div>
                 )}
               </div>
