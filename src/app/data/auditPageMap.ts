@@ -64,10 +64,19 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件触发词识别': 'algorithm-detail',
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件论元抽取': 'algorithm-detail',
   '算法管理/算法仓库/抽取类算法/无监督算法发现': 'algorithm-detail',
-  '算法管理/算法仓库/抽取类算法/候选术语生成': 'algorithm-detail',
-  '算法管理/算法仓库/抽取类算法/候选术语生成/基于统计的扩展': 'algorithm-detail',
-  '算法管理/算法仓库/抽取类算法/候选术语生成/基于规则的扩展': 'algorithm-detail',
-  '算法管理/算法仓库/抽取类算法/候选术语生成/候选术语去重与合并': 'algorithm-detail',
+  '算法管理/算法仓库/抽取类算法/候选术语生成': 'candidate-term-generation',
+  '算法管理/算法仓库/抽取类算法/候选术语生成/基于统计的扩展': 'candidate-term-generation',
+  '算法管理/算法仓库/抽取类算法/候选术语生成/基于规则的扩展': 'candidate-term-generation',
+  '算法管理/算法仓库/抽取类算法/候选术语生成/候选术语去重与合并': 'candidate-term-generation',
+  '算法管理/算法仓库/抽取类算法/候选术语生成/候选术语生成审核': 'candidate-term-review',
+  '候选术语生成/基于统计的扩展': 'candidate-term-generation',
+  '候选术语生成/基于规则的扩展': 'candidate-term-generation',
+  '候选术语生成/候选术语去重与合并': 'candidate-term-generation',
+  '候选术语生成/候选术语生成审核': 'candidate-term-review',
+  '基于统计的扩展': 'candidate-term-generation',
+  '基于规则的扩展': 'candidate-term-generation',
+  '候选术语去重与合并': 'candidate-term-generation',
+  '候选术语生成审核': 'candidate-term-review',
   '算法管理/算法仓库/知识推理/基于置信度图传播的术语排序': 'algorithm-detail',
   '基于置信度图传播的术语排序/语义相似度图构建': 'term-confidence-graph',
   '基于置信度图传播的术语排序/置信度计算与排序': 'term-confidence-graph',
@@ -621,10 +630,6 @@ export const AUDIT_ALGORITHM_MAP: Record<string, string> = {
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件触发词识别': 'term-event-rough',
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件论元抽取': 'term-event-rough',
   '算法管理/算法仓库/抽取类算法/无监督算法发现': 'seed-term-generation',
-  '算法管理/算法仓库/抽取类算法/候选术语生成': 'candidate-term-generation',
-  '算法管理/算法仓库/抽取类算法/候选术语生成/基于统计的扩展': 'candidate-term-generation',
-  '算法管理/算法仓库/抽取类算法/候选术语生成/基于规则的扩展': 'candidate-term-generation',
-  '算法管理/算法仓库/抽取类算法/候选术语生成/候选术语去重与合并': 'candidate-term-generation',
   '算法管理/算法仓库/知识推理/基于置信度图传播的术语排序': 'confidence-graph-term-ranking',
   '算法管理/算法仓库/抽取类算法/依存关系图构建': 'dependency-graph',
   '算法管理/算法仓库/抽取类算法/依存关系图构建/句法分析任务管理': 'dependency-graph',
@@ -1630,6 +1635,30 @@ export function resolveTermConfidenceGraphFocus(
   return null;
 }
 
+
+/** 候选术语生成：统计 / 规则 / 去重合并 */
+export type CandidateTermFocus = 'statistical' | 'rule-based' | 'dedup-merge';
+
+export function resolveCandidateTermFocus(
+  pagePath: string | undefined,
+): CandidateTermFocus | null {
+  const path = (pagePath ?? '').trim();
+  if (!path) return null;
+  if (path.includes('基于统计的扩展')) return 'statistical';
+  if (path.includes('基于规则的扩展')) return 'rule-based';
+  if (path.includes('候选术语去重与合并') || path.includes('去重与合并')) return 'dedup-merge';
+  return null;
+}
+
+/** 候选术语生成审核：测试接口三个分区 */
+export type CandidateTermReviewFocus = 'statistical' | 'rule-based' | 'dedup-merge';
+
+export function resolveCandidateTermReviewFocus(
+  pagePath: string | undefined,
+): CandidateTermReviewFocus | null {
+  return resolveCandidateTermFocus(pagePath);
+}
+
 /** 四元结构自动提取与建模：抽取 / 跨资源预测 */
 export type QuadrupleStructureFocus = 'extract' | 'predict';
 
@@ -1725,8 +1754,14 @@ export function resolveAuditAlgorithmId(pagePath: string | undefined): string | 
   if (!path) return null;
   if (AUDIT_ALGORITHM_MAP[path]) return AUDIT_ALGORITHM_MAP[path];
   if (path.includes('无监督算法发现')) return 'seed-term-generation';
-  if (path.includes('候选术语生成') || path.includes('基于统计的扩展') || path.includes('基于规则的扩展') || path.includes('候选术语去重与合并')) {
-    return 'candidate-term-generation';
+  // 候选术语生成 → 独立目录页 candidate-term-generation / 审核页 candidate-term-review
+  if (
+    path.includes('候选术语生成')
+    || path.includes('基于统计的扩展')
+    || path.includes('基于规则的扩展')
+    || path.includes('候选术语去重与合并')
+  ) {
+    return null;
   }
   if (path.includes('置信度图传播')) {
     if (path.includes('交互式审核') || path.includes('语义相似度图构建') || path.includes('置信度计算与排序')) {

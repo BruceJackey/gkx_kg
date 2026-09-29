@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { ArrowLeft, Copy, Play, Settings, FileText, Eye, Database, Rocket, Download, TrendingUp, Calendar, Shuffle, GitBranch, Cpu, Network, Search, Check, X, Plus, Brain, CheckCircle, XCircle, Tag, Zap, Layers, BookOpen } from 'lucide-react';
+import { ArrowLeft, Copy, Play, Settings, FileText, Eye, Database, Rocket, Download, TrendingUp, Calendar, Shuffle, GitBranch, Cpu, Network, Search, Check, X, Plus, Brain, CheckCircle, XCircle, Tag, Zap, Layers } from 'lucide-react';
 import { ScoringFunctionDemo, type ScoringFunctionSection } from './demos/ScoringFunctionDemo';
 import { SupervisedSimilarityDemo } from './demos/SupervisedSimilarityDemo';
 import { RepresentationSpaceDemo } from './demos/RepresentationSpaceDemo';
@@ -28,7 +28,6 @@ import { HypernymDemo } from './demos/HypernymDemo';
 import { RGATDemo } from './demos/RGATDemo';
 import { TermVectorDemo } from './demos/TermVectorDemo';
 import { DependencyTreeDemo } from './demos/DependencyTreeDemo';
-import { CandidateTermGenerationDemo, type CandidateTermDemoTab } from './demos/CandidateTermGenerationDemo';
 import { MultimodalRepresentationDemo } from './demos/MultimodalRepresentationDemo';
 import { OpenCLIPDemo } from './demos/OpenCLIPDemo';
 import type { EncodingModelFocus, SupervisedSimilarityFocus, NodeSimilarityFocus, SemanticRetrievalFocus, MultimodalRepresentationFocus } from '../data/auditPageMap';
@@ -37,7 +36,6 @@ interface AlgorithmDetailProps {
   algorithmId: string;
   onBack: () => void;
   onNavigateToService?: (algorithmId: string) => void;
-  initialDemoTab?: CandidateTermDemoTab;
   /** 进入算法页时默认打开的 Tab（审计目录跳转用） */
   initialTab?: 'intro' | 'demo' | 'models' | 'training' | 'deployment';
   /** 依存图抽样可视化：进入 demo 时自动启动测试 */
@@ -1800,7 +1798,6 @@ export function AlgorithmDetailPage({
   algorithmId,
   onBack,
   onNavigateToService,
-  initialDemoTab,
   initialTab,
   autoStartDepTest = false,
   initialEmbeddingSpace,
@@ -1814,7 +1811,6 @@ export function AlgorithmDetailPage({
 }: AlgorithmDetailProps) {
   const resolveInitialTab = (): 'intro' | 'demo' | 'models' | 'training' | 'deployment' => {
     if (initialTab) return initialTab;
-    if (algorithmId === 'candidate-term-generation' && initialDemoTab) return 'demo';
     return 'intro';
   };
 
@@ -1825,10 +1821,8 @@ export function AlgorithmDetailPage({
   useEffect(() => {
     if (initialTab) {
       setActiveTab(initialTab);
-    } else if (algorithmId === 'candidate-term-generation' && initialDemoTab) {
-      setActiveTab('demo');
     }
-  }, [algorithmId, initialDemoTab, initialTab]);
+  }, [algorithmId, initialTab]);
 
   useEffect(() => {
     setDepAutoTest(autoStartDepTest);
@@ -2058,18 +2052,6 @@ export function AlgorithmDetailPage({
                 }`}
               >
                 <Shuffle className="w-3.5 h-3.5" />触发词与论元抽取
-              </button>
-            )}
-            {algorithmId === 'candidate-term-generation' && (
-              <button
-                onClick={() => setActiveTab('demo')}
-                className={`py-3 border-b-2 transition-colors flex items-center gap-1.5 ${
-                  activeTab === 'demo'
-                    ? 'border-emerald-600 text-emerald-600 font-medium'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <BookOpen className="w-3.5 h-3.5" />测试接口
               </button>
             )}
             {algorithmId === 'rl-sentence-selector' && (
@@ -2310,9 +2292,6 @@ export function AlgorithmDetailPage({
         {activeTab === 'demo' && algorithmId === 'relation-scoring' && <RelationScoringDemo />}
         {activeTab === 'demo' && algorithmId === 'adversarial-transfer' && <AdversarialTransferDemo />}
         {activeTab === 'demo' && algorithmId === 'term-event-rough' && <TermEventRoughDemo />}
-        {activeTab === 'demo' && algorithmId === 'candidate-term-generation' && (
-          <CandidateTermGenerationDemo initialTab={initialDemoTab} />
-        )}
         {activeTab === 'demo' && algorithmId === 'rl-sentence-selector' && <RLSentenceSelectorDemo />}
         {activeTab === 'demo' && algorithmId === 'event-recognition-engine' && <EventRecognitionEngineDemo />}
         {activeTab === 'demo' && algorithmId === 'stat-instance-generation' && <StatInstanceGenerationDemo />}
