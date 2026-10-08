@@ -11,6 +11,8 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '新实例发现/数据标注/文本高亮标注': 'text-highlight-seed',
   '文本高亮标注': 'text-highlight-seed',
   '图谱构造引擎/数据源管理/外部词典导入': 'kg-datasource',
+  '算法管理/算法仓库/抽取类算法/无监督算法发现': 'kg-datasource',
+  '无监督算法发现': 'kg-datasource',
   '图谱构造引擎/本体管理': 'kg-ontology',
   '知识图谱构造引擎/数据管理/本体管理': 'kg-ontology',
   '知识图谱构造引擎/本体管理/上下位关系预测': 'kg-ontology',
@@ -63,7 +65,6 @@ export const AUDIT_PAGE_MAP: Record<string, string> = {
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取': 'algorithm-detail',
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件触发词识别': 'algorithm-detail',
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件论元抽取': 'algorithm-detail',
-  '算法管理/算法仓库/抽取类算法/无监督算法发现': 'algorithm-detail',
   '算法管理/算法仓库/抽取类算法/候选术语生成': 'candidate-term-generation',
   '算法管理/算法仓库/抽取类算法/候选术语生成/基于统计的扩展': 'candidate-term-generation',
   '算法管理/算法仓库/抽取类算法/候选术语生成/基于规则的扩展': 'candidate-term-generation',
@@ -629,7 +630,6 @@ export const AUDIT_ALGORITHM_MAP: Record<string, string> = {
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取': 'term-event-rough',
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件触发词识别': 'term-event-rough',
   '算法管理/算法仓库/抽取类算法/术语/事件粗抽取/事件论元抽取': 'term-event-rough',
-  '算法管理/算法仓库/抽取类算法/无监督算法发现': 'seed-term-generation',
   '算法管理/算法仓库/知识推理/基于置信度图传播的术语排序': 'confidence-graph-term-ranking',
   '算法管理/算法仓库/抽取类算法/依存关系图构建': 'dependency-graph',
   '算法管理/算法仓库/抽取类算法/依存关系图构建/句法分析任务管理': 'dependency-graph',
@@ -1753,7 +1753,8 @@ export function resolveAuditAlgorithmId(pagePath: string | undefined): string | 
   const path = (pagePath ?? '').trim();
   if (!path) return null;
   if (AUDIT_ALGORITHM_MAP[path]) return AUDIT_ALGORITHM_MAP[path];
-  if (path.includes('无监督算法发现')) return 'seed-term-generation';
+  // 无监督算法发现 → 数据源管理 · 外部词典页内嵌能力，不再进算法详情
+  if (path.includes('无监督算法发现')) return null;
   // 候选术语生成 → 独立目录页 candidate-term-generation / 审核页 candidate-term-review
   if (
     path.includes('候选术语生成')

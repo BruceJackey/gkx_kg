@@ -401,7 +401,7 @@ export default function App() {
   const [datasetCategoryFocus, setDatasetCategoryFocus] = useState<DatasetCategoryFocus | null>(null);
 
   const resolveDataSourceView = (pagePath: string): DSMode => {
-    if (pagePath.includes('外部词典导入')) return 'lexicon';
+    if (pagePath.includes('外部词典导入') || pagePath.includes('无监督算法发现')) return 'lexicon';
     if (pagePath.includes('种子实例') || pagePath.includes('种子集管理')) return 'seed';
     return 'structured';
   };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, RefreshCw, Eye, EyeOff, CheckCircle, XCircle, Loader2, Sprout, Link2, ArrowRight, Database, ChevronDown, BookOpen, Upload, FileText, Search } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Eye, EyeOff, CheckCircle, XCircle, Loader2, Sprout, Link2, ArrowRight, Database, ChevronDown, BookOpen, Upload, Search, Sparkles } from 'lucide-react';
 
 export type DSMode = 'structured' | 'unstructured' | 'seed' | 'lexicon';
 type StructType = 'mysql' | 'postgresql' | 'datalake' | 'trs';
@@ -84,13 +84,11 @@ const MOCK_SEEDS: SeedInstance[] = [
 ];
 
 // ─── External lexicon types ───────────────────────────────────────────────────
-type LexiconFormat = 'csv' | 'txt' | 'json' | 'xlsx';
+type LexiconFormat = 'csv' | 'txt';
 type LexiconStatus = 'draft' | 'parsed' | 'imported';
 interface LexiconTerm {
   id: string;
   term: string;
-  category: string;
-  weight: number;
   note: string;
 }
 interface ExternalLexicon {
@@ -106,6 +104,15 @@ interface ExternalLexicon {
   terms: LexiconTerm[];
 }
 
+type DiscoverAlgo = 'tfidf' | 'cvalue' | 'pmi' | 'textrank';
+
+const DISCOVER_ALGOS: { id: DiscoverAlgo; label: string }[] = [
+  { id: 'tfidf', label: 'TF-IDF' },
+  { id: 'cvalue', label: 'C-Value' },
+  { id: 'pmi', label: 'PMI' },
+  { id: 'textrank', label: 'TextRank' },
+];
+
 const MOCK_LEXICONS: ExternalLexicon[] = [
   {
     id: 'lex1',
@@ -114,15 +121,15 @@ const MOCK_LEXICONS: ExternalLexicon[] = [
     domain: '人工智能',
     format: 'csv',
     fileName: 'ai_seed_terms.csv',
-    termCount: 128,
+    termCount: 5,
     status: 'imported',
     createdAt: '2024-03-10 09:20',
     terms: [
-      { id: 't1', term: '大语言模型', category: '模型架构', weight: 0.95, note: 'LLM' },
-      { id: 't2', term: '知识图谱', category: '知识表示', weight: 0.92, note: 'Knowledge Graph' },
-      { id: 't3', term: '实体对齐', category: '知识融合', weight: 0.88, note: 'Entity Alignment' },
-      { id: 't4', term: '语义检索', category: '信息检索', weight: 0.85, note: 'Semantic Search' },
-      { id: 't5', term: '向量嵌入', category: '表示学习', weight: 0.90, note: 'Embedding' },
+      { id: 't1', term: '大语言模型', note: 'LLM' },
+      { id: 't2', term: '知识图谱', note: 'Knowledge Graph' },
+      { id: 't3', term: '实体对齐', note: 'Entity Alignment' },
+      { id: 't4', term: '语义检索', note: 'Semantic Search' },
+      { id: 't5', term: '向量嵌入', note: 'Embedding' },
     ],
   },
   {
@@ -132,24 +139,73 @@ const MOCK_LEXICONS: ExternalLexicon[] = [
     domain: '新能源',
     format: 'txt',
     fileName: 'new_energy_lexicon.txt',
-    termCount: 86,
+    termCount: 3,
     status: 'parsed',
     createdAt: '2024-03-13 16:45',
     terms: [
-      { id: 't6', term: '钙钛矿太阳能电池', category: '光伏', weight: 0.91, note: '' },
-      { id: 't7', term: '固态电解质', category: '储能', weight: 0.87, note: '' },
-      { id: 't8', term: '质子交换膜', category: '氢能', weight: 0.84, note: 'PEM' },
+      { id: 't6', term: '钙钛矿太阳能电池', note: '' },
+      { id: 't7', term: '固态电解质', note: '' },
+      { id: 't8', term: '质子交换膜', note: 'PEM' },
     ],
   },
 ];
 
-const SAMPLE_PARSE_TERMS: LexiconTerm[] = [
-  { id: 's1', term: '种子术语', category: '通用', weight: 0.90, note: '' },
-  { id: 's2', term: '领域词典', category: '通用', weight: 0.85, note: '' },
-  { id: 's3', term: '冷启动', category: '术语抽取', weight: 0.82, note: '' },
-  { id: 's4', term: '概念抽取', category: '术语抽取', weight: 0.88, note: '' },
-  { id: 's5', term: '上下位关系', category: '知识建模', weight: 0.86, note: '' },
-];
+/** TXT：每行「词条 备注」（首个空格分隔）；CSV：两列词条、备注 */
+function parseLexiconText(content: string, format: LexiconFormat): LexiconTerm[] {
+  const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const terms: LexiconTerm[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // 跳过 CSV 表头
+    if (format === 'csv' && i === 0 && /^(term|词条|术语)/i.test(line.replace(/[",]/g, ''))) {
+      continue;
+    }
+    let term = '';
+    let note = '';
+    if (format === 'csv') {
+      const cols = (line.includes('\t') ? line.split('\t') : line.split(','))
+        .map(s => s.trim().replace(/^"|"$/g, ''));
+      term = cols[0] ?? '';
+      note = cols[1] ?? '';
+    } else {
+      const sp = line.indexOf(' ');
+      if (sp < 0) {
+        term = line;
+        note = '';
+      } else {
+        term = line.slice(0, sp).trim();
+        note = line.slice(sp + 1).trim();
+      }
+    }
+    if (!term || seen.has(term)) continue;
+    seen.add(term);
+    terms.push({ id: `p_${i}_${term}`, term, note });
+  }
+  return terms;
+}
+
+/** 无监督发现：从纯文本抽候选词（演示用多算法融合） */
+function discoverSeedTerms(text: string, algos: DiscoverAlgo[]): LexiconTerm[] {
+  const raw = text
+    .replace(/[，。；、！？,.!?;:\n\r\t()（）【】\[\]{}「」""'']/g, ' ')
+    .split(/\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length >= 2 && s.length <= 24);
+  const freq = new Map<string, number>();
+  for (const w of raw) freq.set(w, (freq.get(w) ?? 0) + 1);
+  const ranked = [...freq.entries()]
+    .filter(([, n]) => n >= 1)
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .slice(0, 20);
+  const algoLabel = algos.map(a => DISCOVER_ALGOS.find(x => x.id === a)?.label ?? a).join('+') || 'TF-IDF';
+  return ranked.map(([term, n], i) => ({
+    id: `d_${Date.now()}_${i}`,
+    term,
+    note: `${algoLabel} · 频次 ${n}`,
+  }));
+}
 
 // ─── Standard DS types ────────────────────────────────────────────────────────
 interface TableField { name: string; type: string; }
@@ -245,6 +301,13 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
   const [parsingId, setParsingId] = useState<string | null>(null);
   const [importingLexiconId, setImportingLexiconId] = useState<string | null>(null);
   const [pendingFileName, setPendingFileName] = useState('');
+  const [discoverText, setDiscoverText] = useState(
+    '知识图谱与大语言模型结合可提升实体抽取与关系抽取效果。种子术语冷启动依赖领域词典与无监督关键词发现。',
+  );
+  const [discoverAlgos, setDiscoverAlgos] = useState<DiscoverAlgo[]>(['tfidf', 'textrank']);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoveredTerms, setDiscoveredTerms] = useState<LexiconTerm[]>([]);
+  const [fileParseError, setFileParseError] = useState('');
 
   useEffect(() => {
     if (viewMode) setMode(viewMode);
@@ -315,22 +378,44 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
     if (selectedLexiconId === id) setSelectedLexiconId(lexiconList.find(l => l.id !== id)?.id || '');
   };
 
-  const handleLexiconFileSelect = (lexicon: ExternalLexicon, fileName: string) => {
-    setPendingFileName(fileName);
-    updateLexicon({ ...lexicon, fileName, status: 'draft', terms: [], termCount: 0 });
-  };
-
-  const handleParseLexicon = (id: string) => {
-    setParsingId(id);
-    setTimeout(() => {
+  const handleLexiconFileSelect = (lexicon: ExternalLexicon, file: File) => {
+    const lower = file.name.toLowerCase();
+    const format: LexiconFormat | null = lower.endsWith('.csv')
+      ? 'csv'
+      : lower.endsWith('.txt')
+        ? 'txt'
+        : null;
+    if (!format) {
+      setFileParseError('仅支持 .txt 与 .csv 文件');
+      return;
+    }
+    setFileParseError('');
+    setPendingFileName(file.name);
+    setParsingId(lexicon.id);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = String(reader.result ?? '');
+      const terms = parseLexiconText(content, format);
       setParsingId(null);
-      setLexiconList(prev => prev.map(l => l.id === id ? {
-        ...l,
+      if (terms.length === 0) {
+        setFileParseError('未解析到有效词条，请检查格式：TXT 为「词条 备注」，CSV 为两列');
+        updateLexicon({ ...lexicon, fileName: file.name, format, status: 'draft', terms: [], termCount: 0 });
+        return;
+      }
+      updateLexicon({
+        ...lexicon,
+        fileName: file.name,
+        format,
         status: 'parsed',
-        terms: SAMPLE_PARSE_TERMS.map((t, i) => ({ ...t, id: `p${id}_${i}` })),
-        termCount: SAMPLE_PARSE_TERMS.length,
-      } : l));
-    }, 1200);
+        terms,
+        termCount: terms.length,
+      });
+    };
+    reader.onerror = () => {
+      setParsingId(null);
+      setFileParseError('文件读取失败');
+    };
+    reader.readAsText(file);
   };
 
   const handleImportLexiconAsSeeds = (id: string) => {
@@ -341,8 +426,39 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
     }, 1400);
   };
 
+  const toggleDiscoverAlgo = (algo: DiscoverAlgo) => {
+    setDiscoverAlgos(prev =>
+      prev.includes(algo) ? (prev.length === 1 ? prev : prev.filter(a => a !== algo)) : [...prev, algo],
+    );
+  };
+
+  const handleDiscover = () => {
+    if (!discoverText.trim()) return;
+    setDiscovering(true);
+    setTimeout(() => {
+      setDiscoveredTerms(discoverSeedTerms(discoverText, discoverAlgos));
+      setDiscovering(false);
+    }, 700);
+  };
+
+  const handleAddDiscoveredToLexicon = () => {
+    if (!selectedLexicon || discoveredTerms.length === 0) return;
+    const existing = new Set(selectedLexicon.terms.map(t => t.term));
+    const toAdd = discoveredTerms.filter(t => !existing.has(t.term));
+    const merged = [...selectedLexicon.terms, ...toAdd];
+    updateLexicon({
+      ...selectedLexicon,
+      terms: merged,
+      termCount: merged.length,
+      status: selectedLexicon.status === 'imported' ? 'imported' : 'parsed',
+    });
+    setDiscoveredTerms([]);
+  };
+
   const filteredLexiconTerms = selectedLexicon?.terms.filter(t =>
-    !lexiconQuery.trim() || t.term.includes(lexiconQuery) || t.category.includes(lexiconQuery),
+    !lexiconQuery.trim()
+    || t.term.includes(lexiconQuery)
+    || t.note.includes(lexiconQuery),
   ) ?? [];
 
   const updateStruct = (s: StructuredDS) => setStructuredList(prev => prev.map(x => x.id === s.id ? s : x));
@@ -855,7 +971,7 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
           {mode === 'lexicon' && selectedLexicon && (
             <>
               <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 text-sm text-violet-900">
-                支持导入领域专家已有的高质量词汇表（CSV / Excel / TXT / JSON），实现种子术语的冷启动，避免从零开始的高成本标注。
+                导入外部词典（仅 TXT / CSV），或在本页用无监督算法从纯文本发现种子术语并写入当前词典。
               </div>
 
               <div className="bg-white border border-gray-200 rounded-xl p-5">
@@ -895,46 +1011,41 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
               </div>
 
               <div className="bg-white border border-gray-200 rounded-xl p-5">
-                <div className="text-sm font-semibold text-gray-800 mb-4">文件上传与解析</div>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1.5">文件格式</div>
-                    <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400 bg-white w-full"
-                      value={selectedLexicon.format}
-                      onChange={e => updateLexicon({ ...selectedLexicon, format: e.target.value as LexiconFormat })}>
-                      <option value="csv">CSV</option>
-                      <option value="xlsx">Excel (.xlsx)</option>
-                      <option value="txt">TXT（每行一词）</option>
-                      <option value="json">JSON</option>
-                    </select>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1.5">已选文件</div>
-                    <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50 truncate">
-                      {selectedLexicon.fileName || pendingFileName || '尚未选择文件'}
-                    </div>
+                <div className="text-sm font-semibold text-gray-800 mb-1">文件上传</div>
+                <p className="text-xs text-gray-500 mb-4">
+                  仅支持 TXT、CSV。TXT：每行「词条 备注」（空格分隔）；CSV：两列（词条、备注）。
+                </p>
+                <div className="mb-3">
+                  <div className="text-xs text-gray-500 mb-1.5">已选文件</div>
+                  <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50 truncate">
+                    {selectedLexicon.fileName || pendingFileName || '尚未选择文件'}
+                    {selectedLexicon.fileName && (
+                      <span className="ml-2 text-xs text-violet-600 uppercase">{selectedLexicon.format}</span>
+                    )}
                   </div>
                 </div>
                 <label className="flex flex-col items-center justify-center border-2 border-dashed border-violet-200 rounded-xl p-8 bg-violet-50/30 cursor-pointer hover:bg-violet-50/60 transition-colors">
-                  <Upload size={24} className="text-violet-400 mb-2" />
-                  <span className="text-sm text-gray-700 font-medium">点击或拖拽上传词汇表文件</span>
-                  <span className="text-xs text-gray-400 mt-1">支持 CSV、Excel、TXT、JSON，单文件不超过 50MB</span>
-                  <input type="file" className="hidden" accept=".csv,.txt,.json,.xlsx,.xls"
+                  {parsingId === selectedLexicon.id
+                    ? <Loader2 size={24} className="text-violet-400 mb-2 animate-spin" />
+                    : <Upload size={24} className="text-violet-400 mb-2" />}
+                  <span className="text-sm text-gray-700 font-medium">
+                    {parsingId === selectedLexicon.id ? '解析中…' : '点击上传 TXT 或 CSV'}
+                  </span>
+                  <span className="text-xs text-gray-400 mt-1">上传后自动解析为词条</span>
+                  <input type="file" className="hidden" accept=".txt,.csv,text/plain,text/csv"
                     onChange={e => {
                       const file = e.target.files?.[0];
-                      if (file) handleLexiconFileSelect(selectedLexicon, file.name);
+                      if (file) handleLexiconFileSelect(selectedLexicon, file);
+                      e.target.value = '';
                     }} />
                 </label>
-                <div className="flex gap-2 mt-4 flex-wrap">
-                  <button
-                    onClick={() => handleParseLexicon(selectedLexicon.id)}
-                    disabled={!selectedLexicon.fileName || parsingId === selectedLexicon.id}
-                    className="text-sm px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-1.5">
-                    {parsingId === selectedLexicon.id
-                      ? <><Loader2 size={13} className="animate-spin" /> 解析中…</>
-                      : <><FileText size={13} /> 解析预览</>}
-                  </button>
-                  {selectedLexicon.status !== 'imported' && selectedLexicon.terms.length > 0 && (
+                {fileParseError && (
+                  <div className="mt-3 text-xs text-red-600 flex items-center gap-1.5">
+                    <XCircle size={12} /> {fileParseError}
+                  </div>
+                )}
+                {selectedLexicon.status !== 'imported' && selectedLexicon.terms.length > 0 && (
+                  <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleImportLexiconAsSeeds(selectedLexicon.id)}
                       disabled={importingLexiconId === selectedLexicon.id}
@@ -943,22 +1054,101 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
                         ? <><Loader2 size={13} className="animate-spin" /> 导入中…</>
                         : <><Sprout size={13} /> 导入为种子术语</>}
                     </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-xl p-5">
+                <div className="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                  <Sparkles size={15} className="text-amber-500" /> 无监督算法发现
+                </div>
+                <p className="text-xs text-gray-500 mb-4">
+                  内置多种自动化关键词提取算法，从纯文本中发现潜在种子术语，并可加入当前词典词条。
+                </p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {DISCOVER_ALGOS.map(algo => {
+                    const on = discoverAlgos.includes(algo.id);
+                    return (
+                      <button
+                        key={algo.id}
+                        type="button"
+                        onClick={() => toggleDiscoverAlgo(algo.id)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                          on
+                            ? 'bg-amber-50 border-amber-300 text-amber-800'
+                            : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                        }`}
+                      >
+                        {algo.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <textarea
+                  rows={4}
+                  value={discoverText}
+                  onChange={e => setDiscoverText(e.target.value)}
+                  placeholder="在此粘贴或输入领域纯文本…"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 resize-none mb-3"
+                />
+                <div className="flex gap-2 flex-wrap mb-3">
+                  <button
+                    type="button"
+                    onClick={handleDiscover}
+                    disabled={!discoverText.trim() || discovering}
+                    className="text-sm px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-1.5"
+                  >
+                    {discovering
+                      ? <><Loader2 size={13} className="animate-spin" /> 发现中…</>
+                      : <><Sparkles size={13} /> 解析为种子术语</>}
+                  </button>
+                  {discoveredTerms.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleAddDiscoveredToLexicon}
+                      className="text-sm px-4 py-2 border border-violet-200 text-violet-700 hover:bg-violet-50 rounded-lg transition-colors flex items-center gap-1.5"
+                    >
+                      <Plus size={13} /> 加入本词典（{discoveredTerms.length}）
+                    </button>
                   )}
                 </div>
+                {discoveredTerms.length > 0 && (
+                  <div className="border border-amber-100 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-amber-50 text-xs text-amber-800 font-medium">
+                      发现结果预览（未入库，可勾选加入本词典）
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-100">
+                        <tr>
+                          <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">词条</th>
+                          <th className="text-left text-xs font-medium text-gray-500 px-3 py-2">备注</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {discoveredTerms.map(t => (
+                          <tr key={t.id}>
+                            <td className="px-3 py-2 font-medium text-gray-800">{t.term}</td>
+                            <td className="px-3 py-2 text-xs text-gray-400">{t.note || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               {selectedLexicon.terms.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                   <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
                     <div className="text-sm font-semibold text-gray-800">
-                      词条预览 <span className="text-xs font-normal text-gray-400 ml-1">{filteredLexiconTerms.length} / {selectedLexicon.termCount} 条</span>
+                      词条 <span className="text-xs font-normal text-gray-400 ml-1">{filteredLexiconTerms.length} / {selectedLexicon.termCount} 条</span>
                     </div>
                     <div className="relative w-48">
                       <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input
                         value={lexiconQuery}
                         onChange={e => setLexiconQuery(e.target.value)}
-                        placeholder="搜索词条…"
+                        placeholder="搜索词条或备注…"
                         className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-violet-400"
                       />
                     </div>
@@ -966,9 +1156,7 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">术语</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">类别</th>
-                        <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">权重</th>
+                        <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">词条</th>
                         <th className="text-left text-xs font-medium text-gray-500 px-4 py-3">备注</th>
                       </tr>
                     </thead>
@@ -976,9 +1164,7 @@ export default function DataSourceManagement({ viewMode }: { viewMode?: DSMode }
                       {filteredLexiconTerms.map(term => (
                         <tr key={term.id}>
                           <td className="px-4 py-3 font-medium text-gray-800">{term.term}</td>
-                          <td className="px-4 py-3"><span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">{term.category}</span></td>
-                          <td className="px-4 py-3 text-gray-600">{term.weight.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-xs text-gray-400">{term.note || '—'}</td>
+                          <td className="px-4 py-3 text-xs text-gray-500">{term.note || '—'}</td>
                         </tr>
                       ))}
                     </tbody>
