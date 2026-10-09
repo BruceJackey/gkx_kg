@@ -6,9 +6,14 @@ import {
   Move, ZoomIn, ZoomOut, Minimize2, Ruler, GitBranch, Network as NetIcon,
   Circle as CircleIcon, Grid3x3, Layers, Sparkles, Tag, Eye, Save, Share,
   PanelLeft, PanelRight, Layout, X, Star, TrendingUp, Route, BookOpen, Zap,
-  Factory, Link2,
+  Factory, Link2, Settings,
 } from 'lucide-react';
 import { ThemeTechDockPanel, type ThemeTechDockTab } from './ThemeTechAnalysisDock';
+import PathScoringConfigModal, {
+  createDefaultModels,
+  scorePathWithModel,
+  type PathScoringModel,
+} from './PathScoringConfigModal';
 
 // ── Knowledge graph types ────────────────────────────────────────────────────
 type AcademicNodeType = 'concept' | 'paper' | 'method' | 'dataset' | 'researcher' | 'venue';
@@ -2169,12 +2174,6 @@ interface ScoredPath {
   subScores: { label: string; value: number }[];
 }
 
-const SCORING_MODELS = [
-  { id: 'scientific', name: '科研图谱评分 v1.2', weights: { 合作: 0.75, 研发: 0.90, 引用: 0.88, 提出: 0.85, 奠基: 0.80, 实现: 0.82, 改进: 0.78, 推动: 0.70, 包含: 0.60, 演化: 0.88, 验证: 0.75 }, lengthAlpha: 0.6 },
-  { id: 'default',    name: '默认评分模型',      weights: { 合作: 0.80, 研发: 0.85, 引用: 0.70, 提出: 0.80, 奠基: 0.75, 实现: 0.80, 改进: 0.78, 推动: 0.65, 包含: 0.60, 演化: 0.82, 验证: 0.70 }, lengthAlpha: 0.5 },
-  { id: 'influence',  name: '影响力传播评分',    weights: { 合作: 0.90, 研发: 0.80, 引用: 0.92, 提出: 0.85, 奠基: 0.90, 实现: 0.75, 改进: 0.80, 推动: 0.88, 包含: 0.65, 演化: 0.92, 验证: 0.78 }, lengthAlpha: 0.4 },
-];
-
 function computeRawPaths(edgeList: GEdge[], srcId: string, tgtId: string): Array<{ nodeIds: string[]; edgeTypes: string[] }> {
   const results: Array<{ nodeIds: string[]; edgeTypes: string[] }> = [];
   function dfs(cur: string, path: string[], rels: string[], visited: Set<string>) {
@@ -2192,16 +2191,15 @@ function computeRawPaths(edgeList: GEdge[], srcId: string, tgtId: string): Array
   return results;
 }
 
-function scorePath(path: { nodeIds: string[]; edgeTypes: string[] }, model: typeof SCORING_MODELS[0]): ScoredPath {
-  const len = path.nodeIds.length - 1;
-  const lenScore = 1 / (1 + model.lengthAlpha * len);
-  const weights = path.edgeTypes.map(t => (model.weights as any)[t] ?? 0.6);
-  const wpScore = weights.length ? weights.reduce((a: number, b: number) => a * b, 1) : 1;
-  const relScore = weights.length ? weights.reduce((a: number, b: number) => a + b, 0) / weights.length : 0.6;
-  const score = Math.min(1, lenScore * 0.35 + wpScore * 0.40 + relScore * 0.25);
+function scorePath(path: { nodeIds: string[]; edgeTypes: string[] }, model: PathScoringModel): ScoredPath {
+  const scored = scorePathWithModel(path, model);
   return {
-    nodeIds: path.nodeIds, nodeLabels: path.nodeIds, edgeTypes: path.edgeTypes, length: len, score,
-    subScores: [{ label: '长度得分', value: lenScore }, { label: '权重积', value: wpScore }, { label: '平均权重', value: relScore }],
+    nodeIds: path.nodeIds,
+    nodeLabels: path.nodeIds,
+    edgeTypes: path.edgeTypes,
+    length: scored.length,
+    score: scored.score,
+    subScores: scored.subScores,
   };
 }
 
@@ -2363,7 +2361,9 @@ function CommunityComparePanel({ communities }: { communities: any[] }) {
 }
 
 function AnalysisTab({ analysisActive, centralityMode, setCentralityMode, centralityRanking, showCommunity, setShowCommunity, communityAlgo, setCommunityAlgo, communities, pathMode, setPathMode, pathEndpoints, setAnalysisActive, nodes, edges }: any) {
-  const [scoringModel, setScoringModel] = useState('scientific');
+  const [scoringModels, setScoringModels] = useState<PathScoringModel[]>(() => createDefaultModels());
+  const [scoringModelId, setScoringModelId] = useState('scientific');
+  const [scoringModalOpen, setScoringModalOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'score' | 'length'>('score');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const [maxLen, setMaxLen] = useState(5);
@@ -2379,12 +2379,15 @@ function AnalysisTab({ analysisActive, centralityMode, setCentralityMode, centra
   const nodeMap: Record<string, string> = useMemo(() => Object.fromEntries((nodes ?? []).map((n: GNode) => [n.id, n.label])), [nodes]);
   const edgeRelTypes: string[] = useMemo(() => Array.from(new Set((edges ?? []).map((e: GEdge) => e.type))), [edges]);
   const nodeLabels: string[] = useMemo(() => (nodes ?? []).map((n: GNode) => n.label), [nodes]);
+  const activeScoringModel = scoringModels.find(m => m.id === scoringModelId) ?? scoringModels[0];
 
   const runScoring = () => {
-    if (!pathEndpoints[0] || !pathEndpoints[1]) return;
-    const model = SCORING_MODELS.find(m => m.id === scoringModel) ?? SCORING_MODELS[0];
+    if (!pathEndpoints[0] || !pathEndpoints[1] || !activeScoringModel) return;
     const raw = computeRawPaths(edges ?? [], pathEndpoints[0], pathEndpoints[1]);
-    const scored = raw.map(p => { const sp = scorePath(p, model); return { ...sp, nodeLabels: sp.nodeIds.map(id => nodeMap[id] ?? id) }; });
+    const scored = raw.map(p => {
+      const sp = scorePath(p, activeScoringModel);
+      return { ...sp, nodeLabels: sp.nodeIds.map(id => nodeMap[id] ?? id) };
+    });
     setRawPaths(scored); setHasRun(true); setExpandedPath(null);
   };
 
@@ -2435,12 +2438,51 @@ function AnalysisTab({ analysisActive, centralityMode, setCentralityMode, centra
           {pathMode === 'all' && (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-gray-700">评分模型</div>
-                <select value={scoringModel} onChange={e => { setScoringModel(e.target.value); setHasRun(false); }}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-blue-400">
-                  {SCORING_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-semibold text-gray-700">评分模型</div>
+                  <button
+                    type="button"
+                    onClick={() => setScoringModalOpen(true)}
+                    className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100"
+                  >
+                    <Settings className="w-3 h-3" />
+                    评分后台
+                  </button>
+                </div>
+                <select
+                  value={scoringModelId}
+                  onChange={e => { setScoringModelId(e.target.value); setHasRun(false); }}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-blue-400"
+                >
+                  {scoringModels.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} · {m.version}
+                    </option>
+                  ))}
                 </select>
+                {activeScoringModel && (
+                  <p className="text-[10px] text-gray-400 leading-relaxed">
+                    {activeScoringModel.algos.filter(a => a.enabled).map(a => (
+                      a.id === 'length' ? '路径长度' : a.id === 'weightProduct' ? '关系权重乘积' : '路径可靠性'
+                    )).join(' + ') || '未启用算法'}
+                    {activeScoringModel.note ? ` · ${activeScoringModel.note}` : ''}
+                  </p>
+                )}
               </div>
+              <PathScoringConfigModal
+                open={scoringModalOpen}
+                models={scoringModels}
+                activeModelId={scoringModelId}
+                onClose={() => setScoringModalOpen(false)}
+                onChangeModels={next => {
+                  setScoringModels(next);
+                  setHasRun(false);
+                }}
+                onSelectModel={id => {
+                  setScoringModelId(id);
+                  setHasRun(false);
+                }}
+              />
               <div className="space-y-1.5">
                 <div className="text-xs font-semibold text-gray-700">路径筛选</div>
                 <div className="grid grid-cols-2 gap-1.5">
